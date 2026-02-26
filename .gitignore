@@ -1,0 +1,15 @@
+# Python virtual environments
+jump/
+
+# Python cache
+__pycache__/
+*.pyc
+
+# Initial version artifacts
+fsm/basic_jump/initial version/
+
+# Project outputs
+fsm/basic_jump/output/
+
+# Project inputs (large/raw data)
+fsm/basic_jump/input/
