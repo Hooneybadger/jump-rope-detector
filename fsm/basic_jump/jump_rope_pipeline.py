@@ -10,8 +10,8 @@ from jump_rope_detection import (
     build_detected_jump_event,
     choose_entry_backfill_tail_count,
     detect_jump_events_offline,
+    evaluate_foot_motion_signature,
     get_adaptive_jump_threshold,
-    get_local_min_prominence,
     get_true_ratio,
     has_stable_entry_cadence,
 )
@@ -113,6 +113,12 @@ def run_pipeline(
         runtime_require_dual_rope = bool(strict_guard_mode and STRICT_REQUIRE_DUAL_ROPE)
         runtime_lower_body_vis_min = float(STRICT_LOWER_BODY_VIS_MIN)
         runtime_foot_lift_min_prominence = float(STRICT_FOOT_LIFT_MIN_PROMINENCE)
+        runtime_both_feet_min_prominence = float(STRICT_BOTH_FEET_MIN_PROMINENCE)
+        runtime_feet_symmetry_min_ratio = float(STRICT_FEET_SYMMETRY_MIN_RATIO)
+        runtime_foot_sync_min_corr = float(STRICT_FOOT_SYNC_MIN_CORR)
+        runtime_inplace_max_center_drift = float(STRICT_INPLACE_MAX_CENTER_DRIFT)
+        runtime_require_advanced_motion = bool(STRICT_REQUIRE_ADVANCED_MOTION)
+        runtime_motion_advanced_min_checks = int(STRICT_MOTION_ADVANCED_MIN_CHECKS)
         if strict_guard_mode:
             runtime_min_strength_ratio = max(
                 runtime_min_strength_ratio,
@@ -150,7 +156,15 @@ def run_pipeline(
                 f"min_strength_ratio={runtime_min_strength_ratio:.2f} "
                 f"enter_min_events={runtime_enter_min_events} "
                 f"startup_lockout_s={runtime_startup_lockout_seconds:.2f} "
-                f"foot_lift_min={runtime_foot_lift_min_prominence:.4f}"
+                f"foot_lift_min={runtime_foot_lift_min_prominence:.4f} "
+                f"both_feet_min={runtime_both_feet_min_prominence:.4f} "
+                f"symmetry_min={runtime_feet_symmetry_min_ratio:.2f} "
+                f"sync_min={runtime_foot_sync_min_corr:.2f} "
+                f"inplace_max={runtime_inplace_max_center_drift:.3f} "
+                f"require_adv_motion={runtime_require_advanced_motion} "
+                f"advanced_min_checks={runtime_motion_advanced_min_checks} "
+                f"active_motion_window={STRICT_ACTIVE_FOOT_MOTION_WINDOW} "
+                f"active_motion_min_ratio={STRICT_ACTIVE_FOOT_MOTION_MIN_RATIO:.2f}"
             )
     
         os.makedirs(OUTPUT_DIR, exist_ok=True)
@@ -223,6 +237,7 @@ def run_pipeline(
         last_processed_minima_idx = -1
         hip_center_y = []
         foot_center_y = []
+        foot_center_x = []
         label_progress_idx = 0
         detected_jump_events = []
         landmark_frame_numbers = []
@@ -242,6 +257,7 @@ def run_pipeline(
         rope_active_window_frames = max(1, int(round(fps * ROPE_ACTIVE_WINDOW_SECONDS)))
         rope_exit_idle_frames = max(1, int(round(fps * ROPE_EXIT_IDLE_SECONDS)))
         last_rope_active_frame = -10**9
+        local_motion_flags = []
         last_frame_timestamp_ms = -1
     
     
@@ -335,6 +351,7 @@ def run_pipeline(
                         left_foot_y.append(landmarks[31].y)
                         right_foot_y.append(landmarks[32].y)
                         foot_center_y.append((landmarks[31].y + landmarks[32].y) * 0.5)
+                        foot_center_x.append((landmarks[31].x + landmarks[32].x) * 0.5)
                         landmark_frame_numbers.append(current_frame_idx)
                         landmark_timestamps_ms.append(current_frame_ts_ms)
                         pose_detected = True
@@ -375,15 +392,38 @@ def run_pipeline(
                             prominence_right = max(right_neighbors) - readings[candidate_idx]
                             prominence = min(prominence_left, prominence_right)
                             strength_ratio = prominence / max(adaptive_threshold, 1e-9)
-                            foot_prominence = get_local_min_prominence(
-                                foot_center_y,
-                                candidate_idx,
-                                LOCAL_PROMINENCE_WINDOW,
+                            motion_signature = evaluate_foot_motion_signature(
+                                candidate_idx=candidate_idx,
+                                left_foot_y=left_foot_y,
+                                right_foot_y=right_foot_y,
+                                foot_center_y=foot_center_y,
+                                foot_center_x=foot_center_x,
+                                prominence_window=LOCAL_PROMINENCE_WINDOW,
+                                foot_lift_min_prominence=runtime_foot_lift_min_prominence,
+                                both_feet_min_prominence=STRICT_BOTH_FEET_MIN_PROMINENCE,
+                                feet_symmetry_min_ratio=STRICT_FEET_SYMMETRY_MIN_RATIO,
+                                foot_sync_window=STRICT_FOOT_SYNC_WINDOW,
+                                foot_sync_min_corr=STRICT_FOOT_SYNC_MIN_CORR,
+                                require_inplace=STRICT_REQUIRE_INPLACE,
+                                inplace_window=STRICT_INPLACE_WINDOW,
+                                inplace_max_center_drift=STRICT_INPLACE_MAX_CENTER_DRIFT,
                             )
-                            foot_motion_strict_ok = (
-                                (foot_prominence is not None)
-                                and (foot_prominence >= runtime_foot_lift_min_prominence)
-                            )
+                            foot_prominence = motion_signature["foot_prominence"]
+                            foot_motion_strict_ok = bool(motion_signature["strict_motion_ok"])
+                            recent_motion_ratio = 0.0
+                            recent_motion_true_count = 0
+                            if is_local_min:
+                                local_motion_flags.append(bool(foot_motion_strict_ok))
+                                motion_window = max(1, int(STRICT_ACTIVE_FOOT_MOTION_WINDOW))
+                                if len(local_motion_flags) > (motion_window * 4):
+                                    local_motion_flags = local_motion_flags[-(motion_window * 4):]
+                                recent_slice = local_motion_flags[-motion_window:]
+                                recent_motion_true_count = int(sum(1 for flag in recent_slice if flag))
+                                recent_motion_ratio = (
+                                    float(recent_motion_true_count) / float(len(recent_slice))
+                                    if recent_slice
+                                    else 0.0
+                                )
                             candidate_frame = landmark_frame_numbers[candidate_idx]
                             startup_locked = candidate_frame < startup_lockout_frames
                             if startup_locked:
@@ -392,17 +432,14 @@ def run_pipeline(
                             rope_ratio = get_true_ratio(rope_flag_series, candidate_idx, rope_active_window_frames)
                             rope_dual_ratio = get_true_ratio(rope_dual_flag_series, candidate_idx, rope_active_window_frames)
                             foot_motion_ok = foot_motion_strict_ok
-                            if strict_guard_mode and not foot_motion_ok:
-                                if is_active:
-                                    strong_rope_override = (
-                                        rope_ratio >= max(0.20, float(ROPE_ACTIVE_MIN_RATIO) * 2.0)
-                                    )
-                                else:
-                                    strong_rope_override = (
-                                        rope_ratio >= max(0.28, float(ROPE_ENTRY_MIN_RATIO) * 1.8)
-                                        and rope_dual_ratio >= max(0.08, float(ROPE_ENTRY_DUAL_MIN_RATIO) * 2.0)
-                                    )
-                                foot_motion_ok = strong_rope_override
+                            if strict_guard_mode and is_active:
+                                foot_motion_ok = True
+                            elif strict_guard_mode and not foot_motion_ok:
+                                strong_rope_override = (
+                                    rope_ratio >= max(0.28, float(ROPE_ENTRY_MIN_RATIO) * 1.8)
+                                    and rope_dual_ratio >= max(0.08, float(ROPE_ENTRY_DUAL_MIN_RATIO) * 2.0)
+                                )
+                                foot_motion_ok = bool(strong_rope_override)
                             if not strict_guard_mode:
                                 foot_motion_ok = True
                             if is_active:
@@ -587,6 +624,16 @@ def run_pipeline(
                         right_roi_hit = False
                         for contour in contours:
                             if cv2.contourArea(contour) < ROPE_CONTOUR_MIN_AREA:
+                                continue
+                            x, y, w, h = cv2.boundingRect(contour)
+                            long_side = max(int(w), int(h))
+                            short_side = max(1, min(int(w), int(h)))
+                            if long_side < int(ROPE_CONTOUR_MIN_SPAN):
+                                continue
+                            aspect_ratio = float(short_side) / float(long_side)
+                            if aspect_ratio > float(ROPE_CONTOUR_MAX_ASPECT_RATIO):
+                                continue
+                            if cv2.arcLength(contour, True) < float(ROPE_CONTOUR_MIN_PERIMETER):
                                 continue
                             for point in contour:
                                 i, j = point[0]

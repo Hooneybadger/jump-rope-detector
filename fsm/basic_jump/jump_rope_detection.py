@@ -46,6 +46,169 @@ def get_local_min_prominence(series, candidate_idx, window_size):
     return float(min(prominence_left, prominence_right))
 
 
+def get_local_range(series, candidate_idx, window_size):
+    if not series:
+        return None
+    if candidate_idx < 0 or candidate_idx >= len(series):
+        return None
+    window_size = max(1, int(window_size))
+    start_idx = max(0, candidate_idx - window_size)
+    end_idx = min(len(series), candidate_idx + 1 + window_size)
+    window = np.array(series[start_idx:end_idx], dtype=np.float32)
+    window = window[np.isfinite(window)]
+    if window.size < 2:
+        return None
+    return float(np.max(window) - np.min(window))
+
+
+def get_local_velocity_correlation(series_a, series_b, candidate_idx, window_size):
+    if not series_a or not series_b:
+        return None
+    max_len = min(len(series_a), len(series_b))
+    if candidate_idx < 1 or candidate_idx >= max_len:
+        return None
+    window_size = max(2, int(window_size))
+    start_idx = max(0, candidate_idx - window_size)
+    end_idx = min(max_len, candidate_idx + 1 + window_size)
+    series_a_window = np.array(series_a[start_idx:end_idx], dtype=np.float32)
+    series_b_window = np.array(series_b[start_idx:end_idx], dtype=np.float32)
+    finite_mask = np.isfinite(series_a_window) & np.isfinite(series_b_window)
+    if int(np.sum(finite_mask)) < 4:
+        return None
+    series_a_window = series_a_window[finite_mask]
+    series_b_window = series_b_window[finite_mask]
+    if series_a_window.size < 4 or series_b_window.size < 4:
+        return None
+    vel_a = np.diff(series_a_window)
+    vel_b = np.diff(series_b_window)
+    finite_vel_mask = np.isfinite(vel_a) & np.isfinite(vel_b)
+    vel_a = vel_a[finite_vel_mask]
+    vel_b = vel_b[finite_vel_mask]
+    if vel_a.size < 3 or vel_b.size < 3:
+        return None
+    if float(np.std(vel_a)) < 1e-6 or float(np.std(vel_b)) < 1e-6:
+        return None
+    corr = float(np.corrcoef(vel_a, vel_b)[0, 1])
+    if not np.isfinite(corr):
+        return None
+    return corr
+
+
+def evaluate_foot_motion_signature(
+    candidate_idx,
+    left_foot_y,
+    right_foot_y,
+    foot_center_y,
+    foot_center_x=None,
+    prominence_window=LOCAL_PROMINENCE_WINDOW,
+    foot_lift_min_prominence=STRICT_FOOT_LIFT_MIN_PROMINENCE,
+    both_feet_min_prominence=STRICT_BOTH_FEET_MIN_PROMINENCE,
+    feet_symmetry_min_ratio=STRICT_FEET_SYMMETRY_MIN_RATIO,
+    foot_sync_window=STRICT_FOOT_SYNC_WINDOW,
+    foot_sync_min_corr=STRICT_FOOT_SYNC_MIN_CORR,
+    require_inplace=STRICT_REQUIRE_INPLACE,
+    inplace_window=STRICT_INPLACE_WINDOW,
+    inplace_max_center_drift=STRICT_INPLACE_MAX_CENTER_DRIFT,
+    require_advanced_motion=STRICT_REQUIRE_ADVANCED_MOTION,
+    advanced_min_checks=STRICT_MOTION_ADVANCED_MIN_CHECKS,
+):
+    foot_prominence = get_local_min_prominence(
+        foot_center_y,
+        candidate_idx,
+        prominence_window,
+    )
+    left_foot_prominence = get_local_min_prominence(
+        left_foot_y,
+        candidate_idx,
+        prominence_window,
+    )
+    right_foot_prominence = get_local_min_prominence(
+        right_foot_y,
+        candidate_idx,
+        prominence_window,
+    )
+    foot_motion_strict_ok = (
+        (foot_prominence is not None)
+        and (foot_prominence >= float(foot_lift_min_prominence))
+    )
+
+    both_feet_lift_ok = (
+        (left_foot_prominence is not None)
+        and (right_foot_prominence is not None)
+        and (left_foot_prominence >= float(both_feet_min_prominence))
+        and (right_foot_prominence >= float(both_feet_min_prominence))
+    )
+
+    feet_symmetry_ratio = 0.0
+    if both_feet_lift_ok:
+        max_prominence = max(float(left_foot_prominence), float(right_foot_prominence))
+        min_prominence = min(float(left_foot_prominence), float(right_foot_prominence))
+        feet_symmetry_ratio = min_prominence / max(max_prominence, 1e-9)
+    feet_symmetry_ok = feet_symmetry_ratio >= float(feet_symmetry_min_ratio)
+
+    foot_sync_corr = get_local_velocity_correlation(
+        left_foot_y,
+        right_foot_y,
+        candidate_idx,
+        foot_sync_window,
+    )
+    foot_sync_ok = (
+        (foot_sync_corr is not None)
+        and (foot_sync_corr >= float(foot_sync_min_corr))
+    )
+    if foot_sync_corr is None and both_feet_lift_ok and feet_symmetry_ok:
+        foot_sync_ok = True
+
+    center_x_drift = None
+    if foot_center_x is not None:
+        center_x_drift = get_local_range(
+            foot_center_x,
+            candidate_idx,
+            inplace_window,
+        )
+    if bool(require_inplace):
+        inplace_ok = (
+            (center_x_drift is not None)
+            and (center_x_drift <= float(inplace_max_center_drift))
+        )
+    else:
+        inplace_ok = True
+
+    advanced_ok_count = (
+        int(bool(both_feet_lift_ok))
+        + int(bool(feet_symmetry_ok))
+        + int(bool(foot_sync_ok))
+        + int(bool(inplace_ok) and bool(require_inplace))
+    )
+    strict_motion_ok = bool(foot_motion_strict_ok)
+    if bool(require_advanced_motion):
+        strict_motion_ok = (
+            strict_motion_ok
+            and advanced_ok_count >= max(1, int(advanced_min_checks))
+        )
+
+    return {
+        "foot_prominence": (float(foot_prominence) if foot_prominence is not None else None),
+        "left_foot_prominence": (
+            float(left_foot_prominence) if left_foot_prominence is not None else None
+        ),
+        "right_foot_prominence": (
+            float(right_foot_prominence) if right_foot_prominence is not None else None
+        ),
+        "foot_motion_strict_ok": bool(foot_motion_strict_ok),
+        "both_feet_lift_ok": bool(both_feet_lift_ok),
+        "feet_symmetry_ratio": float(feet_symmetry_ratio),
+        "feet_symmetry_ok": bool(feet_symmetry_ok),
+        "foot_sync_corr": (float(foot_sync_corr) if foot_sync_corr is not None else None),
+        "foot_sync_ok": bool(foot_sync_ok),
+        "center_x_drift": (float(center_x_drift) if center_x_drift is not None else None),
+        "inplace_ok": bool(inplace_ok),
+        "advanced_ok_count": int(advanced_ok_count),
+        "require_advanced_motion": bool(require_advanced_motion),
+        "strict_motion_ok": bool(strict_motion_ok),
+    }
+
+
 def has_stable_entry_cadence(pending_candidates, min_events, max_gap_frames, max_cv):
     if len(pending_candidates) < min_events:
         return False
@@ -912,6 +1075,7 @@ def detect_jump_events_offline(
     if frame_timestamps_ms is None:
         frame_timestamps_ms = []
     foot_center_y = []
+    foot_center_x = []
     for idx in range(len(hip_series)):
         if idx < len(left_foot_y) and idx < len(right_foot_y):
             left_val = float(left_foot_y[idx])
@@ -922,7 +1086,17 @@ def detect_jump_events_offline(
                 foot_center_y.append(np.nan)
         else:
             foot_center_y.append(np.nan)
+        if idx < len(left_foot_x) and idx < len(right_foot_x):
+            left_x = float(left_foot_x[idx])
+            right_x = float(right_foot_x[idx])
+            if np.isfinite(left_x) and np.isfinite(right_x):
+                foot_center_x.append((left_x + right_x) * 0.5)
+            else:
+                foot_center_x.append(np.nan)
+        else:
+            foot_center_x.append(np.nan)
     local_minima_candidates = [] if debug_gap_recovery else None
+    local_motion_flags = []
 
     def keep_recent_pending(current_candidate_frame):
         min_frame = current_candidate_frame - enter_window_frames
@@ -971,15 +1145,38 @@ def detect_jump_events_offline(
             prominence_right = max(right_neighbors) - hip_series[candidate_idx]
             prominence = min(prominence_left, prominence_right)
             strength_ratio = prominence / max(adaptive_threshold, 1e-9)
-            foot_prominence = get_local_min_prominence(
-                foot_center_y,
-                candidate_idx,
-                prominence_window,
+            motion_signature = evaluate_foot_motion_signature(
+                candidate_idx=candidate_idx,
+                left_foot_y=left_foot_y,
+                right_foot_y=right_foot_y,
+                foot_center_y=foot_center_y,
+                foot_center_x=foot_center_x,
+                prominence_window=prominence_window,
+                foot_lift_min_prominence=foot_lift_min_prominence,
+                both_feet_min_prominence=STRICT_BOTH_FEET_MIN_PROMINENCE,
+                feet_symmetry_min_ratio=STRICT_FEET_SYMMETRY_MIN_RATIO,
+                foot_sync_window=STRICT_FOOT_SYNC_WINDOW,
+                foot_sync_min_corr=STRICT_FOOT_SYNC_MIN_CORR,
+                require_inplace=STRICT_REQUIRE_INPLACE,
+                inplace_window=STRICT_INPLACE_WINDOW,
+                inplace_max_center_drift=STRICT_INPLACE_MAX_CENTER_DRIFT,
             )
-            foot_motion_strict_ok = (
-                (foot_prominence is not None)
-                and (foot_prominence >= foot_lift_min_prominence)
-            )
+            foot_prominence = motion_signature["foot_prominence"]
+            foot_motion_strict_ok = bool(motion_signature["strict_motion_ok"])
+            recent_motion_ratio = 0.0
+            recent_motion_true_count = 0
+            if is_local_min:
+                local_motion_flags.append(bool(foot_motion_strict_ok))
+                motion_window = max(1, int(STRICT_ACTIVE_FOOT_MOTION_WINDOW))
+                if len(local_motion_flags) > (motion_window * 4):
+                    local_motion_flags = local_motion_flags[-(motion_window * 4):]
+                recent_slice = local_motion_flags[-motion_window:]
+                recent_motion_true_count = int(sum(1 for flag in recent_slice if flag))
+                recent_motion_ratio = (
+                    float(recent_motion_true_count) / float(len(recent_slice))
+                    if recent_slice
+                    else 0.0
+                )
             candidate_frame = frame_numbers[candidate_idx]
             if candidate_frame < startup_lockout_frames:
                 last_processed_minima_idx = candidate_idx
@@ -996,17 +1193,14 @@ def detect_jump_events_offline(
             elif rope_dual_flag_series:
                 rope_dual_ratio = get_true_ratio(rope_dual_flag_series, candidate_idx, rope_active_window_frames)
             foot_motion_ok = foot_motion_strict_ok
-            if strict_guards_enabled and not foot_motion_ok:
-                if is_active:
-                    strong_rope_override = (
-                        rope_ratio >= max(0.20, float(ROPE_ACTIVE_MIN_RATIO) * 2.0)
-                    )
-                else:
-                    strong_rope_override = (
-                        rope_ratio >= max(0.28, float(ROPE_ENTRY_MIN_RATIO) * 1.8)
-                        and rope_dual_ratio >= max(0.08, float(ROPE_ENTRY_DUAL_MIN_RATIO) * 2.0)
-                    )
-                foot_motion_ok = strong_rope_override
+            if strict_guards_enabled and is_active:
+                foot_motion_ok = True
+            elif strict_guards_enabled and not foot_motion_ok:
+                strong_rope_override = (
+                    rope_ratio >= max(0.28, float(ROPE_ENTRY_MIN_RATIO) * 1.8)
+                    and rope_dual_ratio >= max(0.08, float(ROPE_ENTRY_DUAL_MIN_RATIO) * 2.0)
+                )
+                foot_motion_ok = bool(strong_rope_override)
             if not strict_guards_enabled:
                 foot_motion_ok = True
             if debug_gap_recovery and is_local_min:
@@ -1018,6 +1212,30 @@ def detect_jump_events_offline(
                         "foot_prominence": (
                             float(foot_prominence) if foot_prominence is not None else np.nan
                         ),
+                        "left_foot_prominence": (
+                            float(motion_signature["left_foot_prominence"])
+                            if motion_signature["left_foot_prominence"] is not None
+                            else np.nan
+                        ),
+                        "right_foot_prominence": (
+                            float(motion_signature["right_foot_prominence"])
+                            if motion_signature["right_foot_prominence"] is not None
+                            else np.nan
+                        ),
+                        "feet_symmetry_ratio": float(motion_signature["feet_symmetry_ratio"]),
+                        "foot_sync_corr": (
+                            float(motion_signature["foot_sync_corr"])
+                            if motion_signature["foot_sync_corr"] is not None
+                            else np.nan
+                        ),
+                        "center_x_drift": (
+                            float(motion_signature["center_x_drift"])
+                            if motion_signature["center_x_drift"] is not None
+                            else np.nan
+                        ),
+                        "recent_motion_ratio": float(recent_motion_ratio),
+                        "recent_motion_true_count": int(recent_motion_true_count),
+                        "motion_signature_ok": bool(motion_signature["strict_motion_ok"]),
                         "foot_motion_ok": bool(foot_motion_ok),
                         "rope_ratio": float(rope_ratio),
                         "rope_dual_ratio": float(rope_dual_ratio),
