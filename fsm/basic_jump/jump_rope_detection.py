@@ -47,14 +47,16 @@ def has_stable_entry_cadence(pending_candidates, min_events, max_gap_frames, max
     return cadence_cv <= float(max_cv)
 
 
-def choose_entry_backfill_tail_count(pending_candidates):
+def choose_entry_backfill_tail_count(pending_candidates, active_enter_min_events=None):
     default_tail = max(1, int(ACTIVE_ENTER_CONFIRM_TAIL_EVENTS))
     if not ENABLE_ADAPTIVE_ENTRY_BACKFILL:
         return default_tail
     if not pending_candidates:
         return default_tail
 
-    recent_count = max(1, int(ACTIVE_ENTER_MIN_EVENTS))
+    if active_enter_min_events is None:
+        active_enter_min_events = ACTIVE_ENTER_MIN_EVENTS
+    recent_count = max(1, int(active_enter_min_events))
     recent = pending_candidates[-recent_count:]
     rope_values = [
         float(item["rope_ratio"])
@@ -850,6 +852,8 @@ def detect_jump_events_offline(
     landing_offset_ms,
     event_time_bias_ms,
     min_strength_ratio,
+    startup_lockout_seconds=STARTUP_LOCKOUT_SECONDS,
+    active_enter_min_events=ACTIVE_ENTER_MIN_EVENTS,
     rope_flag_series=None,
     rope_dual_flag_series=None,
     adaptive_threshold_series=None,
@@ -859,6 +863,8 @@ def detect_jump_events_offline(
     debug_tag="",
     debug_capture=None,
 ):
+    startup_lockout_seconds = float(startup_lockout_seconds)
+    active_enter_min_events = max(1, int(active_enter_min_events))
     detected_events = []
     last_processed_minima_idx = -1
     last_jump_frame = -10**9
@@ -867,7 +873,7 @@ def detect_jump_events_offline(
     enter_window_frames = max(1, int(round(fps * ACTIVE_ENTER_WINDOW_SECONDS)))
     active_enter_max_gap_frames = max(1, int(round(fps * ACTIVE_ENTER_MAX_GAP_SECONDS)))
     candidate_exit_idle_frames = max(enter_window_frames, int(round(fps * ACTIVE_EXIT_IDLE_SECONDS)))
-    startup_lockout_frames = max(0, int(round(fps * STARTUP_LOCKOUT_SECONDS)))
+    startup_lockout_frames = max(0, int(round(fps * startup_lockout_seconds)))
     rope_active_window_frames = max(1, int(round(fps * ROPE_ACTIVE_WINDOW_SECONDS)))
     rope_exit_idle_frames = max(1, int(round(fps * ROPE_EXIT_IDLE_SECONDS)))
     is_active = False
@@ -1015,12 +1021,15 @@ def detect_jump_events_offline(
                     pending_candidates = keep_recent_pending(candidate_frame)
                     if has_stable_entry_cadence(
                         pending_candidates,
-                        min_events=ACTIVE_ENTER_MIN_EVENTS,
+                        min_events=active_enter_min_events,
                         max_gap_frames=active_enter_max_gap_frames,
                         max_cv=ACTIVE_ENTER_CADENCE_MAX_CV,
                     ):
                         is_active = True
-                        tail_n = choose_entry_backfill_tail_count(pending_candidates)
+                        tail_n = choose_entry_backfill_tail_count(
+                            pending_candidates,
+                            active_enter_min_events=active_enter_min_events,
+                        )
                         if tail_n > 0:
                             for confirmed in pending_candidates[-tail_n:]:
                                 detected_events.append(

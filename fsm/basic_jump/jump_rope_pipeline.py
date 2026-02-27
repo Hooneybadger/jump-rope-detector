@@ -24,6 +24,49 @@ from jump_rope_settings import *
 
 mp_drawing = mp.solutions.drawing_utils
 mp_pose = mp.solutions.pose
+
+
+def _is_landmark_reliable(landmarks, landmark_idx, min_visibility):
+    if landmark_idx < 0 or landmark_idx >= len(landmarks):
+        return False
+    landmark = landmarks[landmark_idx]
+    visibility = getattr(landmark, "visibility", 1.0)
+    try:
+        visibility = float(visibility)
+    except (TypeError, ValueError):
+        visibility = 0.0
+    if visibility < float(min_visibility):
+        return False
+    x = float(landmark.x)
+    y = float(landmark.y)
+    return (
+        np.isfinite(x)
+        and np.isfinite(y)
+        and -0.25 <= x <= 1.25
+        and -0.25 <= y <= 1.25
+    )
+
+
+def has_reliable_lower_body(landmarks, min_visibility):
+    hips_ok = (
+        _is_landmark_reliable(landmarks, mp_pose.PoseLandmark.LEFT_HIP.value, min_visibility)
+        and _is_landmark_reliable(landmarks, mp_pose.PoseLandmark.RIGHT_HIP.value, min_visibility)
+    )
+    if not hips_ok:
+        return False
+    left_leg_ok = (
+        _is_landmark_reliable(landmarks, mp_pose.PoseLandmark.LEFT_KNEE.value, min_visibility)
+        and _is_landmark_reliable(landmarks, mp_pose.PoseLandmark.LEFT_ANKLE.value, min_visibility)
+        and _is_landmark_reliable(landmarks, mp_pose.PoseLandmark.LEFT_FOOT_INDEX.value, min_visibility)
+    )
+    right_leg_ok = (
+        _is_landmark_reliable(landmarks, mp_pose.PoseLandmark.RIGHT_KNEE.value, min_visibility)
+        and _is_landmark_reliable(landmarks, mp_pose.PoseLandmark.RIGHT_ANKLE.value, min_visibility)
+        and _is_landmark_reliable(landmarks, mp_pose.PoseLandmark.RIGHT_FOOT_INDEX.value, min_visibility)
+    )
+    return left_leg_ok or right_leg_ok
+
+
 def run_pipeline(
     mode,
     target_stem=None,
@@ -55,6 +98,25 @@ def run_pipeline(
         file_path = job["video_path"]
         capture_source = job.get("capture_source", file_path)
         is_realtime = bool(job.get("is_realtime", False))
+        strict_realtime_mode = bool(is_realtime and REALTIME_STRICT_GUARDS)
+        runtime_min_strength_ratio = float(MIN_STRENGTH_RATIO)
+        runtime_enter_min_events = int(ACTIVE_ENTER_MIN_EVENTS)
+        runtime_startup_lockout_seconds = float(STARTUP_LOCKOUT_SECONDS)
+        runtime_require_dual_rope = bool(strict_realtime_mode and REALTIME_STRICT_REQUIRE_DUAL_ROPE)
+        runtime_lower_body_vis_min = float(REALTIME_STRICT_LOWER_BODY_VIS_MIN)
+        if strict_realtime_mode:
+            runtime_min_strength_ratio = max(
+                runtime_min_strength_ratio,
+                float(REALTIME_STRICT_MIN_STRENGTH_RATIO),
+            )
+            runtime_enter_min_events = max(
+                runtime_enter_min_events,
+                int(REALTIME_STRICT_ENTER_MIN_EVENTS),
+            )
+            runtime_startup_lockout_seconds = max(
+                runtime_startup_lockout_seconds,
+                float(REALTIME_STRICT_STARTUP_LOCKOUT_SECONDS),
+            )
         label_path = job.get("label_path")
     
         if label_path:
@@ -69,6 +131,15 @@ def run_pipeline(
     
         if is_realtime:
             print(f"\n[PROCESS] realtime camera index={capture_source}")
+            if strict_realtime_mode:
+                print(
+                    "[INFO] realtime_strict_guards=true "
+                    f"lower_body_vis_min={runtime_lower_body_vis_min:.2f} "
+                    f"require_dual_rope={runtime_require_dual_rope} "
+                    f"min_strength_ratio={runtime_min_strength_ratio:.2f} "
+                    f"enter_min_events={runtime_enter_min_events} "
+                    f"startup_lockout_s={runtime_startup_lockout_seconds:.2f}"
+                )
         else:
             print(f"\n[PROCESS] {file_path}")
     
@@ -151,7 +222,7 @@ def run_pipeline(
         enter_window_frames = max(1, int(round(fps * ACTIVE_ENTER_WINDOW_SECONDS)))
         active_enter_max_gap_frames = max(1, int(round(fps * ACTIVE_ENTER_MAX_GAP_SECONDS)))
         exit_idle_frames = max(enter_window_frames, int(round(fps * ACTIVE_EXIT_IDLE_SECONDS)))
-        startup_lockout_frames = max(0, int(round(fps * STARTUP_LOCKOUT_SECONDS)))
+        startup_lockout_frames = max(0, int(round(fps * runtime_startup_lockout_seconds)))
         is_active = False
         pending_candidates = []
         last_valid_candidate_frame = -10**9
@@ -223,8 +294,10 @@ def run_pipeline(
     
                     last_frame_shape = frame.shape
                     pose_detected = False
+                    lower_body_reliable = False
                     rope_detected_this_frame = False
                     rope_dual_detected_this_frame = False
+                    effective_rope_detected_this_frame = False
     
                     if processed_frames % 300 == 0:
                         elapsed = time.time() - start_time
@@ -235,6 +308,15 @@ def run_pipeline(
                         if results is None or results.pose_landmarks is None:
                             raise ValueError("no_pose")
                         landmarks = results.pose_landmarks.landmark
+                        if strict_realtime_mode:
+                            lower_body_reliable = has_reliable_lower_body(
+                                landmarks,
+                                runtime_lower_body_vis_min,
+                            )
+                            if not lower_body_reliable:
+                                raise ValueError("lower_body_unreliable")
+                        else:
+                            lower_body_reliable = True
     
                         hip_center_y.append((landmarks[23].y + landmarks[24].y) * 0.5)
                         left_foot_x.append(landmarks[31].x)
@@ -302,7 +384,7 @@ def run_pipeline(
                             if (
                                 (not startup_locked)
                                 and is_local_min
-                                and strength_ratio >= MIN_STRENGTH_RATIO
+                                and strength_ratio >= runtime_min_strength_ratio
                                 and is_far_enough
                                 and rope_active
                             ):
@@ -347,12 +429,15 @@ def run_pipeline(
                                     ]
                                     if has_stable_entry_cadence(
                                         pending_candidates,
-                                        min_events=ACTIVE_ENTER_MIN_EVENTS,
+                                        min_events=runtime_enter_min_events,
                                         max_gap_frames=active_enter_max_gap_frames,
                                         max_cv=ACTIVE_ENTER_CADENCE_MAX_CV,
                                     ):
                                         is_active = True
-                                        tail_n = choose_entry_backfill_tail_count(pending_candidates)
+                                        tail_n = choose_entry_backfill_tail_count(
+                                            pending_candidates,
+                                            active_enter_min_events=runtime_enter_min_events,
+                                        )
                                         if tail_n > 0:
                                             for confirmed in pending_candidates[-tail_n:]:
                                                 jump_counter += 1
@@ -474,19 +559,23 @@ def run_pipeline(
                                 break
                         rope_detected_this_frame = left_roi_hit or right_roi_hit
                         rope_dual_detected_this_frame = left_roi_hit and right_roi_hit
+                        effective_rope_detected_this_frame = rope_detected_this_frame
+                        if runtime_require_dual_rope:
+                            effective_rope_detected_this_frame = rope_dual_detected_this_frame
     
                         cv2.rectangle(image, (e1 - 20, f1 + 10), (e1 + 60, f1 + 70), (0, 255, 0), 2)
                         cv2.rectangle(image, (m1 - 70, n1 + 10), (m1 + 10, n1 + 70), (0, 255, 0), 2)
     
-                    if rope_detected_this_frame:
-                        cv2.putText(image, "Flag: Rope", (10, 90), cv2.FONT_HERSHEY_SIMPLEX, 1, (0, 255, 0), 2)
+                    rope_label = "Flag: Rope(Dual)" if runtime_require_dual_rope else "Flag: Rope"
+                    if effective_rope_detected_this_frame:
+                        cv2.putText(image, rope_label, (10, 90), cv2.FONT_HERSHEY_SIMPLEX, 1, (0, 255, 0), 2)
                     else:
                         cv2.putText(image, "Flag: No Rope", (10, 90), cv2.FONT_HERSHEY_SIMPLEX, 1, (0, 0, 255), 2)
     
                     if pose_detected:
-                        rope_flag_series.append(rope_detected_this_frame)
+                        rope_flag_series.append(effective_rope_detected_this_frame)
                         rope_dual_flag_series.append(rope_dual_detected_this_frame)
-                        if rope_detected_this_frame:
+                        if effective_rope_detected_this_frame:
                             last_rope_active_frame = landmark_frame_numbers[-1]
     
                     if image is not None:
@@ -530,9 +619,11 @@ def run_pipeline(
             min_jump_gap_seconds=MIN_JUMP_GAP_SECONDS,
             landing_offset_ms=LANDING_OFFSET_MS,
             event_time_bias_ms=EVENT_TIME_BIAS_MS,
-            min_strength_ratio=MIN_STRENGTH_RATIO,
+            min_strength_ratio=runtime_min_strength_ratio,
             rope_flag_series=rope_flag_series,
             rope_dual_flag_series=rope_dual_flag_series,
+            startup_lockout_seconds=runtime_startup_lockout_seconds,
+            active_enter_min_events=runtime_enter_min_events,
         )
         selected_events = sorted(selected_events, key=lambda event: int(event["frame"]))
         for idx, event in enumerate(selected_events, start=1):
