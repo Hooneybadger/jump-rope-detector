@@ -26,6 +26,26 @@ def precompute_true_ratio_series(flags, window_size):
     return ratio_series.tolist()
 
 
+def get_local_min_prominence(series, candidate_idx, window_size):
+    if candidate_idx < 1 or (candidate_idx + 1) >= len(series):
+        return None
+    window_size = max(1, int(window_size))
+    center = float(series[candidate_idx])
+    if not np.isfinite(center):
+        return None
+    left_start = max(0, candidate_idx - window_size)
+    right_end = min(len(series), candidate_idx + 1 + window_size)
+    left_neighbors = np.array(series[left_start:candidate_idx], dtype=np.float32)
+    right_neighbors = np.array(series[candidate_idx + 1:right_end], dtype=np.float32)
+    left_neighbors = left_neighbors[np.isfinite(left_neighbors)]
+    right_neighbors = right_neighbors[np.isfinite(right_neighbors)]
+    if left_neighbors.size == 0 or right_neighbors.size == 0:
+        return None
+    prominence_left = float(np.max(left_neighbors) - center)
+    prominence_right = float(np.max(right_neighbors) - center)
+    return float(min(prominence_left, prominence_right))
+
+
 def has_stable_entry_cadence(pending_candidates, min_events, max_gap_frames, max_cv):
     if len(pending_candidates) < min_events:
         return False
@@ -852,8 +872,10 @@ def detect_jump_events_offline(
     landing_offset_ms,
     event_time_bias_ms,
     min_strength_ratio,
+    strict_guards_enabled=STRICT_GUARDS,
     startup_lockout_seconds=STARTUP_LOCKOUT_SECONDS,
     active_enter_min_events=ACTIVE_ENTER_MIN_EVENTS,
+    foot_lift_min_prominence=STRICT_FOOT_LIFT_MIN_PROMINENCE,
     rope_flag_series=None,
     rope_dual_flag_series=None,
     adaptive_threshold_series=None,
@@ -863,8 +885,10 @@ def detect_jump_events_offline(
     debug_tag="",
     debug_capture=None,
 ):
+    strict_guards_enabled = bool(strict_guards_enabled)
     startup_lockout_seconds = float(startup_lockout_seconds)
     active_enter_min_events = max(1, int(active_enter_min_events))
+    foot_lift_min_prominence = float(foot_lift_min_prominence)
     detected_events = []
     last_processed_minima_idx = -1
     last_jump_frame = -10**9
@@ -887,6 +911,17 @@ def detect_jump_events_offline(
     recovery_candidates = []
     if frame_timestamps_ms is None:
         frame_timestamps_ms = []
+    foot_center_y = []
+    for idx in range(len(hip_series)):
+        if idx < len(left_foot_y) and idx < len(right_foot_y):
+            left_val = float(left_foot_y[idx])
+            right_val = float(right_foot_y[idx])
+            if np.isfinite(left_val) and np.isfinite(right_val):
+                foot_center_y.append((left_val + right_val) * 0.5)
+            else:
+                foot_center_y.append(np.nan)
+        else:
+            foot_center_y.append(np.nan)
     local_minima_candidates = [] if debug_gap_recovery else None
 
     def keep_recent_pending(current_candidate_frame):
@@ -936,6 +971,15 @@ def detect_jump_events_offline(
             prominence_right = max(right_neighbors) - hip_series[candidate_idx]
             prominence = min(prominence_left, prominence_right)
             strength_ratio = prominence / max(adaptive_threshold, 1e-9)
+            foot_prominence = get_local_min_prominence(
+                foot_center_y,
+                candidate_idx,
+                prominence_window,
+            )
+            foot_motion_strict_ok = (
+                (foot_prominence is not None)
+                and (foot_prominence >= foot_lift_min_prominence)
+            )
             candidate_frame = frame_numbers[candidate_idx]
             if candidate_frame < startup_lockout_frames:
                 last_processed_minima_idx = candidate_idx
@@ -951,18 +995,40 @@ def detect_jump_events_offline(
                 rope_dual_ratio = float(rope_dual_ratio_series[candidate_idx])
             elif rope_dual_flag_series:
                 rope_dual_ratio = get_true_ratio(rope_dual_flag_series, candidate_idx, rope_active_window_frames)
+            foot_motion_ok = foot_motion_strict_ok
+            if strict_guards_enabled and not foot_motion_ok:
+                if is_active:
+                    strong_rope_override = (
+                        rope_ratio >= max(0.20, float(ROPE_ACTIVE_MIN_RATIO) * 2.0)
+                    )
+                else:
+                    strong_rope_override = (
+                        rope_ratio >= max(0.28, float(ROPE_ENTRY_MIN_RATIO) * 1.8)
+                        and rope_dual_ratio >= max(0.08, float(ROPE_ENTRY_DUAL_MIN_RATIO) * 2.0)
+                    )
+                foot_motion_ok = strong_rope_override
+            if not strict_guards_enabled:
+                foot_motion_ok = True
             if debug_gap_recovery and is_local_min:
                 local_minima_candidates.append(
                     {
                         "candidate_idx": candidate_idx,
                         "candidate_frame": candidate_frame,
                         "strength_ratio": float(strength_ratio),
+                        "foot_prominence": (
+                            float(foot_prominence) if foot_prominence is not None else np.nan
+                        ),
+                        "foot_motion_ok": bool(foot_motion_ok),
                         "rope_ratio": float(rope_ratio),
                         "rope_dual_ratio": float(rope_dual_ratio),
                     }
                 )
             if is_active:
-                rope_active = rope_ratio >= ROPE_ACTIVE_MIN_RATIO
+                active_dual_ok = (
+                    ROPE_ACTIVE_DUAL_MIN_RATIO <= 0.0
+                    or rope_dual_ratio >= ROPE_ACTIVE_DUAL_MIN_RATIO
+                )
+                rope_active = rope_ratio >= ROPE_ACTIVE_MIN_RATIO and active_dual_ok
             else:
                 entry_dual_ok = (
                     ROPE_ENTRY_DUAL_MIN_RATIO <= 0.0
@@ -973,7 +1039,11 @@ def detect_jump_events_offline(
                     and entry_dual_ok
                 )
 
-            if is_local_min and strength_ratio >= (float(min_strength_ratio) * float(GAP_RECOVERY_STRENGTH_SCALE)):
+            if (
+                is_local_min
+                and foot_motion_ok
+                and strength_ratio >= (float(min_strength_ratio) * float(GAP_RECOVERY_STRENGTH_SCALE))
+            ):
                 recovery_candidates.append(
                     {
                         "candidate_idx": candidate_idx,
@@ -984,7 +1054,13 @@ def detect_jump_events_offline(
                     }
                 )
 
-            if is_local_min and strength_ratio >= min_strength_ratio and is_far_enough and rope_active:
+            if (
+                is_local_min
+                and foot_motion_ok
+                and strength_ratio >= min_strength_ratio
+                and is_far_enough
+                and rope_active
+            ):
                 last_jump_frame = candidate_frame
                 last_valid_candidate_frame = candidate_frame
                 candidate_info = {
