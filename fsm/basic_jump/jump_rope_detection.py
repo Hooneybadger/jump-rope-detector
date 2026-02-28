@@ -1163,10 +1163,14 @@ def detect_jump_events_offline(
             )
             foot_prominence = motion_signature["foot_prominence"]
             foot_motion_strict_ok = bool(motion_signature["strict_motion_ok"])
+            loose_foot_motion_ok = (
+                (foot_prominence is not None)
+                and (float(foot_prominence) >= float(STRICT_ACTIVE_LOOSE_FOOT_PROMINENCE))
+            )
             recent_motion_ratio = 0.0
             recent_motion_true_count = 0
             if is_local_min:
-                local_motion_flags.append(bool(foot_motion_strict_ok))
+                local_motion_flags.append(bool(loose_foot_motion_ok))
                 motion_window = max(1, int(STRICT_ACTIVE_FOOT_MOTION_WINDOW))
                 if len(local_motion_flags) > (motion_window * 4):
                     local_motion_flags = local_motion_flags[-(motion_window * 4):]
@@ -1193,8 +1197,35 @@ def detect_jump_events_offline(
             elif rope_dual_flag_series:
                 rope_dual_ratio = get_true_ratio(rope_dual_flag_series, candidate_idx, rope_active_window_frames)
             foot_motion_ok = foot_motion_strict_ok
+            anti_walk_detected = False
             if strict_guards_enabled and is_active:
-                foot_motion_ok = True
+                active_history_ok = (
+                    recent_motion_true_count >= max(0, int(STRICT_ACTIVE_FOOT_MOTION_MIN_TRUE))
+                    and recent_motion_ratio >= float(STRICT_ACTIVE_FOOT_MOTION_MIN_RATIO)
+                )
+                strong_active_override = (
+                    rope_ratio >= float(STRICT_ACTIVE_FOOT_MOTION_ROPE_MIN_RATIO)
+                    and rope_dual_ratio >= float(STRICT_ACTIVE_FOOT_MOTION_DUAL_MIN_RATIO)
+                )
+                if STRICT_ACTIVE_ANTI_WALK_ENABLED:
+                    foot_sync_corr = motion_signature.get("foot_sync_corr")
+                    center_x_drift = motion_signature.get("center_x_drift")
+                    walk_sync = (
+                        foot_sync_corr is not None
+                        and float(foot_sync_corr) <= float(STRICT_ACTIVE_WALK_MAX_SYNC_CORR)
+                    )
+                    walk_drift = (
+                        center_x_drift is not None
+                        and float(center_x_drift) >= float(STRICT_ACTIVE_WALK_MIN_CENTER_DRIFT)
+                        and (
+                            foot_sync_corr is None
+                            or float(foot_sync_corr) < 0.15
+                        )
+                    )
+                    anti_walk_detected = bool(walk_sync or walk_drift)
+                foot_motion_ok = bool(loose_foot_motion_ok or active_history_ok or strong_active_override)
+                if anti_walk_detected:
+                    foot_motion_ok = False
             elif strict_guards_enabled and not foot_motion_ok:
                 strong_rope_override = (
                     rope_ratio >= max(0.28, float(ROPE_ENTRY_MIN_RATIO) * 1.8)
@@ -1233,8 +1264,10 @@ def detect_jump_events_offline(
                             if motion_signature["center_x_drift"] is not None
                             else np.nan
                         ),
+                        "loose_foot_motion_ok": bool(loose_foot_motion_ok),
                         "recent_motion_ratio": float(recent_motion_ratio),
                         "recent_motion_true_count": int(recent_motion_true_count),
+                        "anti_walk_detected": bool(anti_walk_detected),
                         "motion_signature_ok": bool(motion_signature["strict_motion_ok"]),
                         "foot_motion_ok": bool(foot_motion_ok),
                         "rope_ratio": float(rope_ratio),
