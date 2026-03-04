@@ -29,8 +29,9 @@
 1. 큰 gap 구간 누락 복원 (`recover_missing_events_in_large_gaps`)
 2. 단일 미스 보간 (`recover_high_cadence_single_miss_gaps`)
 3. 시작/끝 작은 세그먼트 제거 (`prune_small_edge_segments`)
-4. 경계 저신뢰 이벤트 제거 (`prune_low_confidence_boundary_events`)
-5. 라벨 평가 시 tolerance/strict/adjusted 지표로 정량 검증 (`evaluate_detected_events`)
+4. dual ratio 기반 세그먼트 프루닝 (`prune_low_dual_ratio_segments`)
+5. 경계 저신뢰 이벤트 제거 (`prune_low_confidence_boundary_events`)
+6. 라벨 평가 시 tolerance/strict/adjusted 지표로 정량 검증 (`evaluate_detected_events`)
 
 ## 1. 전체 처리 파이프라인
 
@@ -101,7 +102,8 @@ rope evidence는 손목 주변 ROI + KNN foreground로 계산합니다.
 2. `recover_high_cadence_single_miss_gaps` (`ENABLE_HIGH_CADENCE_GAP_INTERP`)
 3. `recover_high_cadence_single_miss_gaps` long-run 설정 (`ENABLE_LONG_RUN_GAP_INTERP`)
 4. `prune_small_edge_segments` (`ENABLE_EDGE_SEGMENT_PRUNE`)
-5. `prune_low_confidence_boundary_events` (`ENABLE_BOUNDARY_CONF_PRUNE`)
+5. `prune_low_dual_ratio_segments` (`ENABLE_SEGMENT_DUAL_PRUNE`)
+6. `prune_low_confidence_boundary_events` (`ENABLE_BOUNDARY_CONF_PRUNE`)
 
 ### 3.1 Large-gap recovery
 
@@ -120,7 +122,15 @@ rope evidence는 손목 주변 ROI + KNN foreground로 계산합니다.
 - 큰 시간 간격으로 세그먼트 분할
 - 시작/끝의 짧은 세그먼트를 제거(메인 세그먼트가 충분히 긴 경우만)
 
-### 3.4 Boundary confidence prune
+### 3.4 Segment dual prune (zero-collapse guard 포함)
+
+- 세그먼트별 `rope_dual_ratio` 중앙값 + cadence 안정성(CV) 기반으로 저신뢰 세그먼트를 제거
+- 단, 과도한 규제로 모든 세그먼트가 제거되는 경우를 방지하기 위해 fallback 적용
+  - cadence 일관성이 있는 세그먼트를 우선 복구
+  - dual 결손이 큰 경우 저신뢰 이벤트를 소량 trim 하여 과탐 완화
+  - 결과적으로 `offline_refined=0`으로 붕괴하는 케이스를 방지
+
+### 3.5 Boundary confidence prune
 
 - 헤드/테일 이벤트의 rope ratio/dual ratio가 절대적으로 낮거나,
   인접 reference 프로파일 대비 상대적으로 낮으면 제거
@@ -175,9 +185,9 @@ rope evidence는 손목 주변 ROI + KNN foreground로 계산합니다.
 - `JR_ACTIVE_ENTER_CADENCE_MAX_CV=0.55`
 - `JR_ACTIVE_EXIT_IDLE_SECONDS=0.8`
 - `JR_ROPE_ACTIVE_WINDOW_SECONDS=0.6`
-- `JR_ROPE_ACTIVE_MIN_RATIO=0.10`
-- `JR_ROPE_ENTRY_MIN_RATIO=0.16`
-- `JR_ROPE_ENTRY_DUAL_MIN_RATIO=0.02`
+- `JR_ROPE_ACTIVE_MIN_RATIO=0.00`
+- `JR_ROPE_ENTRY_MIN_RATIO=0.00`
+- `JR_ROPE_ENTRY_DUAL_MIN_RATIO=0.00`
 - `JR_ROPE_EXIT_IDLE_SECONDS=0.8`
 
 ### 5.3 후처리 on/off
@@ -186,6 +196,10 @@ rope evidence는 손목 주변 ROI + KNN foreground로 계산합니다.
 - `JR_ENABLE_HIGH_CADENCE_GAP_INTERP=false`
 - `JR_ENABLE_LONG_RUN_GAP_INTERP=true`
 - `JR_ENABLE_EDGE_SEGMENT_PRUNE=true`
+- `JR_ENABLE_SEGMENT_DUAL_PRUNE=true`
+- `JR_SEGMENT_DUAL_PRUNE_MIN_MEDIAN=0.50`
+- `JR_ENABLE_SEGMENT_CADENCE_PRUNE=true`
+- `JR_SHORT_SEGMENT_CADENCE_MAX_CV=0.20`
 - `JR_ENABLE_BOUNDARY_CONF_PRUNE=true`
 
 ### 5.4 평가/출력
@@ -196,3 +210,38 @@ rope evidence는 손목 주변 ROI + KNN foreground로 계산합니다.
 - `JR_LABEL_WINDOW_PADDING_MS=150`
 - `JR_STRICT_IGNORE_GAP_CANDIDATES=true`
 - `JR_ENABLE_OVERLAY_REFRESH=true`
+- `JR_LIVE_OVERLAY_REFINED_COUNT=false` (기본 live 오버레이를 raw 카운트로 통일)
+- `JR_OVERLAY_END_WAIT_ENABLED=true` (영상 종료 후 overlay 값 안정화 대기)
+- `JR_OVERLAY_END_WAIT_SECONDS=1.5` (기본 대기 시간)
+- `JR_OVERLAY_END_WAIT_MAX_SECONDS=8.0` (최대 대기 상한)
+
+## 6. 최신 검증 결과 (2026-03-03)
+
+### 6.1 최신 realtime 세션 재검증
+
+대상 세션:
+
+- `basic_jump/output/realtime_demo_logs/realtime_cam0_20260302_224101`
+
+재현 방식:
+
+- `main_video.py --video-path .../raw.mp4`
+- `main_video.py --video-path .../tracked.mp4`
+
+결과:
+
+- raw 재생: `detected_count=20`
+- tracked 재생: `detected_count=20`
+
+### 6.2 labeled full(01~10) 결과
+
+검증 방식:
+
+- `main_label.py --target-stem 01..10` 개별 실행
+- strict/adjusted 지표 수집
+
+결과 요약:
+
+- 전 stem에서 `strict_f1=1.0`
+- 전 stem에서 `adjusted_f1=1.0`
+- `full_*` 지표는 일부 stem에서 1.0 미만(라벨 윈도우 바깥 extra 영향)이며 strict/adjusted 품질과 별도 관리

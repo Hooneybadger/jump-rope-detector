@@ -14,6 +14,9 @@ from jump_rope_detection import (
     get_adaptive_jump_threshold,
     get_true_ratio,
     has_stable_entry_cadence,
+    prune_low_confidence_boundary_events,
+    prune_low_dual_ratio_segments,
+    prune_small_edge_segments,
 )
 from jump_rope_eval import (
     evaluate_detected_events,
@@ -75,15 +78,111 @@ def has_reliable_lower_body(landmarks, min_visibility):
     return (left_reliable + right_reliable) >= 1
 
 
+def get_live_refined_overlay_count(
+    detected_jump_events,
+    current_frame_idx,
+    fps,
+    strict_guard_mode,
+):
+    if not detected_jump_events:
+        return 0
+
+    stable_tail_frames = max(0, int(round(float(REALTIME_OVERLAY_STABLE_TAIL_SECONDS) * float(fps))))
+    stable_frame_cutoff = int(current_frame_idx) - stable_tail_frames
+    stable_events = [
+        dict(event)
+        for event in detected_jump_events
+        if int(event.get("frame", -1)) <= stable_frame_cutoff
+    ]
+    if not stable_events:
+        return 0
+
+    stable_events = sorted(stable_events, key=lambda event: int(event["frame"]))
+    for idx, event in enumerate(stable_events, start=1):
+        event["count"] = idx
+
+    if ENABLE_EDGE_SEGMENT_PRUNE:
+        stable_events = prune_small_edge_segments(
+            detected_events=stable_events,
+            fps=fps,
+            split_gap_ratio=EDGE_SEGMENT_SPLIT_GAP_RATIO,
+            split_gap_seconds=EDGE_SEGMENT_SPLIT_GAP_SECONDS,
+            max_edge_events=EDGE_SEGMENT_MAX_EVENTS,
+            min_main_events=EDGE_SEGMENT_MIN_MAIN_EVENTS,
+            debug_capture=None,
+        )
+
+    if bool(strict_guard_mode) and ENABLE_SEGMENT_DUAL_PRUNE:
+        stable_events = prune_low_dual_ratio_segments(
+            detected_events=stable_events,
+            fps=fps,
+            split_gap_ratio=EDGE_SEGMENT_SPLIT_GAP_RATIO,
+            split_gap_seconds=EDGE_SEGMENT_SPLIT_GAP_SECONDS,
+            min_dual_median=SEGMENT_DUAL_PRUNE_MIN_MEDIAN,
+            max_segment_events_to_prune=SEGMENT_DUAL_PRUNE_MAX_SEGMENT_EVENTS,
+            min_segment_events_to_keep=SEGMENT_MIN_EVENTS,
+            enable_segment_cadence_prune=ENABLE_SEGMENT_CADENCE_PRUNE,
+            segment_cadence_max_cv=SEGMENT_CADENCE_MAX_CV,
+            short_segment_cadence_max_events=SHORT_SEGMENT_CADENCE_MAX_EVENTS,
+            short_segment_cadence_max_cv=SHORT_SEGMENT_CADENCE_MAX_CV,
+            enable_segment_dual_cadence_override=ENABLE_SEGMENT_DUAL_CADENCE_OVERRIDE,
+            segment_dual_cadence_override_min_events=SEGMENT_DUAL_CADENCE_OVERRIDE_MIN_EVENTS,
+            segment_dual_cadence_override_max_cv=SEGMENT_DUAL_CADENCE_OVERRIDE_MAX_CV,
+            debug_capture=None,
+        )
+
+    if ENABLE_BOUNDARY_CONF_PRUNE:
+        stable_events = prune_low_confidence_boundary_events(
+            detected_events=stable_events,
+            max_head_drop=BOUNDARY_HEAD_MAX_DROP,
+            max_tail_drop=BOUNDARY_TAIL_MAX_DROP,
+            min_events=BOUNDARY_PRUNE_MIN_EVENTS,
+            low_rope_ratio=BOUNDARY_LOW_ROPE_RATIO,
+            low_dual_ratio=BOUNDARY_LOW_DUAL_RATIO,
+            transition_min_rope_ratio=BOUNDARY_TRANSITION_MIN_ROPE_RATIO,
+            transition_min_dual_ratio=BOUNDARY_TRANSITION_MIN_DUAL_RATIO,
+            profile_window=BOUNDARY_PROFILE_WINDOW,
+            relative_factor=BOUNDARY_RELATIVE_FACTOR,
+            debug_capture=None,
+        )
+
+    if bool(strict_guard_mode) and int(SESSION_MIN_EVENTS) > 1:
+        if len(stable_events) < int(SESSION_MIN_EVENTS):
+            stable_events = []
+
+    return int(len(stable_events))
+
+
+def _sanitize_path_fragment(text):
+    if text is None:
+        return ""
+    cleaned = "".join(
+        ch if (ch.isascii() and (ch.isalnum() or ch in {"-", "_", "."})) else "_"
+        for ch in str(text).strip()
+    )
+    return cleaned.strip("._-")
+
+
 def run_pipeline(
     mode,
     target_stem=None,
     target_video_path=None,
     camera_index=0,
     realtime_fps_log_interval_s=1.0,
+    realtime_demo_log=False,
+    realtime_demo_log_dir=None,
+    realtime_demo_tag="",
+    realtime_demo_save_raw=False,
 ):
     run_mode = (mode or "labeled").strip().lower()
     realtime_fps_log_interval_s = max(0.0, float(realtime_fps_log_interval_s))
+    realtime_demo_log = bool(realtime_demo_log)
+    realtime_demo_save_raw = bool(realtime_demo_save_raw)
+    realtime_demo_tag = _sanitize_path_fragment(realtime_demo_tag)
+    if realtime_demo_log_dir:
+        realtime_demo_log_dir = os.path.abspath(str(realtime_demo_log_dir))
+    else:
+        realtime_demo_log_dir = ""
     summary_csv_name = get_summary_csv_name(run_mode)
 
     jobs = build_jobs_for_mode(
@@ -164,16 +263,46 @@ def run_pipeline(
                 f"require_adv_motion={runtime_require_advanced_motion} "
                 f"advanced_min_checks={runtime_motion_advanced_min_checks} "
                 f"active_motion_window={STRICT_ACTIVE_FOOT_MOTION_WINDOW} "
-                f"active_motion_min_ratio={STRICT_ACTIVE_FOOT_MOTION_MIN_RATIO:.2f}"
+                f"active_motion_min_ratio={STRICT_ACTIVE_FOOT_MOTION_MIN_RATIO:.2f} "
+                f"segment_dual_prune={ENABLE_SEGMENT_DUAL_PRUNE} "
+                f"segment_dual_min={SEGMENT_DUAL_PRUNE_MIN_MEDIAN:.2f} "
+                f"segment_dual_max_events={SEGMENT_DUAL_PRUNE_MAX_SEGMENT_EVENTS} "
+                f"segment_min_events={SEGMENT_MIN_EVENTS} "
+                f"segment_cadence_prune={ENABLE_SEGMENT_CADENCE_PRUNE} "
+                f"segment_cadence_max_cv={SEGMENT_CADENCE_MAX_CV:.2f} "
+                f"short_segment_max_events={SHORT_SEGMENT_CADENCE_MAX_EVENTS} "
+                f"short_segment_max_cv={SHORT_SEGMENT_CADENCE_MAX_CV:.2f} "
+                f"dual_cadence_override={ENABLE_SEGMENT_DUAL_CADENCE_OVERRIDE} "
+                f"dual_cadence_min_events={SEGMENT_DUAL_CADENCE_OVERRIDE_MIN_EVENTS} "
+                f"dual_cadence_max_cv={SEGMENT_DUAL_CADENCE_OVERRIDE_MAX_CV:.2f} "
+                f"live_overlay_refined={LIVE_OVERLAY_REFINED_COUNT} "
+                f"overlay_stable_tail_s={REALTIME_OVERLAY_STABLE_TAIL_SECONDS:.2f} "
+                f"session_min_events={SESSION_MIN_EVENTS}"
             )
     
-        os.makedirs(OUTPUT_DIR, exist_ok=True)
-        if is_realtime:
+        job_output_dir = OUTPUT_DIR
+        demo_session_dir = ""
+        frame_log_csv_path = ""
+        if is_realtime and realtime_demo_log:
             out_stamp = time.strftime("%Y%m%d_%H%M%S")
-            out_name = f"{stem}_{out_stamp}_tracked.mp4"
+            demo_root_dir = realtime_demo_log_dir or os.path.join(OUTPUT_DIR, "realtime_demo_logs")
+            tag_prefix = f"{realtime_demo_tag}_" if realtime_demo_tag else ""
+            session_name = f"{tag_prefix}{stem}_{out_stamp}"
+            demo_session_dir = os.path.join(demo_root_dir, session_name)
+            job_output_dir = demo_session_dir
+            frame_log_csv_path = os.path.join(demo_session_dir, "frame_log.csv")
+            print(f"[LOG] realtime demo session: {demo_session_dir}")
+
+        os.makedirs(job_output_dir, exist_ok=True)
+        if is_realtime:
+            if demo_session_dir:
+                out_name = "tracked.mp4"
+            else:
+                out_stamp = time.strftime("%Y%m%d_%H%M%S")
+                out_name = f"{stem}_{out_stamp}_tracked.mp4"
         else:
             out_name = os.path.splitext(os.path.basename(file_path))[0] + "_tracked.mp4"
-        out_path = os.path.join(OUTPUT_DIR, out_name)
+        out_path = os.path.join(job_output_dir, out_name)
         left_foot_x = []
         right_foot_x = []
         left_foot_y = []
@@ -206,6 +335,18 @@ def run_pipeline(
             print(f"[ERROR] Failed to open VideoWriter: {out_path}")
             cap.release()
             continue
+        raw_out = None
+        if demo_session_dir and realtime_demo_save_raw:
+            raw_out_path = os.path.join(demo_session_dir, "raw.mp4")
+            raw_out = cv2.VideoWriter(raw_out_path, fourcc, fps, (width, height))
+            if not raw_out.isOpened():
+                print(f"[WARN] Failed to open raw VideoWriter: {raw_out_path}")
+                raw_out.release()
+                raw_out = None
+            else:
+                print(f"[LOG] raw video: {raw_out_path}")
+        if frame_log_csv_path:
+            print(f"[LOG] frame log: {frame_log_csv_path}")
     
         match_tolerance_ms, frame_based_tolerance_ms = get_match_tolerance_ms(fps)
         print(f"[INFO] fps={fps:.2f} size={width}x{height} frames={num_frames}")
@@ -259,6 +400,7 @@ def run_pipeline(
         last_rope_active_frame = -10**9
         local_motion_flags = []
         last_frame_timestamp_ms = -1
+        frame_log_rows = []
     
     
     
@@ -370,6 +512,7 @@ def run_pipeline(
                     if is_active and (current_frame_idx - last_rope_active_frame) > rope_exit_idle_frames:
                         is_active = False
                         pending_candidates = []
+                    jump_counter_before = jump_counter
     
                     ### online minima counting for jumps (state-gated)
                     readings = hip_center_y
@@ -410,14 +553,26 @@ def run_pipeline(
                             )
                             foot_prominence = motion_signature["foot_prominence"]
                             foot_motion_strict_ok = bool(motion_signature["strict_motion_ok"])
+                            both_feet_lift_ok = bool(motion_signature.get("both_feet_lift_ok"))
+                            feet_symmetry_ok = bool(motion_signature.get("feet_symmetry_ok"))
+                            foot_sync_ok = bool(motion_signature.get("foot_sync_ok"))
                             loose_foot_motion_ok = (
                                 (foot_prominence is not None)
                                 and (float(foot_prominence) >= float(STRICT_ACTIVE_LOOSE_FOOT_PROMINENCE))
                             )
+                            relaxed_motion_gate_ok = bool(
+                                loose_foot_motion_ok
+                                and (both_feet_lift_ok or foot_sync_ok)
+                            )
+                            entry_motion_gate_ok = bool(
+                                foot_motion_strict_ok
+                                and both_feet_lift_ok
+                                and (feet_symmetry_ok or foot_sync_ok)
+                            )
                             recent_motion_ratio = 0.0
                             recent_motion_true_count = 0
                             if is_local_min:
-                                local_motion_flags.append(bool(loose_foot_motion_ok))
+                                local_motion_flags.append(bool(relaxed_motion_gate_ok))
                                 motion_window = max(1, int(STRICT_ACTIVE_FOOT_MOTION_WINDOW))
                                 if len(local_motion_flags) > (motion_window * 4):
                                     local_motion_flags = local_motion_flags[-(motion_window * 4):]
@@ -435,16 +590,20 @@ def run_pipeline(
                             is_far_enough = (candidate_frame - last_jump_frame) >= min_jump_gap_frames
                             rope_ratio = get_true_ratio(rope_flag_series, candidate_idx, rope_active_window_frames)
                             rope_dual_ratio = get_true_ratio(rope_dual_flag_series, candidate_idx, rope_active_window_frames)
+                            candidate_rope_flag = (
+                                candidate_idx < len(rope_flag_series)
+                                and bool(rope_flag_series[candidate_idx])
+                            )
+                            candidate_dual_rope_flag = (
+                                candidate_idx < len(rope_dual_flag_series)
+                                and bool(rope_dual_flag_series[candidate_idx])
+                            )
                             foot_motion_ok = foot_motion_strict_ok
                             anti_walk_detected = False
-                            if strict_guard_mode and is_active:
+                            if strict_guard_mode:
                                 active_history_ok = (
                                     recent_motion_true_count >= max(0, int(STRICT_ACTIVE_FOOT_MOTION_MIN_TRUE))
                                     and recent_motion_ratio >= float(STRICT_ACTIVE_FOOT_MOTION_MIN_RATIO)
-                                )
-                                strong_active_override = (
-                                    rope_ratio >= float(STRICT_ACTIVE_FOOT_MOTION_ROPE_MIN_RATIO)
-                                    and rope_dual_ratio >= float(STRICT_ACTIVE_FOOT_MOTION_DUAL_MIN_RATIO)
                                 )
                                 if STRICT_ACTIVE_ANTI_WALK_ENABLED:
                                     foot_sync_corr = motion_signature.get("foot_sync_corr")
@@ -461,16 +620,34 @@ def run_pipeline(
                                             or float(foot_sync_corr) < 0.15
                                         )
                                     )
-                                    anti_walk_detected = bool(walk_sync or walk_drift)
-                                foot_motion_ok = bool(loose_foot_motion_ok or active_history_ok or strong_active_override)
+                                    walk_unilateral = (
+                                        (not both_feet_lift_ok)
+                                        and center_x_drift is not None
+                                        and float(center_x_drift) >= float(STRICT_ACTIVE_WALK_MIN_CENTER_DRIFT) * 0.80
+                                        and (
+                                            foot_sync_corr is None
+                                            or float(foot_sync_corr) < 0.25
+                                        )
+                                    )
+                                    anti_walk_detected = bool(walk_sync or walk_drift or walk_unilateral)
+                                if is_active:
+                                    strong_active_override = (
+                                        rope_ratio >= float(STRICT_OVERRIDE_ACTIVE_MIN_ROPE_RATIO)
+                                        and rope_dual_ratio >= float(STRICT_OVERRIDE_ACTIVE_MIN_DUAL_RATIO)
+                                    )
+                                    foot_motion_ok = bool(
+                                        relaxed_motion_gate_ok
+                                        or active_history_ok
+                                        or strong_active_override
+                                    )
+                                else:
+                                    strong_entry_override = (
+                                        rope_ratio >= float(STRICT_OVERRIDE_ENTRY_MIN_ROPE_RATIO)
+                                        and rope_dual_ratio >= float(STRICT_OVERRIDE_ENTRY_MIN_DUAL_RATIO)
+                                    )
+                                    foot_motion_ok = bool(entry_motion_gate_ok or strong_entry_override)
                                 if anti_walk_detected:
                                     foot_motion_ok = False
-                            elif strict_guard_mode and not foot_motion_ok:
-                                strong_rope_override = (
-                                    rope_ratio >= max(0.28, float(ROPE_ENTRY_MIN_RATIO) * 1.8)
-                                    and rope_dual_ratio >= max(0.08, float(ROPE_ENTRY_DUAL_MIN_RATIO) * 2.0)
-                                )
-                                foot_motion_ok = bool(strong_rope_override)
                             if not strict_guard_mode:
                                 foot_motion_ok = True
                             if is_active:
@@ -479,6 +656,12 @@ def run_pipeline(
                                     or rope_dual_ratio >= ROPE_ACTIVE_DUAL_MIN_RATIO
                                 )
                                 rope_active = rope_ratio >= ROPE_ACTIVE_MIN_RATIO and active_dual_ok
+                                if strict_guard_mode and not candidate_rope_flag:
+                                    rope_active = bool(
+                                        rope_active
+                                        and rope_ratio >= float(STRICT_OVERRIDE_ACTIVE_MIN_ROPE_RATIO)
+                                        and rope_dual_ratio >= float(STRICT_OVERRIDE_ACTIVE_MIN_DUAL_RATIO)
+                                    )
                             else:
                                 entry_dual_ok = (
                                     ROPE_ENTRY_DUAL_MIN_RATIO <= 0.0
@@ -488,6 +671,15 @@ def run_pipeline(
                                     rope_ratio >= ROPE_ENTRY_MIN_RATIO
                                     and entry_dual_ok
                                 )
+                                if strict_guard_mode:
+                                    rope_active = bool(
+                                        rope_active
+                                        and candidate_rope_flag
+                                        and (
+                                            candidate_dual_rope_flag
+                                            or rope_dual_ratio >= float(STRICT_OVERRIDE_ENTRY_MIN_DUAL_RATIO)
+                                        )
+                                    )
                             if (
                                 (not startup_locked)
                                 and is_local_min
@@ -575,7 +767,18 @@ def run_pipeline(
                                         pending_candidates = []
                         last_processed_minima_idx = candidate_idx
     
-                    ankle_counter = jump_counter
+                    raw_jump_counter = int(jump_counter)
+                    overlay_jump_counter = raw_jump_counter
+                    overlay_counter_mode = "raw"
+                    if LIVE_OVERLAY_REFINED_COUNT:
+                        overlay_jump_counter = get_live_refined_overlay_count(
+                            detected_jump_events=detected_jump_events,
+                            current_frame_idx=current_frame_idx,
+                            fps=fps,
+                            strict_guard_mode=strict_guard_mode,
+                        )
+                        overlay_counter_mode = "refined"
+                    ankle_counter = int(overlay_jump_counter)
     
                     current_ts_ms = current_frame_ts_ms + DISPLAY_TIME_ADVANCE_MS
                     while (
@@ -584,10 +787,14 @@ def run_pipeline(
                     ):
                         label_progress_idx += 1
                     count_delta = ankle_counter - label_progress_idx
+                    raw_count_delta = raw_jump_counter - label_progress_idx
                     delta_color = (0, 180, 0) if count_delta == 0 else (0, 0, 255)
     
                     # Counter overlay
-                    cv2.putText(image, "Jumps", (image.shape[1] - 130, 30), cv2.FONT_HERSHEY_SIMPLEX, 0.8, (0, 0, 255), 2,
+                    jump_title = "Jumps"
+                    if LIVE_OVERLAY_REFINED_COUNT:
+                        jump_title = "Jumps*"
+                    cv2.putText(image, jump_title, (image.shape[1] - 130, 30), cv2.FONT_HERSHEY_SIMPLEX, 0.8, (0, 0, 255), 2,
                                 cv2.LINE_AA)
                     cv2.putText(image, str(ankle_counter),
                                 (image.shape[1] - 40, 30),
@@ -600,6 +807,17 @@ def run_pipeline(
                     cv2.putText(image, f"Delta {count_delta:+d}",
                                 (image.shape[1] - 220, 94),
                                 cv2.FONT_HERSHEY_SIMPLEX, 0.7, delta_color, 2, cv2.LINE_AA)
+                    if LIVE_OVERLAY_REFINED_COUNT:
+                        cv2.putText(
+                            image,
+                            "* refined live",
+                            (image.shape[1] - 220, 118),
+                            cv2.FONT_HERSHEY_SIMPLEX,
+                            0.55,
+                            (180, 180, 180),
+                            1,
+                            cv2.LINE_AA,
+                        )
     
                     # Frame index overlay
                     cv2.putText(image, 'Frame', (0, 20),
@@ -698,7 +916,32 @@ def run_pipeline(
                         rope_dual_flag_series.append(rope_dual_detected_this_frame)
                         if effective_rope_detected_this_frame:
                             last_rope_active_frame = landmark_frame_numbers[-1]
-    
+
+                    if frame_log_csv_path:
+                        frame_log_rows.append(
+                            {
+                                "frame": int(current_frame_idx),
+                                "timestamp_ms": int(current_frame_ts_ms),
+                                "pose_detected": int(bool(pose_detected)),
+                                "lower_body_reliable": int(bool(lower_body_reliable)),
+                                "rope_detected": int(bool(rope_detected_this_frame)),
+                                "rope_dual_detected": int(bool(rope_dual_detected_this_frame)),
+                                "effective_rope_detected": int(bool(effective_rope_detected_this_frame)),
+                                "is_active": int(bool(is_active)),
+                                "pending_candidates": int(len(pending_candidates)),
+                                "jump_counter": int(raw_jump_counter),
+                                "jump_increment": int(raw_jump_counter - jump_counter_before),
+                                "overlay_counter": int(ankle_counter),
+                                "overlay_counter_mode": overlay_counter_mode,
+                                "raw_count_delta": int(raw_count_delta),
+                                "label_progress": int(label_progress_idx),
+                                "count_delta": int(count_delta),
+                            }
+                        )
+
+                    if raw_out is not None:
+                        raw_out.write(frame)
+
                     if image is not None:
                         out.write(image)
     
@@ -712,8 +955,13 @@ def run_pipeline(
         finally:
             cap.release()
             out.release()
+            if raw_out is not None:
+                raw_out.release()
             if not HEADLESS:
                 cv2.destroyAllWindows()
+            if frame_log_csv_path:
+                pd.DataFrame(frame_log_rows).to_csv(frame_log_csv_path, index=False)
+                print(f"[LOG] frame log saved: {frame_log_csv_path} rows={len(frame_log_rows)}")
             elapsed = time.time() - start_time
             print(f"[DONE] {out_path} frames={processed_frames} elapsed={elapsed:.1f}s")
     
@@ -763,6 +1011,7 @@ def run_pipeline(
                     out_path,
                     selected_events,
                     [],
+                    raw_online_count=len(detected_jump_events),
                 )
                 if overlay_ok:
                     print(f"[POST] refreshed_count_overlay {overlay_message}")
@@ -771,7 +1020,7 @@ def run_pipeline(
             else:
                 print("[POST] skipped_count_overlay_refresh (JR_ENABLE_OVERLAY_REFRESH=false)")
     
-            detected_events_csv = os.path.join(OUTPUT_DIR, f"{stem}_detected_events.csv")
+            detected_events_csv = os.path.join(job_output_dir, f"{stem}_detected_events.csv")
             detected_rows = []
             for item in selected_events:
                 left_point = item.get("left_point", (np.nan, np.nan))
@@ -812,6 +1061,8 @@ def run_pipeline(
                     "missed_labels": 0,
                     "strict_extra_detected": len(selected_events),
                     "adjusted_extra_detected": len(selected_events),
+                    "full_strict_extra_detected": len(selected_events),
+                    "full_adjusted_extra_detected": len(selected_events),
                     "label_gap_candidates": 0,
                     "label_window_trim_removed": 0,
                     "label_gap_trim_removed": 0,
@@ -823,6 +1074,14 @@ def run_pipeline(
                     "adjusted_recall": np.nan,
                     "adjusted_f1": np.nan,
                     "adjusted_accuracy": np.nan,
+                    "full_strict_precision": np.nan,
+                    "full_strict_recall": np.nan,
+                    "full_strict_f1": np.nan,
+                    "full_strict_accuracy": np.nan,
+                    "full_adjusted_precision": np.nan,
+                    "full_adjusted_recall": np.nan,
+                    "full_adjusted_f1": np.nan,
+                    "full_adjusted_accuracy": np.nan,
                     "mean_abs_time_error_ms": np.nan,
                     "mean_left_point_error_px": np.nan,
                     "mean_right_point_error_px": np.nan,
@@ -842,6 +1101,7 @@ def run_pipeline(
                 out_path,
                 selected_events,
                 label_events,
+                raw_online_count=len(detected_jump_events),
             )
             if overlay_ok:
                 print(f"[POST] refreshed_count_overlay {overlay_message}")
@@ -858,16 +1118,26 @@ def run_pipeline(
         matched_events = selected_eval["matched_events"]
         strict_extra_detected = selected_eval["strict_extra_detected"]
         extra_detected = selected_eval["extra_detected"]
+        full_strict_extra_detected = selected_eval["full_strict_extra_detected"]
+        full_extra_detected = selected_eval["full_extra_detected"]
         gap_candidate_events = selected_eval["gap_candidate_events"]
         missed_labels = selected_eval["missed_labels"]
         strict_precision = selected_eval["strict_precision"]
         strict_recall = selected_eval["strict_recall"]
         strict_f1 = selected_eval["strict_f1"]
         strict_accuracy = selected_eval["strict_accuracy"]
+        full_strict_precision = selected_eval["full_strict_precision"]
+        full_strict_recall = selected_eval["full_strict_recall"]
+        full_strict_f1 = selected_eval["full_strict_f1"]
+        full_strict_accuracy = selected_eval["full_strict_accuracy"]
         precision = selected_eval["precision"]
         recall = selected_eval["recall"]
         f1 = selected_eval["f1"]
         accuracy = selected_eval["accuracy"]
+        full_precision = selected_eval["full_precision"]
+        full_recall = selected_eval["full_recall"]
+        full_f1 = selected_eval["full_f1"]
+        full_accuracy = selected_eval["full_accuracy"]
         mean_abs_time_error_ms = selected_eval["mean_abs_time_error_ms"]
         print("\n[COMPARE] label vs detected")
         print(
@@ -891,6 +1161,23 @@ def run_pipeline(
         print(
             f"[COMPARE] adjusted_precision={precision:.3f} adjusted_recall={recall:.3f} "
             f"adjusted_f1={f1:.3f} adjusted_accuracy={accuracy:.3f}"
+        )
+        print(
+            f"[COMPARE] full_strict_extra_detected={len(full_strict_extra_detected)} "
+            f"(includes_outside_window={len(outside_window_events)})"
+        )
+        print(
+            f"[COMPARE] full_strict_precision={full_strict_precision:.3f} "
+            f"full_strict_recall={full_strict_recall:.3f} "
+            f"full_strict_f1={full_strict_f1:.3f} "
+            f"full_strict_accuracy={full_strict_accuracy:.3f}"
+        )
+        print(
+            f"[COMPARE] full_adjusted_extra_detected={len(full_extra_detected)} "
+            f"full_adjusted_precision={full_precision:.3f} "
+            f"full_adjusted_recall={full_recall:.3f} "
+            f"full_adjusted_f1={full_f1:.3f} "
+            f"full_adjusted_accuracy={full_accuracy:.3f}"
         )
         mean_left_point_error_px = np.nan
         mean_right_point_error_px = np.nan
@@ -1004,7 +1291,7 @@ def run_pipeline(
                 }
             )
     
-        compare_csv = os.path.join(OUTPUT_DIR, f"{stem}_label_compare.csv")
+        compare_csv = os.path.join(job_output_dir, f"{stem}_label_compare.csv")
         pd.DataFrame(report_rows).to_csv(compare_csv, index=False)
         print(f"[COMPARE] Detailed report saved: {compare_csv}")
         overall_summary_rows.append(
@@ -1022,6 +1309,8 @@ def run_pipeline(
                 "missed_labels": len(missed_labels),
                 "strict_extra_detected": len(strict_extra_detected),
                 "adjusted_extra_detected": len(extra_detected),
+                "full_strict_extra_detected": len(full_strict_extra_detected),
+                "full_adjusted_extra_detected": len(full_extra_detected),
                 "label_gap_candidates": len(gap_candidate_events),
                 "label_window_trim_removed": 0,
                 "label_gap_trim_removed": 0,
@@ -1033,6 +1322,14 @@ def run_pipeline(
                 "adjusted_recall": recall,
                 "adjusted_f1": f1,
                 "adjusted_accuracy": accuracy,
+                "full_strict_precision": full_strict_precision,
+                "full_strict_recall": full_strict_recall,
+                "full_strict_f1": full_strict_f1,
+                "full_strict_accuracy": full_strict_accuracy,
+                "full_adjusted_precision": full_precision,
+                "full_adjusted_recall": full_recall,
+                "full_adjusted_f1": full_f1,
+                "full_adjusted_accuracy": full_accuracy,
                 "mean_abs_time_error_ms": mean_abs_time_error_ms,
                 "mean_left_point_error_px": mean_left_point_error_px,
                 "mean_right_point_error_px": mean_right_point_error_px,
@@ -1048,16 +1345,22 @@ def run_pipeline(
             "[SUMMARY] strict_f1_mean="
             f"{overall_summary_df['strict_f1'].mean():.3f} "
             f"strict_f1_min={overall_summary_df['strict_f1'].min():.3f} "
-            f"adjusted_f1_mean={overall_summary_df['adjusted_f1'].mean():.3f}"
+            f"adjusted_f1_mean={overall_summary_df['adjusted_f1'].mean():.3f} "
+            f"full_strict_f1_mean={overall_summary_df['full_strict_f1'].mean():.3f} "
+            f"full_adjusted_f1_mean={overall_summary_df['full_adjusted_f1'].mean():.3f}"
         )
         print("[SUMMARY] Per video:")
         for _, row in overall_summary_df.iterrows():
             print(
                 f"[SUMMARY] {row['video_stem']}: "
                 f"strict_f1={row['strict_f1']:.3f} adjusted_f1={row['adjusted_f1']:.3f} "
+                f"full_strict_f1={row['full_strict_f1']:.3f} "
+                f"full_adjusted_f1={row['full_adjusted_f1']:.3f} "
                 f"matched={int(row['matched'])}/{int(row['label_count'])} "
                 f"strict_extra={int(row['strict_extra_detected'])} "
                 f"adjusted_extra={int(row['adjusted_extra_detected'])} "
+                f"full_strict_extra={int(row['full_strict_extra_detected'])} "
+                f"full_adjusted_extra={int(row['full_adjusted_extra_detected'])} "
                 f"missed={int(row['missed_labels'])}"
             )
 

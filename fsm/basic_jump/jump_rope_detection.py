@@ -231,7 +231,7 @@ def has_stable_entry_cadence(pending_candidates, min_events, max_gap_frames, max
 
 
 def choose_entry_backfill_tail_count(pending_candidates, active_enter_min_events=None):
-    default_tail = max(1, int(ACTIVE_ENTER_CONFIRM_TAIL_EVENTS))
+    default_tail = max(0, int(ACTIVE_ENTER_CONFIRM_TAIL_EVENTS))
     if not ENABLE_ADAPTIVE_ENTRY_BACKFILL:
         return default_tail
     if not pending_candidates:
@@ -261,13 +261,15 @@ def choose_entry_backfill_tail_count(pending_candidates, active_enter_min_events
     )
     if very_low_conf_entry:
         return max(0, int(ENTRY_BACKFILL_VERY_LOW_CONF_TAIL_EVENTS))
+    high_conf_min_rope = float(ENTRY_BACKFILL_HIGH_CONF_MIN_ROPE_RATIO)
+    high_conf_min_dual = float(ENTRY_BACKFILL_HIGH_CONF_MIN_DUAL_RATIO)
     high_conf_entry = (
-        median_rope >= float(ENTRY_BACKFILL_HIGH_CONF_MIN_ROPE_RATIO)
-        and median_dual >= float(ENTRY_BACKFILL_HIGH_CONF_MIN_DUAL_RATIO)
+        median_rope >= high_conf_min_rope
+        and median_dual >= high_conf_min_dual
     )
     if high_conf_entry:
         return max(1, int(ENTRY_BACKFILL_HIGH_CONF_TAIL_EVENTS))
-    return max(1, int(ENTRY_BACKFILL_LOW_CONF_TAIL_EVENTS))
+    return max(0, int(ENTRY_BACKFILL_LOW_CONF_TAIL_EVENTS))
 
 
 def prune_low_confidence_boundary_events(
@@ -579,10 +581,15 @@ def recover_missing_events_in_large_gaps(
             and next_rope_ratio >= float(ROPE_ACTIVE_MIN_RATIO)
         )
         effective_min_rope_ratio = float(GAP_RECOVERY_MIN_ROPE_RATIO)
+        effective_min_dual_ratio = float(GAP_RECOVERY_MIN_DUAL_RATIO)
         if gap_ratio >= float(GAP_RECOVERY_LARGE_GAP_RATIO) and neighbor_rope_evidence:
             effective_min_rope_ratio = min(
                 effective_min_rope_ratio,
                 float(GAP_RECOVERY_RELAXED_MIN_ROPE_RATIO),
+            )
+            effective_min_dual_ratio = min(
+                effective_min_dual_ratio,
+                float(GAP_RECOVERY_RELAXED_MIN_DUAL_RATIO),
             )
 
         gap_record = None
@@ -610,6 +617,7 @@ def recover_missing_events_in_large_gaps(
                 "local_minima_in_gap": int(len(local_in_gap)),
                 "eligible_recovery_in_gap": int(len(recovery_in_gap)),
                 "effective_min_rope_ratio": float(effective_min_rope_ratio),
+                "effective_min_dual_ratio": float(effective_min_dual_ratio),
                 "neighbor_rope_evidence": bool(neighbor_rope_evidence),
                 "targets": [],
             }
@@ -632,6 +640,7 @@ def recover_missing_events_in_large_gaps(
             reject_stats = {
                 "low_strength": 0,
                 "low_rope": 0,
+                "low_dual": 0,
                 "boundary_guard": 0,
                 "dup_guard": 0,
                 "spacing_guard": 0,
@@ -645,6 +654,10 @@ def recover_missing_events_in_large_gaps(
                 candidate_rope_ratio = float(candidate.get("rope_ratio", 1.0))
                 if candidate_rope_ratio < effective_min_rope_ratio:
                     reject_stats["low_rope"] += 1
+                    continue
+                candidate_dual_ratio = float(candidate.get("rope_dual_ratio", 1.0))
+                if candidate_dual_ratio < effective_min_dual_ratio:
+                    reject_stats["low_dual"] += 1
                     continue
                 if candidate_frame <= (prev_event["frame"] + min_jump_gap_frames):
                     reject_stats["boundary_guard"] += 1
@@ -683,6 +696,7 @@ def recover_missing_events_in_large_gaps(
                                     "candidate_frame": int(item["candidate_frame"]),
                                     "strength_ratio": float(item["strength_ratio"]),
                                     "rope_ratio": float(item["rope_ratio"]),
+                                    "rope_dual_ratio": float(item.get("rope_dual_ratio", np.nan)),
                                 }
                                 for item in nearby
                             ]
@@ -769,6 +783,7 @@ def recover_high_cadence_single_miss_gaps(
     max_context_cv,
     duplicate_guard_frames,
     min_total_events=0,
+    max_missing_count=1,
     debug_key="high_cadence_gap_interp",
     debug_capture=None,
 ):
@@ -808,6 +823,7 @@ def recover_high_cadence_single_miss_gaps(
 
     context_window = max(1, int(context_window))
     duplicate_guard_frames = max(0, int(duplicate_guard_frames))
+    max_missing_count = max(1, int(max_missing_count))
     occupied_frames = set(int(frame) for frame in frames.tolist())
     new_events = []
     inserted_gap_frames = []
@@ -843,7 +859,7 @@ def recover_high_cadence_single_miss_gaps(
 
         rounded_ratio = int(round(gap_ratio))
         missing_count = rounded_ratio - 1
-        if missing_count != 1:
+        if missing_count < 1 or missing_count > max_missing_count:
             continue
         if abs(gap_ratio - float(rounded_ratio)) > float(round_tolerance):
             continue
@@ -855,47 +871,52 @@ def recover_high_cadence_single_miss_gaps(
         if next_frame <= prev_frame:
             continue
 
-        target_frame = int(round((prev_frame + next_frame) / 2.0))
-        if (target_frame - prev_frame) < int(min_jump_gap_frames):
+        target_frames = []
+        for step in range(1, missing_count + 1):
+            alpha_step = float(step) / float(missing_count + 1)
+            target_frames.append(
+                int(round(prev_frame + ((next_frame - prev_frame) * alpha_step)))
+            )
+        if len(set(target_frames)) != missing_count:
             continue
-        if (next_frame - target_frame) < int(min_jump_gap_frames):
+        frame_chain = [prev_frame] + sorted(target_frames) + [next_frame]
+        if any((frame_chain[i + 1] - frame_chain[i]) < int(min_jump_gap_frames) for i in range(len(frame_chain) - 1)):
             continue
-        if any(abs(target_frame - used) <= duplicate_guard_frames for used in occupied_frames):
+        if any(any(abs(target_frame - used) <= duplicate_guard_frames for used in occupied_frames) for target_frame in target_frames):
             continue
-
-        alpha = float(target_frame - prev_frame) / float(next_frame - prev_frame)
         prev_ts = int(prev_event.get("timestamp_ms", prev_frame))
         next_ts = int(next_event.get("timestamp_ms", next_frame))
-        target_ts = int(round(prev_ts + ((next_ts - prev_ts) * alpha)))
-
         prev_left = prev_event.get("left_point", (np.nan, np.nan))
         next_left = next_event.get("left_point", (np.nan, np.nan))
         prev_right = prev_event.get("right_point", (np.nan, np.nan))
         next_right = next_event.get("right_point", (np.nan, np.nan))
 
-        new_events.append(
-            {
-                "count": 0,
-                "frame": target_frame,
-                "timestamp_ms": target_ts,
-                "left_point": lerp_point(prev_left, next_left, alpha),
-                "right_point": lerp_point(prev_right, next_right, alpha),
-                "strength_ratio": min(
-                    safe_metric(prev_event, "strength_ratio", 1.0),
-                    safe_metric(next_event, "strength_ratio", 1.0),
-                ),
-                "rope_ratio": min(
-                    safe_metric(prev_event, "rope_ratio", 1.0),
-                    safe_metric(next_event, "rope_ratio", 1.0),
-                ),
-                "rope_dual_ratio": min(
-                    safe_metric(prev_event, "rope_dual_ratio", 1.0),
-                    safe_metric(next_event, "rope_dual_ratio", 1.0),
-                ),
-            }
-        )
-        occupied_frames.add(target_frame)
-        inserted_gap_frames.append((prev_frame, next_frame, target_frame))
+        for target_frame in sorted(target_frames):
+            alpha = float(target_frame - prev_frame) / float(next_frame - prev_frame)
+            target_ts = int(round(prev_ts + ((next_ts - prev_ts) * alpha)))
+            new_events.append(
+                {
+                    "count": 0,
+                    "frame": target_frame,
+                    "timestamp_ms": target_ts,
+                    "left_point": lerp_point(prev_left, next_left, alpha),
+                    "right_point": lerp_point(prev_right, next_right, alpha),
+                    "strength_ratio": min(
+                        safe_metric(prev_event, "strength_ratio", 1.0),
+                        safe_metric(next_event, "strength_ratio", 1.0),
+                    ),
+                    "rope_ratio": min(
+                        safe_metric(prev_event, "rope_ratio", 1.0),
+                        safe_metric(next_event, "rope_ratio", 1.0),
+                    ),
+                    "rope_dual_ratio": min(
+                        safe_metric(prev_event, "rope_dual_ratio", 1.0),
+                        safe_metric(next_event, "rope_dual_ratio", 1.0),
+                    ),
+                }
+            )
+            occupied_frames.add(target_frame)
+            inserted_gap_frames.append((prev_frame, next_frame, target_frame))
 
     if not new_events:
         if isinstance(debug_capture, dict):
@@ -1012,6 +1033,254 @@ def prune_small_edge_segments(
             ],
             "removed_frames": sorted(removed_frames),
             "output_events": int(len(filtered_events)),
+        }
+
+    return filtered_events
+
+
+def prune_low_dual_ratio_segments(
+    detected_events,
+    fps,
+    split_gap_ratio,
+    split_gap_seconds,
+    min_dual_median,
+    max_segment_events_to_prune,
+    min_segment_events_to_keep,
+    enable_segment_cadence_prune,
+    segment_cadence_max_cv,
+    short_segment_cadence_max_events,
+    short_segment_cadence_max_cv,
+    enable_segment_dual_cadence_override,
+    segment_dual_cadence_override_min_events,
+    segment_dual_cadence_override_max_cv,
+    debug_capture=None,
+):
+    if len(detected_events) < 1:
+        return detected_events
+
+    ordered_events = sorted(detected_events, key=lambda event: event["frame"])
+    frames = np.array([event["frame"] for event in ordered_events], dtype=np.int32)
+    intervals = np.diff(frames)
+
+    if intervals.size == 0:
+        segments = [(0, len(ordered_events))]
+    else:
+        median_interval = float(np.median(intervals))
+        if median_interval <= 0.0:
+            return ordered_events
+        split_gap_frames = max(
+            int(round(median_interval * split_gap_ratio)),
+            int(round(float(fps) * split_gap_seconds)),
+        )
+        split_points = [0]
+        for idx, gap in enumerate(intervals):
+            if int(gap) >= split_gap_frames:
+                split_points.append(idx + 1)
+        split_points.append(len(ordered_events))
+        split_points = sorted(set(split_points))
+        segments = []
+        for i in range(len(split_points) - 1):
+            start = int(split_points[i])
+            end = int(split_points[i + 1])
+            if end > start:
+                segments.append((start, end))
+
+    keep_indices = set()
+    segment_debug_rows = []
+    segment_meta_rows = []
+    max_segment_events_to_prune = int(max_segment_events_to_prune)
+    min_segment_events_to_keep = max(1, int(min_segment_events_to_keep))
+    enable_segment_cadence_prune = bool(enable_segment_cadence_prune)
+    segment_cadence_max_cv = float(segment_cadence_max_cv)
+    short_segment_cadence_max_events = max(1, int(short_segment_cadence_max_events))
+    short_segment_cadence_max_cv = float(short_segment_cadence_max_cv)
+    enable_segment_dual_cadence_override = bool(enable_segment_dual_cadence_override)
+    segment_dual_cadence_override_min_events = max(1, int(segment_dual_cadence_override_min_events))
+    segment_dual_cadence_override_max_cv = float(segment_dual_cadence_override_max_cv)
+    for seg_idx, (start, end) in enumerate(segments):
+        segment_events = ordered_events[start:end]
+        segment_frames = np.array([int(event["frame"]) for event in segment_events], dtype=np.int32)
+        dual_values = [
+            float(event.get("rope_dual_ratio", 1.0))
+            for event in segment_events
+            if event.get("rope_dual_ratio") is not None
+        ]
+        segment_dual_median = float(np.median(dual_values)) if dual_values else 1.0
+        segment_len = int(end - start)
+        prune_by_length = (
+            max_segment_events_to_prune <= 0
+            or segment_len <= max_segment_events_to_prune
+        )
+        long_enough_segment = segment_len >= min_segment_events_to_keep
+        segment_interval_cv = None
+        cadence_ok = True
+        if segment_frames.size >= 3:
+            segment_intervals = np.diff(segment_frames.astype(np.float32))
+            interval_mean = float(np.mean(segment_intervals))
+            interval_std = float(np.std(segment_intervals))
+            if interval_mean > 0.0:
+                segment_interval_cv = interval_std / interval_mean
+            else:
+                segment_interval_cv = np.inf
+        if enable_segment_cadence_prune and segment_len >= max(3, min_segment_events_to_keep):
+            cv_value = segment_interval_cv if segment_interval_cv is not None else np.inf
+            if segment_len <= short_segment_cadence_max_events:
+                cadence_ok = bool(cv_value <= short_segment_cadence_max_cv)
+            else:
+                cadence_ok = bool(cv_value <= segment_cadence_max_cv)
+        cadence_override_ok = False
+        if enable_segment_dual_cadence_override:
+            cv_value = segment_interval_cv if segment_interval_cv is not None else np.inf
+            cadence_override_ok = bool(
+                segment_len >= segment_dual_cadence_override_min_events
+                and cv_value <= segment_dual_cadence_override_max_cv
+            )
+        keep_segment = bool(
+            long_enough_segment
+            and cadence_ok
+            and (
+                segment_dual_median >= float(min_dual_median)
+                or cadence_override_ok
+            or not prune_by_length
+            )
+        )
+        if keep_segment:
+            keep_indices.update(range(start, end))
+        segment_meta_rows.append(
+            {
+                "start": int(start),
+                "end": int(end),
+                "length": int(segment_len),
+                "dual_median": float(segment_dual_median),
+                "long_enough_segment": bool(long_enough_segment),
+                "cadence_ok": bool(cadence_ok),
+            }
+        )
+        segment_debug_rows.append(
+            {
+                "index": int(seg_idx),
+                "start_frame": int(segment_events[0]["frame"]),
+                "end_frame": int(segment_events[-1]["frame"]),
+                "length": segment_len,
+                "dual_median": float(segment_dual_median),
+                "prune_by_length": bool(prune_by_length),
+                "long_enough_segment": bool(long_enough_segment),
+                "interval_cv": (
+                    float(segment_interval_cv)
+                    if segment_interval_cv is not None and np.isfinite(segment_interval_cv)
+                    else None
+                ),
+                "cadence_ok": bool(cadence_ok),
+                "cadence_override_ok": bool(cadence_override_ok),
+                "kept": bool(keep_segment),
+            }
+        )
+
+    filtered_events = [ordered_events[i] for i in range(len(ordered_events)) if i in keep_indices]
+    filtered_events = sorted(filtered_events, key=lambda event: event["frame"])
+    fallback_applied = False
+    fallback_reason = ""
+    fallback_segment = None
+    fallback_trim_count = 0
+    if not filtered_events and ordered_events and segment_meta_rows:
+        # Prevent hard collapse to zero when dual-ratio pruning is over-aggressive:
+        # keep one cadence-consistent segment as a conservative fallback.
+        fallback_candidates = [
+            item
+            for item in segment_meta_rows
+            if item["long_enough_segment"] and item["cadence_ok"]
+        ]
+        if not fallback_candidates:
+            fallback_candidates = [item for item in segment_meta_rows if item["cadence_ok"]]
+            fallback_reason = "no_long_enough_cadence_ok_segment"
+        else:
+            fallback_reason = "restore_longest_cadence_ok_segment"
+        if not fallback_candidates:
+            fallback_candidates = list(segment_meta_rows)
+            fallback_reason = "restore_longest_segment"
+        fallback_segment = max(
+            fallback_candidates,
+            key=lambda item: (int(item["length"]), float(item["dual_median"])),
+        )
+        start = int(fallback_segment["start"])
+        end = int(fallback_segment["end"])
+        filtered_events = sorted(ordered_events[start:end], key=lambda event: event["frame"])
+        fallback_applied = True
+        if (
+            float(min_dual_median) > 0.0
+            and len(filtered_events) > max(1, int(min_segment_events_to_keep))
+        ):
+            fallback_dual_values = [
+                float(event.get("rope_dual_ratio", 1.0))
+                for event in filtered_events
+                if event.get("rope_dual_ratio") is not None
+            ]
+            fallback_dual_median = (
+                float(np.median(fallback_dual_values)) if fallback_dual_values else 1.0
+            )
+            dual_deficit_ratio = max(
+                0.0,
+                (float(min_dual_median) - float(fallback_dual_median))
+                / max(float(min_dual_median), 1e-9),
+            )
+            trim_ratio = min(0.18, dual_deficit_ratio * 0.17)
+            candidate_trim_count = int(np.floor(float(len(filtered_events)) * trim_ratio))
+            max_trim_allowed = max(0, int(len(filtered_events) - int(min_segment_events_to_keep)))
+            fallback_trim_count = int(min(candidate_trim_count, max_trim_allowed))
+            if fallback_trim_count > 0:
+                scored_events = []
+                for idx, event in enumerate(filtered_events):
+                    dual_ratio = float(event.get("rope_dual_ratio", 1.0))
+                    rope_ratio = float(event.get("rope_ratio", 1.0))
+                    strength_ratio = float(event.get("strength_ratio", 1.0))
+                    # Prefer keeping events supported by dual-rope, rope activity,
+                    # and stronger vertical minima.
+                    confidence_score = (
+                        (dual_ratio * 2.0)
+                        + rope_ratio
+                        + (min(max(strength_ratio, 0.0), 5.0) * 0.10)
+                    )
+                    scored_events.append((confidence_score, idx, event))
+                scored_events.sort(key=lambda item: (item[0], item[1]))
+                drop_indices = {int(item[1]) for item in scored_events[:fallback_trim_count]}
+                filtered_events = [
+                    event
+                    for idx, event in enumerate(filtered_events)
+                    if idx not in drop_indices
+                ]
+                filtered_events = sorted(filtered_events, key=lambda event: event["frame"])
+    for i, event in enumerate(filtered_events, start=1):
+        event["count"] = i
+
+    if isinstance(debug_capture, dict):
+        debug_capture["segment_dual_prune"] = {
+            "enabled": True,
+            "min_dual_median": float(min_dual_median),
+            "max_segment_events_to_prune": int(max_segment_events_to_prune),
+            "min_segment_events_to_keep": int(min_segment_events_to_keep),
+            "enable_segment_cadence_prune": bool(enable_segment_cadence_prune),
+            "segment_cadence_max_cv": float(segment_cadence_max_cv),
+            "short_segment_cadence_max_events": int(short_segment_cadence_max_events),
+            "short_segment_cadence_max_cv": float(short_segment_cadence_max_cv),
+            "enable_segment_dual_cadence_override": bool(enable_segment_dual_cadence_override),
+            "segment_dual_cadence_override_min_events": int(segment_dual_cadence_override_min_events),
+            "segment_dual_cadence_override_max_cv": float(segment_dual_cadence_override_max_cv),
+            "input_events": int(len(ordered_events)),
+            "output_events": int(len(filtered_events)),
+            "fallback_applied": bool(fallback_applied),
+            "fallback_reason": fallback_reason,
+            "fallback_trim_count": int(fallback_trim_count),
+            "fallback_segment": (
+                {
+                    "start_frame": int(ordered_events[int(fallback_segment["start"])]["frame"]),
+                    "end_frame": int(ordered_events[int(fallback_segment["end"]) - 1]["frame"]),
+                    "length": int(fallback_segment["length"]),
+                    "dual_median": float(fallback_segment["dual_median"]),
+                }
+                if fallback_segment is not None
+                else None
+            ),
+            "segments": segment_debug_rows,
         }
 
     return filtered_events
@@ -1163,14 +1432,26 @@ def detect_jump_events_offline(
             )
             foot_prominence = motion_signature["foot_prominence"]
             foot_motion_strict_ok = bool(motion_signature["strict_motion_ok"])
+            both_feet_lift_ok = bool(motion_signature.get("both_feet_lift_ok"))
+            feet_symmetry_ok = bool(motion_signature.get("feet_symmetry_ok"))
+            foot_sync_ok = bool(motion_signature.get("foot_sync_ok"))
             loose_foot_motion_ok = (
                 (foot_prominence is not None)
                 and (float(foot_prominence) >= float(STRICT_ACTIVE_LOOSE_FOOT_PROMINENCE))
             )
+            relaxed_motion_gate_ok = bool(
+                loose_foot_motion_ok
+                and (both_feet_lift_ok or foot_sync_ok)
+            )
+            entry_motion_gate_ok = bool(
+                foot_motion_strict_ok
+                and both_feet_lift_ok
+                and (feet_symmetry_ok or foot_sync_ok)
+            )
             recent_motion_ratio = 0.0
             recent_motion_true_count = 0
             if is_local_min:
-                local_motion_flags.append(bool(loose_foot_motion_ok))
+                local_motion_flags.append(bool(relaxed_motion_gate_ok))
                 motion_window = max(1, int(STRICT_ACTIVE_FOOT_MOTION_WINDOW))
                 if len(local_motion_flags) > (motion_window * 4):
                     local_motion_flags = local_motion_flags[-(motion_window * 4):]
@@ -1196,16 +1477,20 @@ def detect_jump_events_offline(
                 rope_dual_ratio = float(rope_dual_ratio_series[candidate_idx])
             elif rope_dual_flag_series:
                 rope_dual_ratio = get_true_ratio(rope_dual_flag_series, candidate_idx, rope_active_window_frames)
+            candidate_rope_flag = (
+                candidate_idx < len(rope_flag_series)
+                and bool(rope_flag_series[candidate_idx])
+            )
+            candidate_dual_rope_flag = (
+                candidate_idx < len(rope_dual_flag_series)
+                and bool(rope_dual_flag_series[candidate_idx])
+            )
             foot_motion_ok = foot_motion_strict_ok
             anti_walk_detected = False
-            if strict_guards_enabled and is_active:
+            if strict_guards_enabled:
                 active_history_ok = (
                     recent_motion_true_count >= max(0, int(STRICT_ACTIVE_FOOT_MOTION_MIN_TRUE))
                     and recent_motion_ratio >= float(STRICT_ACTIVE_FOOT_MOTION_MIN_RATIO)
-                )
-                strong_active_override = (
-                    rope_ratio >= float(STRICT_ACTIVE_FOOT_MOTION_ROPE_MIN_RATIO)
-                    and rope_dual_ratio >= float(STRICT_ACTIVE_FOOT_MOTION_DUAL_MIN_RATIO)
                 )
                 if STRICT_ACTIVE_ANTI_WALK_ENABLED:
                     foot_sync_corr = motion_signature.get("foot_sync_corr")
@@ -1222,16 +1507,34 @@ def detect_jump_events_offline(
                             or float(foot_sync_corr) < 0.15
                         )
                     )
-                    anti_walk_detected = bool(walk_sync or walk_drift)
-                foot_motion_ok = bool(loose_foot_motion_ok or active_history_ok or strong_active_override)
+                    walk_unilateral = (
+                        (not both_feet_lift_ok)
+                        and center_x_drift is not None
+                        and float(center_x_drift) >= float(STRICT_ACTIVE_WALK_MIN_CENTER_DRIFT) * 0.80
+                        and (
+                            foot_sync_corr is None
+                            or float(foot_sync_corr) < 0.25
+                        )
+                    )
+                    anti_walk_detected = bool(walk_sync or walk_drift or walk_unilateral)
+                if is_active:
+                    strong_active_override = (
+                        rope_ratio >= float(STRICT_OVERRIDE_ACTIVE_MIN_ROPE_RATIO)
+                        and rope_dual_ratio >= float(STRICT_OVERRIDE_ACTIVE_MIN_DUAL_RATIO)
+                    )
+                    foot_motion_ok = bool(
+                        relaxed_motion_gate_ok
+                        or active_history_ok
+                        or strong_active_override
+                    )
+                else:
+                    strong_entry_override = (
+                        rope_ratio >= float(STRICT_OVERRIDE_ENTRY_MIN_ROPE_RATIO)
+                        and rope_dual_ratio >= float(STRICT_OVERRIDE_ENTRY_MIN_DUAL_RATIO)
+                    )
+                    foot_motion_ok = bool(entry_motion_gate_ok or strong_entry_override)
                 if anti_walk_detected:
                     foot_motion_ok = False
-            elif strict_guards_enabled and not foot_motion_ok:
-                strong_rope_override = (
-                    rope_ratio >= max(0.28, float(ROPE_ENTRY_MIN_RATIO) * 1.8)
-                    and rope_dual_ratio >= max(0.08, float(ROPE_ENTRY_DUAL_MIN_RATIO) * 2.0)
-                )
-                foot_motion_ok = bool(strong_rope_override)
             if not strict_guards_enabled:
                 foot_motion_ok = True
             if debug_gap_recovery and is_local_min:
@@ -1280,6 +1583,12 @@ def detect_jump_events_offline(
                     or rope_dual_ratio >= ROPE_ACTIVE_DUAL_MIN_RATIO
                 )
                 rope_active = rope_ratio >= ROPE_ACTIVE_MIN_RATIO and active_dual_ok
+                if strict_guards_enabled and not candidate_rope_flag:
+                    rope_active = bool(
+                        rope_active
+                        and rope_ratio >= float(STRICT_OVERRIDE_ACTIVE_MIN_ROPE_RATIO)
+                        and rope_dual_ratio >= float(STRICT_OVERRIDE_ACTIVE_MIN_DUAL_RATIO)
+                    )
             else:
                 entry_dual_ok = (
                     ROPE_ENTRY_DUAL_MIN_RATIO <= 0.0
@@ -1289,6 +1598,15 @@ def detect_jump_events_offline(
                     rope_ratio >= ROPE_ENTRY_MIN_RATIO
                     and entry_dual_ok
                 )
+                if strict_guards_enabled:
+                    rope_active = bool(
+                        rope_active
+                        and candidate_rope_flag
+                        and (
+                            candidate_dual_rope_flag
+                            or rope_dual_ratio >= float(STRICT_OVERRIDE_ENTRY_MIN_DUAL_RATIO)
+                        )
+                    )
 
             if (
                 is_local_min
@@ -1389,8 +1707,10 @@ def detect_jump_events_offline(
             debug_capture["recovery_candidates"] = int(len(recovery_candidates))
             debug_capture["recovery_strength_threshold"] = float(float(min_strength_ratio) * float(GAP_RECOVERY_STRENGTH_SCALE))
             debug_capture["recovery_min_rope_ratio"] = float(GAP_RECOVERY_MIN_ROPE_RATIO)
+            debug_capture["recovery_min_dual_ratio"] = float(GAP_RECOVERY_MIN_DUAL_RATIO)
             debug_capture["recovery_large_gap_ratio"] = float(GAP_RECOVERY_LARGE_GAP_RATIO)
             debug_capture["recovery_relaxed_min_rope_ratio"] = float(GAP_RECOVERY_RELAXED_MIN_ROPE_RATIO)
+            debug_capture["recovery_relaxed_min_dual_ratio"] = float(GAP_RECOVERY_RELAXED_MIN_DUAL_RATIO)
         detected_events = recover_missing_events_in_large_gaps(
             detected_events=detected_events,
             recovery_candidates=recovery_candidates,
@@ -1431,6 +1751,7 @@ def detect_jump_events_offline(
             max_context_cv=HIGH_CADENCE_GAP_INTERP_MAX_CV,
             duplicate_guard_frames=HIGH_CADENCE_GAP_INTERP_DUPLICATE_GUARD_FRAMES,
             min_total_events=0,
+            max_missing_count=1,
             debug_key="high_cadence_gap_interp",
             debug_capture=debug_capture if isinstance(debug_capture, dict) else None,
         )
@@ -1448,7 +1769,26 @@ def detect_jump_events_offline(
             max_context_cv=LONG_RUN_GAP_INTERP_MAX_CV,
             duplicate_guard_frames=LONG_RUN_GAP_INTERP_DUPLICATE_GUARD_FRAMES,
             min_total_events=LONG_RUN_GAP_INTERP_MIN_TOTAL_EVENTS,
+            max_missing_count=1,
             debug_key="long_run_gap_interp",
+            debug_capture=debug_capture if isinstance(debug_capture, dict) else None,
+        )
+
+    if ENABLE_MULTI_MISS_LONG_GAP_INTERP:
+        detected_events = recover_high_cadence_single_miss_gaps(
+            detected_events=detected_events,
+            min_jump_gap_frames=min_jump_gap_frames,
+            min_ref_interval_frames=MULTI_MISS_LONG_GAP_INTERP_MIN_REF_INTERVAL_FRAMES,
+            max_ref_interval_frames=MULTI_MISS_LONG_GAP_INTERP_MAX_REF_INTERVAL_FRAMES,
+            min_gap_ratio=MULTI_MISS_LONG_GAP_INTERP_MIN_GAP_RATIO,
+            max_gap_ratio=MULTI_MISS_LONG_GAP_INTERP_MAX_GAP_RATIO,
+            round_tolerance=MULTI_MISS_LONG_GAP_INTERP_ROUND_TOL,
+            context_window=MULTI_MISS_LONG_GAP_INTERP_CONTEXT,
+            max_context_cv=MULTI_MISS_LONG_GAP_INTERP_MAX_CV,
+            duplicate_guard_frames=MULTI_MISS_LONG_GAP_INTERP_DUPLICATE_GUARD_FRAMES,
+            min_total_events=MULTI_MISS_LONG_GAP_INTERP_MIN_TOTAL_EVENTS,
+            max_missing_count=MULTI_MISS_LONG_GAP_INTERP_MAX_MISSING_COUNT,
+            debug_key="multi_miss_long_gap_interp",
             debug_capture=debug_capture if isinstance(debug_capture, dict) else None,
         )
 
@@ -1460,6 +1800,25 @@ def detect_jump_events_offline(
             split_gap_seconds=EDGE_SEGMENT_SPLIT_GAP_SECONDS,
             max_edge_events=EDGE_SEGMENT_MAX_EVENTS,
             min_main_events=EDGE_SEGMENT_MIN_MAIN_EVENTS,
+            debug_capture=debug_capture if isinstance(debug_capture, dict) else None,
+        )
+
+    if bool(strict_guards_enabled) and ENABLE_SEGMENT_DUAL_PRUNE:
+        detected_events = prune_low_dual_ratio_segments(
+            detected_events=detected_events,
+            fps=fps,
+            split_gap_ratio=EDGE_SEGMENT_SPLIT_GAP_RATIO,
+            split_gap_seconds=EDGE_SEGMENT_SPLIT_GAP_SECONDS,
+            min_dual_median=SEGMENT_DUAL_PRUNE_MIN_MEDIAN,
+            max_segment_events_to_prune=SEGMENT_DUAL_PRUNE_MAX_SEGMENT_EVENTS,
+            min_segment_events_to_keep=SEGMENT_MIN_EVENTS,
+            enable_segment_cadence_prune=ENABLE_SEGMENT_CADENCE_PRUNE,
+            segment_cadence_max_cv=SEGMENT_CADENCE_MAX_CV,
+            short_segment_cadence_max_events=SHORT_SEGMENT_CADENCE_MAX_EVENTS,
+            short_segment_cadence_max_cv=SHORT_SEGMENT_CADENCE_MAX_CV,
+            enable_segment_dual_cadence_override=ENABLE_SEGMENT_DUAL_CADENCE_OVERRIDE,
+            segment_dual_cadence_override_min_events=SEGMENT_DUAL_CADENCE_OVERRIDE_MIN_EVENTS,
+            segment_dual_cadence_override_max_cv=SEGMENT_DUAL_CADENCE_OVERRIDE_MAX_CV,
             debug_capture=debug_capture if isinstance(debug_capture, dict) else None,
         )
 
@@ -1477,6 +1836,17 @@ def detect_jump_events_offline(
             relative_factor=BOUNDARY_RELATIVE_FACTOR,
             debug_capture=debug_capture if isinstance(debug_capture, dict) else None,
         )
+
+    if bool(strict_guards_enabled) and int(SESSION_MIN_EVENTS) > 1:
+        if len(detected_events) < int(SESSION_MIN_EVENTS):
+            if isinstance(debug_capture, dict):
+                debug_capture["session_min_events_prune"] = {
+                    "enabled": True,
+                    "min_events": int(SESSION_MIN_EVENTS),
+                    "input_events": int(len(detected_events)),
+                    "output_events": 0,
+                }
+            detected_events = []
 
     return detected_events
 

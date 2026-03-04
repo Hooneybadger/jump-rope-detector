@@ -143,7 +143,12 @@ def filter_events_to_label_window(detected_events, label_events, padding_ms=LABE
     return in_window, out_window
 
 
-def rewrite_tracked_video_count_overlay(tracked_video_path, selected_events, label_events):
+def rewrite_tracked_video_count_overlay(
+    tracked_video_path,
+    selected_events,
+    label_events,
+    raw_online_count=None,
+):
     if not os.path.isfile(tracked_video_path):
         return False, "tracked video not found"
 
@@ -164,33 +169,29 @@ def rewrite_tracked_video_count_overlay(tracked_video_path, selected_events, lab
 
     ordered_detected = sorted(selected_events, key=lambda item: int(item["timestamp_ms"]))
     ordered_labels = sorted(label_events, key=lambda item: int(item["timestamp_ms"]))
+    final_detected_count = int(len(ordered_detected))
+    final_label_count = int(len(ordered_labels))
+    raw_online_count = (
+        final_detected_count
+        if raw_online_count is None
+        else int(max(0, int(raw_online_count)))
+    )
     detected_idx = 0
     label_idx = 0
     frame_idx = -1
     last_timestamp_ms = -1
+    last_display_ts_ms = -1
+    last_frame = None
     panel_left = max(0, width - 270)
     panel_top = 0
     panel_right = width
-    panel_bottom = 110
+    panel_bottom = 162
 
-    while True:
-        ret, frame = cap.read()
-        if not ret or frame is None:
-            break
-
-        frame_idx += 1
-        raw_ts_ms = cap.get(cv2.CAP_PROP_POS_MSEC)
-        current_ts_ms = resolve_frame_timestamp_ms(raw_ts_ms, frame_idx, fps, last_timestamp_ms)
-        last_timestamp_ms = current_ts_ms
-        display_ts_ms = current_ts_ms + DISPLAY_TIME_ADVANCE_MS
-
-        while detected_idx < len(ordered_detected) and int(ordered_detected[detected_idx]["timestamp_ms"]) <= display_ts_ms:
-            detected_idx += 1
-        while label_idx < len(ordered_labels) and int(ordered_labels[label_idx]["timestamp_ms"]) <= display_ts_ms:
-            label_idx += 1
-
-        count_delta = detected_idx - label_idx
+    def draw_counter_panel(frame, current_detected_idx, current_label_idx):
+        count_delta = int(current_detected_idx) - int(current_label_idx)
         delta_color = (0, 180, 0) if count_delta == 0 else (0, 0, 255)
+        pending_detected = max(0, final_detected_count - int(current_detected_idx))
+        pending_labels = max(0, final_label_count - int(current_label_idx))
 
         # Hide the first-pass counters and redraw finalized counters from post-processed events.
         cv2.rectangle(frame, (panel_left, panel_top), (panel_right, panel_bottom), (0, 0, 0), -1)
@@ -206,7 +207,7 @@ def rewrite_tracked_video_count_overlay(tracked_video_path, selected_events, lab
         )
         cv2.putText(
             frame,
-            str(detected_idx),
+            str(int(current_detected_idx)),
             (width - 40, 30),
             cv2.FONT_HERSHEY_SIMPLEX,
             0.8,
@@ -226,7 +227,7 @@ def rewrite_tracked_video_count_overlay(tracked_video_path, selected_events, lab
         )
         cv2.putText(
             frame,
-            str(label_idx),
+            str(int(current_label_idx)),
             (width - 40, 62),
             cv2.FONT_HERSHEY_SIMPLEX,
             0.8,
@@ -244,8 +245,93 @@ def rewrite_tracked_video_count_overlay(tracked_video_path, selected_events, lab
             2,
             cv2.LINE_AA,
         )
+        cv2.putText(
+            frame,
+            f"Online {raw_online_count}  Offline {final_detected_count}",
+            (width - 265, 122),
+            cv2.FONT_HERSHEY_SIMPLEX,
+            0.50,
+            (190, 190, 190),
+            1,
+            cv2.LINE_AA,
+        )
+        cv2.putText(
+            frame,
+            f"Pending J:{pending_detected} L:{pending_labels}",
+            (width - 265, 146),
+            cv2.FONT_HERSHEY_SIMPLEX,
+            0.50,
+            (190, 190, 190),
+            1,
+            cv2.LINE_AA,
+        )
 
+    while True:
+        ret, frame = cap.read()
+        if not ret or frame is None:
+            break
+
+        frame_idx += 1
+        raw_ts_ms = cap.get(cv2.CAP_PROP_POS_MSEC)
+        current_ts_ms = resolve_frame_timestamp_ms(raw_ts_ms, frame_idx, fps, last_timestamp_ms)
+        last_timestamp_ms = current_ts_ms
+        display_ts_ms = current_ts_ms + DISPLAY_TIME_ADVANCE_MS
+        last_display_ts_ms = int(display_ts_ms)
+        last_frame = frame
+
+        while detected_idx < len(ordered_detected) and int(ordered_detected[detected_idx]["timestamp_ms"]) <= display_ts_ms:
+            detected_idx += 1
+        while label_idx < len(ordered_labels) and int(ordered_labels[label_idx]["timestamp_ms"]) <= display_ts_ms:
+            label_idx += 1
+
+        draw_counter_panel(frame, detected_idx, label_idx)
         writer.write(frame)
+
+    extra_wait_frames = 0
+    if (
+        OVERLAY_END_WAIT_ENABLED
+        and last_frame is not None
+        and fps > 0.0
+    ):
+        frame_step_ms = 1000.0 / float(fps)
+        pending_target_ts_ms = float(last_display_ts_ms)
+        if detected_idx < len(ordered_detected):
+            pending_target_ts_ms = max(
+                pending_target_ts_ms,
+                float(ordered_detected[-1]["timestamp_ms"]),
+            )
+        if label_idx < len(ordered_labels):
+            pending_target_ts_ms = max(
+                pending_target_ts_ms,
+                float(ordered_labels[-1]["timestamp_ms"]),
+            )
+        pending_wait_ms = max(0.0, pending_target_ts_ms - float(last_display_ts_ms))
+        wait_for_pending_frames = int(np.ceil(pending_wait_ms / max(frame_step_ms, 1e-6)))
+        base_wait_frames = int(round(max(0.0, float(OVERLAY_END_WAIT_SECONDS)) * float(fps)))
+        extra_wait_frames = max(base_wait_frames, wait_for_pending_frames)
+        if OVERLAY_END_WAIT_MAX_SECONDS > 0:
+            max_wait_frames = int(round(float(OVERLAY_END_WAIT_MAX_SECONDS) * float(fps)))
+            extra_wait_frames = min(extra_wait_frames, max_wait_frames)
+
+        synthetic_ts_ms = float(last_timestamp_ms)
+        tail_template = last_frame.copy()
+        for _ in range(int(max(0, extra_wait_frames))):
+            frame_idx += 1
+            synthetic_ts_ms += frame_step_ms
+            display_ts_ms = int(round(synthetic_ts_ms)) + DISPLAY_TIME_ADVANCE_MS
+            while (
+                detected_idx < len(ordered_detected)
+                and int(ordered_detected[detected_idx]["timestamp_ms"]) <= display_ts_ms
+            ):
+                detected_idx += 1
+            while (
+                label_idx < len(ordered_labels)
+                and int(ordered_labels[label_idx]["timestamp_ms"]) <= display_ts_ms
+            ):
+                label_idx += 1
+            hold_frame = tail_template.copy()
+            draw_counter_panel(hold_frame, detected_idx, label_idx)
+            writer.write(hold_frame)
 
     cap.release()
     writer.release()
@@ -267,8 +353,9 @@ def rewrite_tracked_video_count_overlay(tracked_video_path, selected_events, lab
     os.replace(temp_output_path, tracked_video_path)
     final_delta = detected_idx - label_idx
     return True, (
-        f"frames={refreshed_frame_count} jumps={detected_idx} labels={label_idx} "
-        f"delta={final_delta:+d}"
+        f"frames={refreshed_frame_count} end_wait_frames={int(extra_wait_frames)} "
+        f"jumps={detected_idx}/{final_detected_count} labels={label_idx}/{final_label_count} "
+        f"online={raw_online_count} delta={final_delta:+d}"
     )
 
 
@@ -326,6 +413,8 @@ def evaluate_detected_events(detected_events, label_events, tolerance_ms):
         strict_extra_detected = extra_detected
     else:
         strict_extra_detected = strict_extra_detected_raw
+    full_strict_extra_detected = list(strict_extra_detected) + list(outside_window_events)
+    full_extra_detected = list(extra_detected) + list(outside_window_events)
     strict_precision, strict_recall, strict_f1, strict_accuracy = compute_metrics(
         len(matched_events),
         len(strict_extra_detected),
@@ -334,6 +423,16 @@ def evaluate_detected_events(detected_events, label_events, tolerance_ms):
     precision, recall, f1, accuracy = compute_metrics(
         len(matched_events),
         len(extra_detected),
+        len(missed_labels),
+    )
+    full_strict_precision, full_strict_recall, full_strict_f1, full_strict_accuracy = compute_metrics(
+        len(matched_events),
+        len(full_strict_extra_detected),
+        len(missed_labels),
+    )
+    full_precision, full_recall, full_f1, full_accuracy = compute_metrics(
+        len(matched_events),
+        len(full_extra_detected),
         len(missed_labels),
     )
     mean_abs_time_error_ms = float(
@@ -346,16 +445,26 @@ def evaluate_detected_events(detected_events, label_events, tolerance_ms):
         "matched_events": matched_events,
         "strict_extra_detected": strict_extra_detected,
         "extra_detected": extra_detected,
+        "full_strict_extra_detected": full_strict_extra_detected,
+        "full_extra_detected": full_extra_detected,
         "gap_candidate_events": gap_candidate_events,
         "missed_labels": missed_labels,
         "strict_precision": strict_precision,
         "strict_recall": strict_recall,
         "strict_f1": strict_f1,
         "strict_accuracy": strict_accuracy,
+        "full_strict_precision": full_strict_precision,
+        "full_strict_recall": full_strict_recall,
+        "full_strict_f1": full_strict_f1,
+        "full_strict_accuracy": full_strict_accuracy,
         "precision": precision,
         "recall": recall,
         "f1": f1,
         "accuracy": accuracy,
+        "full_precision": full_precision,
+        "full_recall": full_recall,
+        "full_f1": full_f1,
+        "full_accuracy": full_accuracy,
         "mean_abs_time_error_ms": mean_abs_time_error_ms,
         "tolerance_ms": int(tolerance_ms),
     }
