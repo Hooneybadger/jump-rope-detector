@@ -44,13 +44,25 @@
 - anti-walk 게이트 (`JR_STRICT_ACTIVE_ANTI_WALK_ENABLED`)
 - entry bootstrap 게이트 (`JR_STRICT_ENTRY_NO_FLAG_BOOTSTRAP_ENABLED`)
 
-### 3.3 Fixed-Lag 확정
+### 3.3 Fixed-Lag 확정과 스트리밍 오버레이
 
-- 실시간 카운트/최종 카운트는 `fixed_lag_confirmed_events` 기준입니다.
+- 최종 카운트의 입력은 `fixed_lag_confirmed_events`입니다.
 - 기본값:
   - `JR_FIXED_LAG_SECONDS=1.0`
   - `JR_FIXED_LAG_FINALIZE_WAIT_SECONDS=2.0`
-- 오버레이 숫자도 fixed-lag 확정 카운트를 사용합니다.
+- 기본 오버레이는 fixed-lag count를 그대로 쓰지 않고,
+  `fixed_lag_confirmed_events`에 **동일한 post 규칙을 스트리밍 재적용한 count**를 사용합니다.
+- 이때 다시 보는 대상은 **전체 영상 프레임/원신호가 아니라 이미 확정된 이벤트 리스트**입니다.
+- 즉 예전 offline 재검출처럼 전체 영상을 다시 스캔하지 않고,
+  현재까지 누적된 `fixed_lag_confirmed_events`만 매 업데이트 시 재정리합니다.
+- 제어 스위치:
+  - `JR_LIVE_OVERLAY_FIXED_LAG_COUNT=true`
+  - `JR_LIVE_OVERLAY_STREAM_POSTPROCESS=true`
+
+의도:
+
+- 라이브 숫자를 종료 후 확정치에 더 가깝게 맞춘다.
+- no-jump 짧은 스파이크를 라이브 오버레이 단계에서 바로 숨긴다.
 
 ### 3.4 세션 후처리 (Post)
 
@@ -79,7 +91,15 @@ gap/head fill 상세:
 ### 3.5 오버레이 정책
 
 - 화면에는 **현재 카운트 숫자만** 표시합니다.
+- pose landmarks는 영상 위에 계속 표시합니다.
 - 라벨 수, delta, 기타 디버그 텍스트는 표시하지 않습니다.
+- `stream_post`가 켜져 있으면 오버레이 숫자는 다음 규칙을 이미 반영한 값입니다.
+  - weak non-bilateral prune
+  - session filter
+  - session gap fill
+  - session head fill
+  - session median strength prune
+  - run-level min events prune
 - 필요 시 `JR_ENABLE_OVERLAY_REFRESH=true`로 post 단계에서 카운트 오버레이 재기록을 수행합니다.
 
 ## 4) 평가 방식
@@ -141,6 +161,7 @@ gap/head fill 상세:
 - `JR_FIXED_LAG_SECONDS=1.0`
 - `JR_FIXED_LAG_FINALIZE_WAIT_SECONDS=2.0`
 - `JR_LIVE_OVERLAY_FIXED_LAG_COUNT=true`
+- `JR_LIVE_OVERLAY_STREAM_POSTPROCESS=true`
 
 ## 7) 명령어
 
@@ -191,8 +212,10 @@ python main_realtime.py --camera-index 0 --demo-log --demo-save-raw
 
 ### 9.1 요약
 
-- **대부분의 경우 라이브 카운트와 종료 후 최종 카운트는 같다.**
-- **차이가 나는 경우는 주로 짧은 세션/경계 구간**이며, 종료 시 후처리(session filter)가 라이브 카운트를 일부 정리한다.
+- 요지는 **오버레이를 "빠른 추정치"가 아니라 "보수적 확정치"에 더 가깝게 바꿨다**는 것입니다.
+- 이전 fixed-lag 오버레이는 짧은 오탐 세션도 바로 숫자로 보여줘서, 사용자 입장에서는 의미 없는 숫자가 먼저 올라가고 종료 후 사라질 수 있었습니다.
+- 현재 `stream_post` 오버레이는 같은 세션 규칙을 즉시 반영하므로, **보여준 숫자가 최종 숫자로 남을 가능성**을 높입니다.
+- 대가로 **실제 점프 시작 직후 몇 카운트는 표시가 늦어질 수 있습니다.**
 
 ### 9.2 실측 근거
 
@@ -214,3 +237,21 @@ realtime demo 로그(overlay_counter 있는 세션) 편차:
 - 예시:
   - `demo_20260309_000620...`: `47 -> 48` (`+1`)
   - `realtime_cam0_20260302_212705`: `17 -> 24` (`+7`)
+
+### 9.3 이번 시도에서 확인한 개선 효과
+
+- 11번 샘플:
+  - 기존 fixed-lag 오버레이 마지막 값: `24`
+  - 새 `stream_post` 오버레이 마지막 값: `22`
+  - 최종 확정값: `22`
+  - 첫 fixed-lag 확정 대비 첫 오버레이 표시는 약 `+2000 ms` 늦어짐
+- no-jump 샘플(`demo_20260309_000620.../raw.mp4`):
+  - 기존 fixed-lag/raw 내부 카운트는 끝까지 `45`
+  - 새 `stream_post` 오버레이는 끝까지 `0`
+  - 최종 확정값: `0`
+
+즉 현재 시도는 UX 관점에서 다음 효과를 냈습니다.
+
+- no-jump에서 의미 없는 숫자가 보이는 문제를 사실상 제거
+- 실제 점프 세션에서는 라이브 마지막 숫자와 최종 숫자의 불일치를 축소
+- 오버레이 숫자는 더 늦게 올라오지만, 올라온 뒤 다시 뒤집힐 가능성은 줄어듦
