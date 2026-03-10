@@ -22,7 +22,6 @@ def parse_args(argv=None):
 def main(argv=None):
     args = parse_args(argv)
     return run_pipeline(
-        mode="video",
         target_stem=args.target_stem,
         target_video_path=args.video_path,
     )

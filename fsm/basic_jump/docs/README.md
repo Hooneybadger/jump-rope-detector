@@ -1,247 +1,216 @@
-# 모아뛰기 기술 문서
+# Basic Jump Detector Tech Docs
 
-## 0. 초기 버전 한계와 오프라인 후처리 필수성
+## 1) 범위
 
-### 0.1 초기 버전의 구조적 문제점
+- 이 프로젝트는 **단일 엔진**으로 동작합니다.
+- `label/video/realtime`는 입력 소스와 평가 유무만 다르고, 카운팅 엔진은 동일합니다.
 
-- 검출이 단일 규칙에 과도하게 의존
-  - `left_hip_y` 로컬 최소점 + 고정 임계치(`diff >= 0.003`) 방식이라 촬영 조건/피사체/리듬 변화에 취약합니다.
-- 시간적 제약과 상태 전이가 없음
-  - 최소 점프 간격, 시작 lockout, active/inactive 상태 관리가 없어 경계 구간/노이즈에서 과검출이 쉽게 발생합니다.
-- rope evidence가 최종 카운트에 구조적으로 결합되지 않음
-  - rope flag를 표시하지만 점프 이벤트 확정 로직 자체를 강하게 제어하지 못합니다.
+## 2) 실행 진입점
 
-- 성능
-  - 매 프레임마다 과거 전체 시계열을 다시 스캔하는 형태라 영상 길이가 길어질수록 비효율이 커집니다.
+- `main_label.py`
+- `main_video.py`
+- `main_realtime.py`
 
+세 진입점 모두 내부적으로 동일한 `run_pipeline(...)`을 호출합니다.
 
-### 0.2 오프라인 후처리가  필요한 이유
+## 3) 파이프라인 구조
 
-온라인 1-pass 검출만으로는 모든 프레임에서 안정적인 카운트를 보장하기 어렵습니다. 실제 영상에서는 다음이 반복됩니다.
+### 3.1 입력 Job 구성
 
-- 순간 pose 누락/오검출
-- 모션 블러/가림으로 인한 최소점 약화
-- 시작/종료 경계의 비정상 리듬
-- 구간별 cadence 변화
+- `label`: 영상 + 라벨이 둘 다 있는 스템만 처리 (`require_label=True`)
+- `video`: 영상만 처리 (라벨이 있으면 자동 비교, 없으면 카운트만 출력)
+- `realtime`: 카메라 입력 처리 (`use_realtime=True`)
 
-이 때문에 최종 카운트는 전체 시계열을 본 오프라인 재정리가 필요합니다.
+### 3.2 프레임 온라인 검출
 
-1. 큰 gap 구간 누락 복원 (`recover_missing_events_in_large_gaps`)
-2. 단일 미스 보간 (`recover_high_cadence_single_miss_gaps`)
-3. 시작/끝 작은 세그먼트 제거 (`prune_small_edge_segments`)
-4. dual ratio 기반 세그먼트 프루닝 (`prune_low_dual_ratio_segments`)
-5. 경계 저신뢰 이벤트 제거 (`prune_low_confidence_boundary_events`)
-6. 라벨 평가 시 tolerance/strict/adjusted 지표로 정량 검증 (`evaluate_detected_events`)
+프레임 루프에서 다음을 수행합니다.
 
-## 1. 전체 처리 파이프라인
+- Pose 추출 + 하체 신뢰도 검사
+- 손목 ROI 기반 rope evidence 추출
+- hip/foot 시계열에서 로컬 minima 후보 생성
+- 후보 게이트 통과 시 이벤트 생성
 
-영상 1개(job) 기준 처리 순서는 아래와 같습니다.
+하체 신뢰도 기본 규칙:
 
-1. 입력 job 생성
-   - 모드별로 대상 영상/라벨 목록 구성
-2. 프레임 루프
-   - MediaPipe Pose 랜드마크 추출
-   - 손목 ROI 기반 rope evidence 추출
-   - 온라인 카운트(오버레이용 임시 카운트)
-   - 트래킹 영상 저장(`*_tracked.mp4`)
-3. 오프라인 재검출(`detect_jump_events_offline`)
-   - 전체 시계열 기반으로 점프 이벤트 재구성
-   - gap/interp/prune 후처리 적용
-4. 결과 정리
-   - 라벨 없으면: 검출 CSV + 요약
-   - 라벨 있으면: 이벤트 매칭, 성능 지표, 비교 CSV, 요약
-5. 요약 CSV 저장
-   - 모드별 summary 파일(`all_videos_summary.csv`, `video_count_summary.csv`, `realtime_count_summary.csv`)
+- 양쪽 hip가 모두 신뢰 가능해야 함
+- 좌/우 하체(무릎/발목/발끝)에서 각 측 최소 1개 이상 신뢰 가능해야 함
 
-중요:
+핵심 온라인 게이트:
 
-- 최종 카운트는 3단계 오프라인 재검출 결과를 사용합니다.
-- 라벨은 `labeled` 모드에서 평가 전용이며, 검출 카운트 자체를 보정하지 않습니다.
+- 점프 간격 게이트 (`JR_MIN_JUMP_GAP_SECONDS`)
+- 모션 시그니처 게이트
+- rope ratio / rope dual ratio 게이트
+- active/inactive 상태 전이 게이트
+- anti-walk 게이트 (`JR_STRICT_ACTIVE_ANTI_WALK_ENABLED`)
+- entry bootstrap 게이트 (`JR_STRICT_ENTRY_NO_FLAG_BOOTSTRAP_ENABLED`)
 
-## 2. 프레임 루프 핵심 로직
+### 3.3 Fixed-Lag 확정
 
-### 2.1 Pose 기반 시계열 생성
+- 실시간 카운트/최종 카운트는 `fixed_lag_confirmed_events` 기준입니다.
+- 기본값:
+  - `JR_FIXED_LAG_SECONDS=1.0`
+  - `JR_FIXED_LAG_FINALIZE_WAIT_SECONDS=2.0`
+- 오버레이 숫자도 fixed-lag 확정 카운트를 사용합니다.
 
-Pose 검출 성공 프레임에 대해 다음 시계열을 누적합니다.
+### 3.4 세션 후처리 (Post)
 
-- `hip_center_y = (left_hip_y + right_hip_y)/2`
-- 발목 좌표(`left_foot_x/y`, `right_foot_x/y`)
-- 프레임 인덱스/타임스탬프
+최종 이벤트는 아래 순서로 정리됩니다.
 
-타임스탬프는 `resolve_frame_timestamp_ms`로 보정합니다.
+1. weak non-bilateral prune
+2. session filter
+3. session gap fill
+4. session head fill
+5. session median strength prune
+6. run-level min events prune
 
-- `CAP_PROP_POS_MSEC` 이상치/역행 방지
-- FPS 기반 fallback 시간 사용
+session filter 상세:
 
-### 2.2 Rope evidence 추출
+- 세그먼트 분리: `JR_STRICT_SESSION_SPLIT_GAP_SECONDS`
+- 최소 이벤트 수: `JR_SESSION_MIN_EVENTS`
+- cadence CV 상한: `JR_STRICT_SESSION_MAX_CADENCE_CV`
+- abs foot prominence 하한: `JR_STRICT_SESSION_MIN_ABS_FOOT_PROMINENCE`
+- 짧은 스파이크 브리지: `JR_STRICT_SESSION_SHORT_BRIDGE_*`
 
-rope evidence는 손목 주변 ROI + KNN foreground로 계산합니다.
+gap/head fill 상세:
 
-1. 좌/우 손목 중심 ROI를 생성
-2. `cv2.createBackgroundSubtractorKNN` 마스크에서 contour 추출
-3. contour area가 임계값 이상일 때 ROI hit 판단
-4. `rope_detected_this_frame`(좌/우 중 하나), `rope_dual_detected_this_frame`(양손 동시) 생성
+- gap fill: `JR_STRICT_SESSION_GAP_FILL_*`
+- head fill: `JR_STRICT_SESSION_HEAD_FILL_*`
 
-이 bool 시계열은 이후 검출 게이트(활성/진입/경계 프루닝)에 사용됩니다.
+### 3.5 오버레이 정책
 
-### 2.3 온라인 카운트(오버레이용)
+- 화면에는 **현재 카운트 숫자만** 표시합니다.
+- 라벨 수, delta, 기타 디버그 텍스트는 표시하지 않습니다.
+- 필요 시 `JR_ENABLE_OVERLAY_REFRESH=true`로 post 단계에서 카운트 오버레이 재기록을 수행합니다.
 
-프레임 루프 안에서 로컬 최소점 기반 온라인 카운트를 수행합니다.
+## 4) 평가 방식
 
-- 적응형 threshold + prominence + 최소 점프 간격
-- rope ratio 게이트
-- 활성 상태 전이(`inactive -> active`) 후 카운트
+### 4.1 label 모드
 
-온라인 카운트는 즉시 화면/영상 오버레이를 위해 사용되며, 종료 후 오프라인 재검출로 최종 이벤트를 다시 확정합니다.
+- strict/adjusted/full 지표를 계산합니다.
+- 주요 지표:
+  - `strict_f1`
+  - `missed_labels`
+  - `strict_extra_detected`
 
-## 3. 오프라인 후처리 순서
+### 4.2 video / realtime 모드
 
-`detect_jump_events_offline` 내부 적용 순서:
+- 라벨이 없으면 `detected_count` 중심 결과를 출력합니다.
+- summary의 F1 계열은 `NaN`이 정상입니다.
 
-1. `recover_missing_events_in_large_gaps` (`ENABLE_GAP_RECOVERY`)
-2. `recover_high_cadence_single_miss_gaps` (`ENABLE_HIGH_CADENCE_GAP_INTERP`)
-3. `recover_high_cadence_single_miss_gaps` long-run 설정 (`ENABLE_LONG_RUN_GAP_INTERP`)
-4. `prune_small_edge_segments` (`ENABLE_EDGE_SEGMENT_PRUNE`)
-5. `prune_low_dual_ratio_segments` (`ENABLE_SEGMENT_DUAL_PRUNE`)
-6. `prune_low_confidence_boundary_events` (`ENABLE_BOUNDARY_CONF_PRUNE`)
+### 4.3 라벨 타임스탬프 보정
 
-### 3.1 Large-gap recovery
+- Kinovea 고주파 tick 포맷 라벨은 파일 timebase를 이용해 ms로 자동 변환합니다.
+- 비교 tolerance는 프레임 기반/고정 ms를 함께 고려해 계산합니다.
 
-- 이벤트 간격의 median을 기준으로 큰 gap 구간 탐지
-- 후보 강도/rope 조건/중복 간격 조건을 만족하는 minima를 삽입
-- gap별 삽입 개수 상한 적용
+## 5) 용어
 
-### 3.2 High-cadence / Long-run 단일 미스 보간
+- `short spike`: 포즈 흔들림 등으로 생기는 짧은 오탐 이벤트 묶음
+- `causal`: 미래 프레임을 보지 않는 온라인 판정
+- `fixed-lag`: 일정 지연 후 이벤트를 확정하는 방식
+- `session gate`: 이벤트 묶음을 유효 세션으로 인정하는 조건
+- `rope ratio`: 최근 윈도우에서 rope evidence가 관측된 비율
+- `rope dual ratio`: 좌/우 ROI 동시 rope evidence 비율
 
-- 주변 interval CV가 낮은 안정 구간에서만 동작
-- gap ratio가 거의 정수배이고 `missing_count == 1`일 때 중간 이벤트 1개 삽입
-- 좌표/시간은 양끝 이벤트 선형 보간
+## 6) 현재 기본값
 
-### 3.3 Edge segment prune
+- `JR_STRICT_GUARDS=true`
+- `JR_STRICT_LOWER_BODY_VIS_MIN=0.15`
+- `JR_STRICT_ACTIVE_ANTI_WALK_ENABLED=true`
+- `JR_STRICT_WEAK_NON_BILATERAL_PRUNE_ENABLED=true`
+- `JR_STRICT_WEAK_NON_BILATERAL_MAX_STRENGTH=2.0`
+- `JR_SESSION_MIN_EVENTS=5`
+- `JR_STRICT_SESSION_MIN_MEDIAN_STRENGTH_RATIO=6.0`
+- `JR_STRICT_SESSION_FILTER_ENABLED=true`
+- `JR_STRICT_SESSION_SPLIT_GAP_SECONDS=0.90`
+- `JR_STRICT_SESSION_MAX_CADENCE_CV=0.30`
+- `JR_STRICT_SESSION_MIN_ABS_FOOT_PROMINENCE=0.0005`
+- `JR_STRICT_SESSION_SHORT_BRIDGE_ENABLED=true`
+- `JR_STRICT_SESSION_SHORT_BRIDGE_MIN_EVENTS=2`
+- `JR_STRICT_SESSION_SHORT_BRIDGE_MAX_EVENTS=4`
+- `JR_STRICT_SESSION_SHORT_BRIDGE_MAX_GAP_SECONDS=1.40`
+- `JR_STRICT_SESSION_SHORT_BRIDGE_CV_SCALE=1.20`
+- `JR_STRICT_SESSION_GAP_FILL_ENABLED=true`
+- `JR_STRICT_SESSION_GAP_FILL_MIN_EVENTS=12`
+- `JR_STRICT_SESSION_GAP_FILL_MAX_CADENCE_CV=0.22`
+- `JR_STRICT_SESSION_GAP_FILL_MIN_RATIO=1.80`
+- `JR_STRICT_SESSION_GAP_FILL_MAX_RATIO=8.00`
+- `JR_STRICT_SESSION_HEAD_FILL_ENABLED=true`
+- `JR_STRICT_SESSION_HEAD_FILL_MIN_EVENTS=300`
+- `JR_STRICT_SESSION_HEAD_FILL_INSERT_COUNT=2`
+- `JR_STRICT_SESSION_HEAD_FILL_MAX_CADENCE_CV=0.10`
+- `JR_FIXED_LAG_SECONDS=1.0`
+- `JR_FIXED_LAG_FINALIZE_WAIT_SECONDS=2.0`
+- `JR_LIVE_OVERLAY_FIXED_LAG_COUNT=true`
 
-- 큰 시간 간격으로 세그먼트 분할
-- 시작/끝의 짧은 세그먼트를 제거(메인 세그먼트가 충분히 긴 경우만)
+## 7) 명령어
 
-### 3.4 Segment dual prune (zero-collapse guard 포함)
+### 7.1 라벨 전체 검증 (1~11)
 
-- 세그먼트별 `rope_dual_ratio` 중앙값 + cadence 안정성(CV) 기반으로 저신뢰 세그먼트를 제거
-- 단, 과도한 규제로 모든 세그먼트가 제거되는 경우를 방지하기 위해 fallback 적용
-  - cadence 일관성이 있는 세그먼트를 우선 복구
-  - dual 결손이 큰 경우 저신뢰 이벤트를 소량 trim 하여 과탐 완화
-  - 결과적으로 `offline_refined=0`으로 붕괴하는 케이스를 방지
+```bash
+env -u DISPLAY JR_ENABLE_OVERLAY_REFRESH=false python main_label.py
+```
 
-### 3.5 Boundary confidence prune
+### 7.2 라벨 단일 스템 검증
 
-- 헤드/테일 이벤트의 rope ratio/dual ratio가 절대적으로 낮거나,
-  인접 reference 프로파일 대비 상대적으로 낮으면 제거
-- 단, 옆 이벤트가 충분히 강한 경우에만 제거
+```bash
+env -u DISPLAY JR_ENABLE_OVERLAY_REFRESH=false python main_label.py --target-stem 07
+```
 
-## 4. 라벨 평가 로직(`labeled`)
+### 7.3 비라벨 영상 카운트
 
-### 4.1 매칭 tolerance
+```bash
+env -u DISPLAY JR_ENABLE_OVERLAY_REFRESH=false python main_video.py --video-path <video_path>
+```
 
-`tolerance_ms = max(JR_MATCH_TOLERANCE_MS, frames->ms)` 후 상한(`JR_MATCH_TOLERANCE_MAX_MS`) 적용
+### 7.4 realtime 시연 + 저장
 
-### 4.2 이벤트 매칭
+```bash
+python main_realtime.py --camera-index 0 --demo-log --demo-save-raw
+```
 
-정렬된 detected/label를 two-pointer 방식으로 1:1 시간 매칭:
+- 결과 저장 위치: `output/realtime_demo_logs/<session_dir>/`
+- 주요 산출물:
+  - `tracked.mp4`
+  - `raw.mp4` (`--demo-save-raw` 사용 시)
+  - `frame_log.csv`
+  - `<stem>_detected_events.csv`
 
-- tolerance 이내면 `matched`
-- detected가 너무 이르면 `extra_detected`
-- label이 너무 이르면 `missed_labels`
+### 7.5 summary CSV
 
-### 4.3 strict / adjusted 지표
+- video/label 실행 요약: `output/realtime_engine_summary.csv`
+- realtime 실행 요약: `output/realtime_count_summary.csv`
 
-`split_gap_candidate_events`:
+## 8) 최신 성능 평가
 
-- 라벨 내부의 큰 공백(중앙 근처)에서 생긴 extra를 `label_gap_candidate`로 분리
-- `JR_STRICT_IGNORE_GAP_CANDIDATES=true`이면 strict extra에서 gap candidate를 제외
+- label 01~11: `strict_f1=1.000`
+- no-jump 샘플:
+  - `output/realtime_demo_logs/demo_20260309_000620_realtime_cam0_20260309_000621/raw.mp4`
+  - 결과: `detected_count=0`
 
-최종 산출:
+## 9) UX 편차 실측 (라이브 vs 종료 후 최종 카운트)
 
-- `strict_precision/recall/f1/accuracy`
-- `adjusted_precision/recall/f1/accuracy`
-- `mean_abs_time_error_ms`
-- 좌/우 발 위치 오차 평균(px)
+### 9.1 요약
 
-## 5. 핵심 기본 설정(현재 코드 기본값)
+- **대부분의 경우 라이브 카운트와 종료 후 최종 카운트는 같다.**
+- **차이가 나는 경우는 주로 짧은 세션/경계 구간**이며, 종료 시 후처리(session filter)가 라이브 카운트를 일부 정리한다.
 
-### 5.1 검출
+### 9.2 실측 근거
 
-- `JR_THRESHOLD_GAIN=0.60`
-- `JR_MINIMA_LAG_FRAMES=4`
-- `JR_PROMINENCE_WINDOW=6`
-- `JR_MIN_JUMP_GAP_SECONDS=0.17`
-- `JR_MIN_STRENGTH_RATIO=1.0`
-- `JR_STARTUP_LOCKOUT_SECONDS=0.8`
-- `JR_LANDING_OFFSET_MS=100`
-- `JR_EVENT_TIME_BIAS_MS=100`
+정량 기준:
 
-### 5.2 상태/rope
+- `count_delta_end = final_count - live_overlay_last_count`
+- `first_event_time_gap_ms = first_live_count_ts - first_final_event_ts`
 
-- `JR_ACTIVE_ENTER_WINDOW_SECONDS=0.8`
-- `JR_ACTIVE_ENTER_MIN_EVENTS=2`
-- `JR_ACTIVE_ENTER_MAX_GAP_SECONDS=0.55`
-- `JR_ACTIVE_ENTER_CADENCE_MAX_CV=0.55`
-- `JR_ACTIVE_EXIT_IDLE_SECONDS=0.8`
-- `JR_ROPE_ACTIVE_WINDOW_SECONDS=0.6`
-- `JR_ROPE_ACTIVE_MIN_RATIO=0.00`
-- `JR_ROPE_ENTRY_MIN_RATIO=0.00`
-- `JR_ROPE_ENTRY_DUAL_MIN_RATIO=0.00`
-- `JR_ROPE_EXIT_IDLE_SECONDS=0.8`
+`01~11` 라벨셋에서 `first_pass -> final` 편차:
 
-### 5.3 후처리 on/off
+- 11개 중 8개 스템: 보정 0
+- 보정 발생: `02(+2)`, `07(+3)`, `11(+4)`
+- 평균 `0.818 count`, 중앙값 `0`, 최대 `+4` (`11`, `26 -> 22`)
 
-- `JR_ENABLE_GAP_RECOVERY=true`
-- `JR_ENABLE_HIGH_CADENCE_GAP_INTERP=false`
-- `JR_ENABLE_LONG_RUN_GAP_INTERP=true`
-- `JR_ENABLE_EDGE_SEGMENT_PRUNE=true`
-- `JR_ENABLE_SEGMENT_DUAL_PRUNE=true`
-- `JR_SEGMENT_DUAL_PRUNE_MIN_MEDIAN=0.50`
-- `JR_ENABLE_SEGMENT_CADENCE_PRUNE=true`
-- `JR_SHORT_SEGMENT_CADENCE_MAX_CV=0.20`
-- `JR_ENABLE_BOUNDARY_CONF_PRUNE=true`
+realtime demo 로그(overlay_counter 있는 세션) 편차:
 
-### 5.4 평가/출력
-
-- `JR_MATCH_TOLERANCE_MS=120`
-- `JR_MATCH_TOLERANCE_FRAMES=5.0`
-- `JR_MATCH_TOLERANCE_MAX_MS=180`
-- `JR_LABEL_WINDOW_PADDING_MS=150`
-- `JR_STRICT_IGNORE_GAP_CANDIDATES=true`
-- `JR_ENABLE_OVERLAY_REFRESH=true`
-- `JR_LIVE_OVERLAY_REFINED_COUNT=false` (기본 live 오버레이를 raw 카운트로 통일)
-- `JR_OVERLAY_END_WAIT_ENABLED=true` (영상 종료 후 overlay 값 안정화 대기)
-- `JR_OVERLAY_END_WAIT_SECONDS=1.5` (기본 대기 시간)
-- `JR_OVERLAY_END_WAIT_MAX_SECONDS=8.0` (최대 대기 상한)
-
-## 6. 최신 검증 결과 (2026-03-03)
-
-### 6.1 최신 realtime 세션 재검증
-
-대상 세션:
-
-- `basic_jump/output/realtime_demo_logs/realtime_cam0_20260302_224101`
-
-재현 방식:
-
-- `main_video.py --video-path .../raw.mp4`
-- `main_video.py --video-path .../tracked.mp4`
-
-결과:
-
-- raw 재생: `detected_count=20`
-- tracked 재생: `detected_count=20`
-
-### 6.2 labeled full(01~10) 결과
-
-검증 방식:
-
-- `main_label.py --target-stem 01..10` 개별 실행
-- strict/adjusted 지표 수집
-
-결과 요약:
-
-- 전 stem에서 `strict_f1=1.0`
-- 전 stem에서 `adjusted_f1=1.0`
-- `full_*` 지표는 일부 stem에서 1.0 미만(라벨 윈도우 바깥 extra 영향)이며 strict/adjusted 품질과 별도 관리
+- 집계 4세션
+- `count_delta_end`: min `0`, max `+7`, mean `2.0`, median `0.5`
+- 예시:
+  - `demo_20260309_000620...`: `47 -> 48` (`+1`)
+  - `realtime_cam0_20260302_212705`: `17 -> 24` (`+7`)
