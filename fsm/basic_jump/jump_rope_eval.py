@@ -339,6 +339,53 @@ def split_gap_candidate_events(extra_detected, label_events):
 
     return confirmed_extra, gap_candidates
 
+
+def split_boundary_candidate_events(outside_window_events, label_events):
+    if len(label_events) < 2 or not outside_window_events:
+        return list(outside_window_events), []
+
+    label_timestamps = [item["timestamp_ms"] for item in label_events]
+    intervals = np.diff(label_timestamps)
+    valid_intervals = intervals[intervals > 0]
+    if valid_intervals.size == 0:
+        return list(outside_window_events), []
+
+    median_gap = float(np.median(valid_intervals))
+    if not np.isfinite(median_gap) or median_gap <= 0.0:
+        return list(outside_window_events), []
+
+    max_ratio = float(max(1.0, BOUNDARY_CANDIDATE_MAX_RATIO))
+    max_boundary_delta_ms = float(median_gap) * max_ratio
+    max_head_events = max(0, int(BOUNDARY_CANDIDATE_MAX_HEAD_EVENTS))
+    max_tail_events = max(0, int(BOUNDARY_CANDIDATE_MAX_TAIL_EVENTS))
+    first_label_ts = int(label_timestamps[0])
+    last_label_ts = int(label_timestamps[-1])
+
+    head_candidates = []
+    tail_candidates = []
+    confirmed_outside = []
+    for event in sorted(outside_window_events, key=lambda item: int(item["timestamp_ms"])):
+        ts = int(event["timestamp_ms"])
+        if ts < first_label_ts:
+            delta_ms = float(first_label_ts - ts)
+            if delta_ms <= max_boundary_delta_ms and len(head_candidates) < max_head_events:
+                head_candidates.append(event)
+            else:
+                confirmed_outside.append(event)
+            continue
+        if ts > last_label_ts:
+            delta_ms = float(ts - last_label_ts)
+            if delta_ms <= max_boundary_delta_ms and len(tail_candidates) < max_tail_events:
+                tail_candidates.append(event)
+            else:
+                confirmed_outside.append(event)
+            continue
+        confirmed_outside.append(event)
+
+    boundary_candidates = list(head_candidates) + list(tail_candidates)
+    return confirmed_outside, boundary_candidates
+
+
 def evaluate_detected_events(detected_events, label_events, tolerance_ms):
     compared_detected_events, outside_window_events = filter_events_to_label_window(
         detected_events,
@@ -354,8 +401,16 @@ def evaluate_detected_events(detected_events, label_events, tolerance_ms):
         strict_extra_detected = extra_detected
     else:
         strict_extra_detected = strict_extra_detected_raw
-    full_strict_extra_detected = list(strict_extra_detected) + list(outside_window_events)
-    full_extra_detected = list(extra_detected) + list(outside_window_events)
+    confirmed_outside_window_events, boundary_candidate_events = split_boundary_candidate_events(
+        outside_window_events,
+        label_events,
+    )
+    if STRICT_IGNORE_BOUNDARY_CANDIDATES:
+        full_strict_extra_detected = list(strict_extra_detected) + list(confirmed_outside_window_events)
+        full_extra_detected = list(extra_detected) + list(confirmed_outside_window_events)
+    else:
+        full_strict_extra_detected = list(strict_extra_detected) + list(outside_window_events)
+        full_extra_detected = list(extra_detected) + list(outside_window_events)
     strict_precision, strict_recall, strict_f1, strict_accuracy = compute_metrics(
         len(matched_events),
         len(strict_extra_detected),
@@ -383,6 +438,8 @@ def evaluate_detected_events(detected_events, label_events, tolerance_ms):
     return {
         "compared_detected_events": compared_detected_events,
         "outside_window_events": outside_window_events,
+        "confirmed_outside_window_events": confirmed_outside_window_events,
+        "boundary_candidate_events": boundary_candidate_events,
         "matched_events": matched_events,
         "strict_extra_detected": strict_extra_detected,
         "extra_detected": extra_detected,

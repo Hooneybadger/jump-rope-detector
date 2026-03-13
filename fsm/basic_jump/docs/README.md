@@ -1,257 +1,232 @@
 # Basic Jump Detector Tech Docs
 
-## 1) 범위
+## 1) Prerequisites
 
-- 이 프로젝트는 **단일 엔진**으로 동작합니다.
-- `label/video/realtime`는 입력 소스와 평가 유무만 다르고, 카운팅 엔진은 동일합니다.
+이 문서를 읽기 전에 아래 개념을 먼저 잡아두면 전체 구조를 이해하기 쉽습니다.
 
-## 2) 실행 진입점
+- `raw candidate`
+  - 프레임 루프에서 생성된 원시 jump event입니다.
+  - 아직 최종 count가 아닙니다.
+- `confirmed count`
+  - `all-in-one` 선택기를 통과한 이벤트만으로 만든 최종 count입니다.
+  - 라이브 오버레이와 저장 결과가 이 count를 공유합니다.
+- `cadence`
+  - 연속 jump 간 시간 간격의 규칙성입니다.
+  - CV가 낮을수록 안정적인 점프열로 봅니다.
+- `rope ratio` / `rope dual ratio`
+  - 손목 ROI에서 rope evidence가 얼마나 안정적으로 관측되는지를 나타내는 비율입니다.
+  - `dual`은 좌/우가 동시에 보인 정도입니다.
+- `bilateral / symmetry`
+  - 양발 lift가 함께 보이거나 좌우 발 움직임이 대칭적인지에 대한 증거입니다.
+- `raw commit lag` / `positive commit lag`
+  - `raw_commit_lag_ms = overlay_count_reached_ts - final_event_ts`
+  - display advance와 event timestamp bias 때문에 raw lag는 음수가 될 수 있습니다.
+  - UX 평가는 `positive_commit_lag_ms = max(0, raw_commit_lag_ms)`로 해석합니다.
+- `strict / adjusted / full`
+  - `strict`: label window 내부에서 직접 비교한 지표
+  - `adjusted`: label gap candidate를 제외한 지표
+  - `full`: label window 밖 confirmed extra까지 포함한 지표
+- `label_boundary_candidate`
+  - 첫/마지막 label 바로 바깥에 있지만 cadence상 같은 점프열로 이어지는 경계 이벤트입니다.
+  - runtime 오탐이 아니라 평가 보고용 분류입니다.
+- `label timestamp conversion`
+  - Kinovea 고주파 tick 라벨은 파일 timebase를 이용해 ms로 변환한 뒤 비교합니다.
 
-- `main_label.py`
-- `main_video.py`
-- `main_realtime.py`
+## 2) What
 
-세 진입점 모두 내부적으로 동일한 `run_pipeline(...)`을 호출합니다.
+이 시스템은 줄넘기 jump count를 `label / video / realtime`에서 같은 엔진으로 계산하기 위한 detector입니다.
 
-## 3) 파이프라인 구조
+현재 운영 기준의 핵심은 아래 두 가지입니다.
 
-### 3.1 입력 Job 구성
+- 기본 엔진은 `all-in-one` 온라인 확정 엔진입니다.
+- 전체 영상을 다시 스캔하는 offline 재검출 경로는 운영 기준에서 사용하지 않습니다.
 
-- `label`: 영상 + 라벨이 둘 다 있는 스템만 처리 (`require_label=True`)
-- `video`: 영상만 처리 (라벨이 있으면 자동 비교, 없으면 카운트만 출력)
-- `realtime`: 카메라 입력 처리 (`use_realtime=True`)
+즉 현재 구조의 목적은 단순히 jump event를 많이 잡는 것이 아니라,
+`라이브에서 보인 count`와 `최종 저장 count`가 같은 의미를 갖도록 만드는 것입니다.
 
-### 3.2 프레임 온라인 검출
+## 3) Why
 
-프레임 루프에서 다음을 수행합니다.
+이 구조가 필요한 이유는 UX 문제 때문입니다.
 
-- Pose 추출 + 하체 신뢰도 검사
-- 손목 ROI 기반 rope evidence 추출
-- hip/foot 시계열에서 로컬 minima 후보 생성
-- 후보 게이트 통과 시 이벤트 생성
+기존 문제:
 
-하체 신뢰도 기본 규칙:
+- 빠른 임시 count와 종료 후 최종 count가 달라질 수 있었습니다.
+- no-jump나 짧은 오탐 세션에서 숫자가 먼저 올라갔다가 사라질 수 있었습니다.
+- 사용자는 라이브에서 본 숫자를 신뢰하기 어렵습니다.
+
+현재 설계 목표:
+
+- `final_count = online_confirmed_count`
+- 종료 후 과거 이벤트를 다시 분류해서 count를 바꾸지 않음
+- count는 monotonic하게 증가하고 rollback하지 않음
+- 확정 지연은 전체 영상 길이가 아니라 세션 초반 prefix와 로컬 gap에만 의존함
+
+## 4) Where
+
+같은 엔진이 세 경로에 공통 적용됩니다.
+
+- `label`
+  - 영상과 라벨이 모두 있을 때 count와 평가를 함께 수행합니다.
+- `video`
+  - 영상만 있을 때 count를 수행하고, 라벨이 있으면 같은 방식으로 비교합니다.
+- `realtime`
+  - 카메라 입력에서 같은 count 엔진을 사용합니다.
+
+세 경로는 입력 소스와 평가 유무만 다르고, 카운팅 원리는 같습니다.
+
+## 5) Who
+
+이 시스템에서 실제 역할을 나누는 구성요소는 아래와 같습니다.
+
+- `frame loop`
+  - pose, rope evidence, foot motion을 프레임 단위로 읽습니다.
+- `raw candidate detector`
+  - minima, motion, rope, gap 조건을 통과한 프레임을 raw candidate로 만듭니다.
+- `all-in-one session confirmer`
+  - raw candidate를 바로 count하지 않고 세션 단위로 재구성합니다.
+- `bounded recovery`
+  - 세션 시작부와 단일 gap 누락만 온라인으로 복원합니다.
+- `overlay renderer`
+  - 현재 confirmed count만 화면 숫자로 표시합니다.
+- `evaluator`
+  - label과 비교해 strict / adjusted / full 지표를 계산합니다.
+
+## 6) When
+
+각 단계는 아래 시점에 동작합니다.
+
+- `raw candidate` 생성 시점:
+  - pose와 하체 landmark가 충분히 신뢰 가능하고
+  - minima와 motion signature가 맞고
+  - rope evidence와 jump gap 조건을 통과할 때 생성됩니다.
+- `confirmed count` 증가 시점:
+  - raw candidate가 세션으로 묶이고
+  - 세그먼트 시작점이 유효하다고 판단된 뒤 증가합니다.
+- `entry backfill` 적용 시점:
+  - 세션이 이미 유효하다고 판단된 뒤, 바로 앞 1~2개 raw event가 cadence상 자연스럽게 이어질 때만 적용합니다.
+- `gap recovery` 적용 시점:
+  - 확정 세션 내부에서 단일 cadence 누락이 ratio상 분명할 때만 적용합니다.
+- `stable` 시작을 여는 시점:
+  - 현재 기본값은 `JR_ALL_IN_ONE_STABLE_ENTRY_MIN_EVENTS=4`입니다.
+  - 이 값은 `11`의 초기 지연을 `1200ms -> 333ms`로 줄이기 위해 `5 -> 4`로 조정됐습니다.
+- evaluation 보정 적용 시점:
+  - `label_boundary_candidate`와 `label_gap_candidate`는 runtime count를 바꾸지 않고 보고 단계에서만 분리됩니다.
+
+## 7) How
+
+### 7.1 Raw Candidate Generation
+
+프레임 루프는 아래 순서로 원시 후보를 만듭니다.
+
+1. pose 추출
+2. 하체 신뢰도 검사
+3. 손목 ROI 기반 rope evidence 추출
+4. hip/foot 시계열에서 로컬 minima 후보 생성
+5. motion / gap / rope 게이트 통과 시 raw candidate 생성
+
+하체 신뢰도 기본 조건:
 
 - 양쪽 hip가 모두 신뢰 가능해야 함
 - 좌/우 하체(무릎/발목/발끝)에서 각 측 최소 1개 이상 신뢰 가능해야 함
 
-핵심 온라인 게이트:
+핵심 게이트:
 
-- 점프 간격 게이트 (`JR_MIN_JUMP_GAP_SECONDS`)
-- 모션 시그니처 게이트
-- rope ratio / rope dual ratio 게이트
-- active/inactive 상태 전이 게이트
-- anti-walk 게이트 (`JR_STRICT_ACTIVE_ANTI_WALK_ENABLED`)
-- entry bootstrap 게이트 (`JR_STRICT_ENTRY_NO_FLAG_BOOTSTRAP_ENABLED`)
+- jump gap gate
+- motion signature gate
+- rope ratio / rope dual ratio gate
+- active/inactive state gate
+- anti-walk gate
+- entry bootstrap gate
 
-### 3.3 Fixed-Lag 확정과 스트리밍 오버레이
+### 7.2 All-In-One Session Confirmation
 
-- 최종 카운트의 입력은 `fixed_lag_confirmed_events`입니다.
-- 기본값:
-  - `JR_FIXED_LAG_SECONDS=1.0`
-  - `JR_FIXED_LAG_FINALIZE_WAIT_SECONDS=2.0`
-- 기본 오버레이는 fixed-lag count를 그대로 쓰지 않고,
-  `fixed_lag_confirmed_events`에 **동일한 post 규칙을 스트리밍 재적용한 count**를 사용합니다.
-- 이때 다시 보는 대상은 **전체 영상 프레임/원신호가 아니라 이미 확정된 이벤트 리스트**입니다.
-- 즉 예전 offline 재검출처럼 전체 영상을 다시 스캔하지 않고,
-  현재까지 누적된 `fixed_lag_confirmed_events`만 매 업데이트 시 재정리합니다.
-- 제어 스위치:
-  - `JR_LIVE_OVERLAY_FIXED_LAG_COUNT=true`
-  - `JR_LIVE_OVERLAY_STREAM_POSTPROCESS=true`
+raw candidate는 바로 최종 count가 되지 않습니다.
+`_select_all_in_one_events(detected_jump_events, ...)`가 세션 단위로 유효 jump만 남깁니다.
 
-의도:
-
-- 라이브 숫자를 종료 후 확정치에 더 가깝게 맞춘다.
-- no-jump 짧은 스파이크를 라이브 오버레이 단계에서 바로 숨긴다.
-
-### 3.4 세션 후처리 (Post)
-
-최종 이벤트는 아래 순서로 정리됩니다.
+처리 순서:
 
 1. weak non-bilateral prune
-2. session filter
-3. session gap fill
-4. session head fill
-5. session median strength prune
-6. run-level min events prune
+2. gap 기반 세그먼트 분리
+3. 세그먼트 시작점 판정
+4. bounded entry backfill
+5. bounded gap recovery
+6. count 재부여
 
-session filter 상세:
+세그먼트 시작점 판정 유형:
 
-- 세그먼트 분리: `JR_STRICT_SESSION_SPLIT_GAP_SECONDS`
-- 최소 이벤트 수: `JR_SESSION_MIN_EVENTS`
-- cadence CV 상한: `JR_STRICT_SESSION_MAX_CADENCE_CV`
-- abs foot prominence 하한: `JR_STRICT_SESSION_MIN_ABS_FOOT_PROMINENCE`
-- 짧은 스파이크 브리지: `JR_STRICT_SESSION_SHORT_BRIDGE_*`
+- `strong_high_dual`
+  - 초반 cadence가 안정적이고 dual rope 증거가 강한 세션
+- `strong_low_dual`
+  - dual이 약해도 rope support와 strong-positive가 충분한 세션
+- `stable`
+  - 더 긴 prefix 안정성으로 시작을 인정하는 세션
 
-gap/head fill 상세:
+### 7.3 Bounded Online Recovery
 
-- gap fill: `JR_STRICT_SESSION_GAP_FILL_*`
-- head fill: `JR_STRICT_SESSION_HEAD_FILL_*`
+offline 재스캔 대신 작은 로컬 복원만 허용합니다.
 
-### 3.5 오버레이 정책
+- `entry backfill`
+  - 확정 세션 바로 앞 1~2개 실제 raw event를 다시 포함
+  - 목적: 세션 시작 직전 실제 jump가 늦게 확정되는 문제 복구
+- `gap recovery`
+  - 확정 세션 내부의 단일 cadence 누락만 온라인 보간
+  - 핵심 기본값: `JR_ALL_IN_ONE_GAP_FILL_MIN_RATIO=1.50`
 
-- 화면에는 **현재 카운트 숫자만** 표시합니다.
-- pose landmarks는 영상 위에 계속 표시합니다.
-- 라벨 수, delta, 기타 디버그 텍스트는 표시하지 않습니다.
-- `stream_post`가 켜져 있으면 오버레이 숫자는 다음 규칙을 이미 반영한 값입니다.
-  - weak non-bilateral prune
-  - session filter
-  - session gap fill
-  - session head fill
-  - session median strength prune
-  - run-level min events prune
-- 필요 시 `JR_ENABLE_OVERLAY_REFRESH=true`로 post 단계에서 카운트 오버레이 재기록을 수행합니다.
+이 제한 때문에 현재 구조는 future 전체를 다시 뒤집는 offline 후처리와 다릅니다.
 
-## 4) 평가 방식
+### 7.4 Overlay and Final Count
 
-### 4.1 label 모드
+현재 운영 UX의 핵심은 여기입니다.
 
-- strict/adjusted/full 지표를 계산합니다.
-- 주요 지표:
-  - `strict_f1`
-  - `missed_labels`
-  - `strict_extra_detected`
+- 화면에는 현재 count 숫자만 표시합니다.
+- pose landmarks는 계속 표시합니다.
+- 라이브 오버레이와 최종 저장 count는 같은 all-in-one 결과를 사용합니다.
+- 즉 종료 후 count source가 다른 규칙으로 바뀌지 않습니다.
 
-### 4.2 video / realtime 모드
+### 7.5 Evaluation
 
-- 라벨이 없으면 `detected_count` 중심 결과를 출력합니다.
-- summary의 F1 계열은 `NaN`이 정상입니다.
+평가는 runtime과 별도입니다.
 
-### 4.3 라벨 타임스탬프 보정
+- `strict`
+  - label window 내부 직접 비교
+- `adjusted`
+  - label gap candidate 제외
+- `full`
+  - confirmed outside-window extra 포함
 
-- Kinovea 고주파 tick 포맷 라벨은 파일 timebase를 이용해 ms로 자동 변환합니다.
-- 비교 tolerance는 프레임 기반/고정 ms를 함께 고려해 계산합니다.
+경계 이벤트 해석:
 
-## 5) 용어
+- `01`, `02`, `03`, `06`에는 총 `7`개의 경계 이벤트가 있습니다.
+- 이 항목들은 `outside_label_window`가 아니라 `label_boundary_candidate`로 분류됩니다.
+- 따라서 현재 `full=1.000`은 runtime count 개선이 아니라 평가 정의 정리 결과를 포함합니다.
 
-- `short spike`: 포즈 흔들림 등으로 생기는 짧은 오탐 이벤트 묶음
-- `causal`: 미래 프레임을 보지 않는 온라인 판정
-- `fixed-lag`: 일정 지연 후 이벤트를 확정하는 방식
-- `session gate`: 이벤트 묶음을 유효 세션으로 인정하는 조건
-- `rope ratio`: 최근 윈도우에서 rope evidence가 관측된 비율
-- `rope dual ratio`: 좌/우 ROI 동시 rope evidence 비율
+## 8) Current Status
 
-## 6) 현재 기본값
+`2026-03-12 00:55 KST` 기준:
 
-- `JR_STRICT_GUARDS=true`
-- `JR_STRICT_LOWER_BODY_VIS_MIN=0.15`
-- `JR_STRICT_ACTIVE_ANTI_WALK_ENABLED=true`
-- `JR_STRICT_WEAK_NON_BILATERAL_PRUNE_ENABLED=true`
-- `JR_STRICT_WEAK_NON_BILATERAL_MAX_STRENGTH=2.0`
-- `JR_SESSION_MIN_EVENTS=5`
-- `JR_STRICT_SESSION_MIN_MEDIAN_STRENGTH_RATIO=6.0`
-- `JR_STRICT_SESSION_FILTER_ENABLED=true`
-- `JR_STRICT_SESSION_SPLIT_GAP_SECONDS=0.90`
-- `JR_STRICT_SESSION_MAX_CADENCE_CV=0.30`
-- `JR_STRICT_SESSION_MIN_ABS_FOOT_PROMINENCE=0.0005`
-- `JR_STRICT_SESSION_SHORT_BRIDGE_ENABLED=true`
-- `JR_STRICT_SESSION_SHORT_BRIDGE_MIN_EVENTS=2`
-- `JR_STRICT_SESSION_SHORT_BRIDGE_MAX_EVENTS=4`
-- `JR_STRICT_SESSION_SHORT_BRIDGE_MAX_GAP_SECONDS=1.40`
-- `JR_STRICT_SESSION_SHORT_BRIDGE_CV_SCALE=1.20`
-- `JR_STRICT_SESSION_GAP_FILL_ENABLED=true`
-- `JR_STRICT_SESSION_GAP_FILL_MIN_EVENTS=12`
-- `JR_STRICT_SESSION_GAP_FILL_MAX_CADENCE_CV=0.22`
-- `JR_STRICT_SESSION_GAP_FILL_MIN_RATIO=1.80`
-- `JR_STRICT_SESSION_GAP_FILL_MAX_RATIO=8.00`
-- `JR_STRICT_SESSION_HEAD_FILL_ENABLED=true`
-- `JR_STRICT_SESSION_HEAD_FILL_MIN_EVENTS=300`
-- `JR_STRICT_SESSION_HEAD_FILL_INSERT_COUNT=2`
-- `JR_STRICT_SESSION_HEAD_FILL_MAX_CADENCE_CV=0.10`
-- `JR_FIXED_LAG_SECONDS=1.0`
-- `JR_FIXED_LAG_FINALIZE_WAIT_SECONDS=2.0`
-- `JR_LIVE_OVERLAY_FIXED_LAG_COUNT=true`
-- `JR_LIVE_OVERLAY_STREAM_POSTPROCESS=true`
+정확도:
 
-## 7) 명령어
+- `01~11 strict_f1_mean=1.000`
+- `strict_f1_min=1.000`
+- `adjusted_f1_mean=1.000`
+- `full_strict_f1_mean=1.000`
+- `full_adjusted_f1_mean=1.000`
+- no-jump `detected_count=0`
 
-### 7.1 라벨 전체 검증 (1~11)
+대표 UX:
 
-```bash
-env -u DISPLAY JR_ENABLE_OVERLAY_REFRESH=false python main_label.py
-```
+- `07`: `final_live_delta=0`, `monotonic=true`, `max_positive_commit_lag_ms=0`
+- `09`: `final_live_delta=0`, `monotonic=true`, `max_positive_commit_lag_ms=500`
+- `11`: `final_live_delta=0`, `monotonic=true`, `max_positive_commit_lag_ms=333`
+- no-jump: `overlay_max_count=0`, `final_count=0`
 
-### 7.2 라벨 단일 스템 검증
+요약:
 
-```bash
-env -u DISPLAY JR_ENABLE_OVERLAY_REFRESH=false python main_label.py --target-stem 07
-```
+- representative probe 기준으로 `e2e <= 1000ms`와 `live=final`은 현재 충족합니다.
+- 정확도 1.000과 UX gate는 모두 닫힌 상태입니다.
+- 남은 일은 엔진 원리 변경이 아니라, 더 많은 세션 유형에 대해 같은 UX 수치를 지속 추적하는 것입니다.
 
-### 7.3 비라벨 영상 카운트
+참고 산출물:
 
-```bash
-env -u DISPLAY JR_ENABLE_OVERLAY_REFRESH=false python main_video.py --video-path <video_path>
-```
-
-### 7.4 realtime 시연 + 저장
-
-```bash
-python main_realtime.py --camera-index 0 --demo-log --demo-save-raw
-```
-
-- 결과 저장 위치: `output/realtime_demo_logs/<session_dir>/`
-- 주요 산출물:
-  - `tracked.mp4`
-  - `raw.mp4` (`--demo-save-raw` 사용 시)
-  - `frame_log.csv`
-  - `<stem>_detected_events.csv`
-
-### 7.5 summary CSV
-
-- video/label 실행 요약: `output/realtime_engine_summary.csv`
-- realtime 실행 요약: `output/realtime_count_summary.csv`
-
-## 8) 최신 성능 평가
-
-- label 01~11: `strict_f1=1.000`
-- no-jump 샘플:
-  - `output/realtime_demo_logs/demo_20260309_000620_realtime_cam0_20260309_000621/raw.mp4`
-  - 결과: `detected_count=0`
-
-## 9) UX 편차 실측 (라이브 vs 종료 후 최종 카운트)
-
-### 9.1 요약
-
-- 요지는 **오버레이를 "빠른 추정치"가 아니라 "보수적 확정치"에 더 가깝게 바꿨다**는 것입니다.
-- 이전 fixed-lag 오버레이는 짧은 오탐 세션도 바로 숫자로 보여줘서, 사용자 입장에서는 의미 없는 숫자가 먼저 올라가고 종료 후 사라질 수 있었습니다.
-- 현재 `stream_post` 오버레이는 같은 세션 규칙을 즉시 반영하므로, **보여준 숫자가 최종 숫자로 남을 가능성**을 높입니다.
-- 대가로 **실제 점프 시작 직후 몇 카운트는 표시가 늦어질 수 있습니다.**
-
-### 9.2 실측 근거
-
-정량 기준:
-
-- `count_delta_end = final_count - live_overlay_last_count`
-- `first_event_time_gap_ms = first_live_count_ts - first_final_event_ts`
-
-`01~11` 라벨셋에서 `first_pass -> final` 편차:
-
-- 11개 중 8개 스템: 보정 0
-- 보정 발생: `02(+2)`, `07(+3)`, `11(+4)`
-- 평균 `0.818 count`, 중앙값 `0`, 최대 `+4` (`11`, `26 -> 22`)
-
-realtime demo 로그(overlay_counter 있는 세션) 편차:
-
-- 집계 4세션
-- `count_delta_end`: min `0`, max `+7`, mean `2.0`, median `0.5`
-- 예시:
-  - `demo_20260309_000620...`: `47 -> 48` (`+1`)
-  - `realtime_cam0_20260302_212705`: `17 -> 24` (`+7`)
-
-### 9.3 이번 시도에서 확인한 개선 효과
-
-- 11번 샘플:
-  - 기존 fixed-lag 오버레이 마지막 값: `24`
-  - 새 `stream_post` 오버레이 마지막 값: `22`
-  - 최종 확정값: `22`
-  - 첫 fixed-lag 확정 대비 첫 오버레이 표시는 약 `+2000 ms` 늦어짐
-- no-jump 샘플(`demo_20260309_000620.../raw.mp4`):
-  - 기존 fixed-lag/raw 내부 카운트는 끝까지 `45`
-  - 새 `stream_post` 오버레이는 끝까지 `0`
-  - 최종 확정값: `0`
-
-즉 현재 시도는 UX 관점에서 다음 효과를 냈습니다.
-
-- no-jump에서 의미 없는 숫자가 보이는 문제를 사실상 제거
-- 실제 점프 세션에서는 라이브 마지막 숫자와 최종 숫자의 불일치를 축소
-- 오버레이 숫자는 더 늦게 올라오지만, 올라온 뒤 다시 뒤집힐 가능성은 줄어듦
+- `output/realtime_engine_summary.csv`
+- `output/ux_probe_summary.csv`

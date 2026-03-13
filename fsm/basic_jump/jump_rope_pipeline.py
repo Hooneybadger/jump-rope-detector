@@ -310,6 +310,7 @@ def _fill_session_gaps(
     max_ratio,
     max_insert_per_gap,
     max_total_insert,
+    skip_prefix_pairs=0,
 ):
     if len(segment_events) < 3:
         return list(segment_events), 0
@@ -335,6 +336,8 @@ def _fill_session_gaps(
         prev_event = segment_events[idx]
         next_event = segment_events[idx + 1]
         filled_events.append(prev_event)
+        if idx < max(0, int(skip_prefix_pairs)):
+            continue
         if inserted_total >= max_insert_total:
             continue
         gap_ms = int(next_event.get("timestamp_ms", -1)) - int(prev_event.get("timestamp_ms", -1))
@@ -382,6 +385,329 @@ def _fill_session_head(
             continue
         head_events.append(extrapolated)
     return head_events + list(segment_events), len(head_events)
+
+
+def _is_weak_non_bilateral_event(event):
+    strength = float(event.get("strength_ratio", np.nan))
+    foot_prominence = float(event.get("foot_prominence", np.nan))
+    both_feet_lift_ok = bool(event.get("both_feet_lift_ok", False))
+    feet_symmetry_ok = bool(event.get("feet_symmetry_ok", False))
+    weak_strength_max = float(STRICT_WEAK_NON_BILATERAL_MAX_STRENGTH)
+    return bool(
+        np.isfinite(strength)
+        and strength <= weak_strength_max
+        and np.isfinite(foot_prominence)
+        and foot_prominence < 0.0
+        and (not both_feet_lift_ok)
+        and (not feet_symmetry_ok)
+    )
+
+
+def _is_all_in_one_strong_positive_event(event):
+    strength = float(event.get("strength_ratio", np.nan))
+    foot_prominence = float(event.get("foot_prominence", np.nan))
+    return bool(
+        np.isfinite(strength)
+        and strength >= float(ALL_IN_ONE_STRONG_ENTRY_MIN_STRENGTH_RATIO)
+        and np.isfinite(foot_prominence)
+        and foot_prominence >= float(ALL_IN_ONE_STRONG_ENTRY_MIN_FOOT_PROMINENCE)
+    )
+
+
+def _has_bilateral_or_symmetry(event):
+    return bool(event.get("both_feet_lift_ok", False) or event.get("feet_symmetry_ok", False))
+
+
+def _find_all_in_one_segment_start(segment_events):
+    if not segment_events:
+        return None, ""
+    strong_min_events = max(1, int(ALL_IN_ONE_STRONG_ENTRY_MIN_EVENTS))
+    stable_min_events = max(strong_min_events, int(ALL_IN_ONE_STABLE_ENTRY_MIN_EVENTS))
+    strong_max_cv = float(max(0.0, float(ALL_IN_ONE_STRONG_ENTRY_MAX_CADENCE_CV)))
+    stable_max_cv = float(max(0.0, float(ALL_IN_ONE_STABLE_ENTRY_MAX_CADENCE_CV)))
+    strong_min_events_count = max(1, int(ALL_IN_ONE_STRONG_ENTRY_MIN_STRONG_EVENTS))
+    stable_min_events_count = max(1, int(ALL_IN_ONE_STABLE_ENTRY_MIN_STRONG_EVENTS))
+    start_min_fp = float(max(0.0, float(ALL_IN_ONE_ENTRY_START_MIN_FOOT_PROMINENCE)))
+    strong_min_rope = float(max(0.0, float(ALL_IN_ONE_STRONG_ENTRY_MIN_ROPE_RATIO)))
+    strong_min_dual = float(max(0.0, float(ALL_IN_ONE_STRONG_ENTRY_MIN_DUAL_RATIO)))
+    stable_min_rope = float(max(0.0, float(ALL_IN_ONE_STABLE_ENTRY_MIN_ROPE_RATIO)))
+    stable_min_abs_fp = float(max(0.0, float(ALL_IN_ONE_STABLE_ENTRY_MIN_ABS_FOOT_PROMINENCE)))
+
+    for end_idx in range(len(segment_events)):
+        prefix = segment_events[: end_idx + 1]
+        prefix_len = len(prefix)
+        prefix_cv = _compute_event_cadence_cv(prefix)
+        rope_values = [
+            float(event.get("rope_ratio", np.nan))
+            for event in prefix
+            if np.isfinite(float(event.get("rope_ratio", np.nan)))
+        ]
+        dual_values = [
+            float(event.get("rope_dual_ratio", np.nan))
+            for event in prefix
+            if np.isfinite(float(event.get("rope_dual_ratio", np.nan)))
+        ]
+        abs_fp_values = [
+            abs(float(event.get("foot_prominence", np.nan)))
+            for event in prefix
+            if np.isfinite(float(event.get("foot_prominence", np.nan)))
+        ]
+        strong_positive_indices = [
+            idx for idx, event in enumerate(prefix) if _is_all_in_one_strong_positive_event(event)
+        ]
+        bilateral_indices = [idx for idx, event in enumerate(prefix) if _has_bilateral_or_symmetry(event)]
+        median_rope = float(np.median(rope_values)) if rope_values else 0.0
+        median_dual = float(np.median(dual_values)) if dual_values else 0.0
+        median_abs_fp = float(np.median(abs_fp_values)) if abs_fp_values else 0.0
+
+        if (
+            prefix_len >= strong_min_events
+            and prefix_cv <= strong_max_cv
+            and median_rope >= strong_min_rope
+            and median_dual >= strong_min_dual
+            and len(strong_positive_indices) >= strong_min_events_count
+            and bilateral_indices
+        ):
+            for idx, event in enumerate(prefix):
+                event_fp = float(event.get("foot_prominence", np.nan))
+                if (
+                    _has_bilateral_or_symmetry(event)
+                    or (np.isfinite(event_fp) and event_fp >= start_min_fp)
+                ):
+                    return idx, "strong_high_dual"
+            return strong_positive_indices[0], "strong_high_dual_fallback"
+
+        if (
+            prefix_len >= strong_min_events
+            and prefix_cv <= strong_max_cv
+            and median_rope >= strong_min_rope
+            and len(strong_positive_indices) >= strong_min_events_count
+            and bilateral_indices
+        ):
+            low_dual_start_idx = max(0, strong_positive_indices[0] - 1)
+            for idx in range(low_dual_start_idx, strong_positive_indices[0] + 1):
+                event = prefix[idx]
+                event_fp = abs(float(event.get("foot_prominence", np.nan)))
+                if _has_bilateral_or_symmetry(event) or (
+                    np.isfinite(event_fp) and event_fp >= start_min_fp
+                ):
+                    return idx, "strong_low_dual"
+            return strong_positive_indices[0], "strong_low_dual_strong_start"
+
+        if (
+            prefix_len >= stable_min_events
+            and prefix_cv <= stable_max_cv
+            and median_rope >= stable_min_rope
+            and median_abs_fp >= stable_min_abs_fp
+            and len(strong_positive_indices) >= stable_min_events_count
+            and bilateral_indices
+        ):
+            return strong_positive_indices[0], "stable"
+    return None, ""
+
+
+def _backfill_all_in_one_entry(segment_events, keep_start_idx):
+    kept_segment = [dict(event) for event in segment_events[keep_start_idx:]]
+    if keep_start_idx <= 0 or len(kept_segment) < 3:
+        return kept_segment, 0
+
+    min_backfill = max(1, int(ALL_IN_ONE_ENTRY_BACKFILL_MIN_EVENTS))
+    max_backfill = max(min_backfill, int(ALL_IN_ONE_ENTRY_BACKFILL_MAX_EVENTS))
+    if keep_start_idx < min_backfill:
+        return kept_segment, 0
+
+    kept_timestamps = np.asarray(
+        [int(item.get("timestamp_ms", -1)) for item in kept_segment[:5]],
+        dtype=np.float64,
+    )
+    kept_gaps = np.diff(kept_timestamps)
+    kept_gaps = kept_gaps[kept_gaps > 0.0]
+    if kept_gaps.size == 0:
+        return kept_segment, 0
+    reference_gap = float(np.median(kept_gaps))
+    if not np.isfinite(reference_gap) or reference_gap <= 0.0:
+        return kept_segment, 0
+
+    min_gap_ratio = float(max(0.0, float(ALL_IN_ONE_ENTRY_BACKFILL_MIN_GAP_RATIO)))
+    max_gap_ratio = float(
+        max(min_gap_ratio, float(ALL_IN_ONE_ENTRY_BACKFILL_MAX_GAP_RATIO))
+    )
+    min_abs_fp = float(
+        max(0.0, float(ALL_IN_ONE_ENTRY_BACKFILL_MIN_ABS_FOOT_PROMINENCE))
+    )
+
+    backfilled_events = []
+    strong_or_bilateral_count = 0
+    next_event = dict(kept_segment[0])
+    for source_idx in range(keep_start_idx - 1, -1, -1):
+        if len(backfilled_events) >= max_backfill:
+            break
+        candidate = dict(segment_events[source_idx])
+        candidate_ts = int(candidate.get("timestamp_ms", -1))
+        next_ts = int(next_event.get("timestamp_ms", -1))
+        gap_ms = next_ts - candidate_ts
+        if gap_ms <= 0:
+            break
+        gap_ratio = float(gap_ms) / reference_gap
+        if gap_ratio < min_gap_ratio or gap_ratio > max_gap_ratio:
+            break
+        if _is_weak_non_bilateral_event(candidate):
+            break
+        abs_fp = abs(float(candidate.get("foot_prominence", np.nan)))
+        strong_or_bilateral = bool(
+            _is_all_in_one_strong_positive_event(candidate)
+            or _has_bilateral_or_symmetry(candidate)
+        )
+        if (not strong_or_bilateral) and (
+            (not np.isfinite(abs_fp)) or abs_fp < min_abs_fp
+        ):
+            break
+        backfilled_events.append(candidate)
+        if strong_or_bilateral:
+            strong_or_bilateral_count += 1
+        next_event = candidate
+
+    if len(backfilled_events) < min_backfill or strong_or_bilateral_count <= 0:
+        return kept_segment, 0
+    backfilled_events.reverse()
+    return backfilled_events + kept_segment, len(backfilled_events)
+
+
+def _head_fill_all_in_one_entry(
+    kept_segment,
+    keep_start_idx,
+    entry_backfill_count,
+    start_reason,
+    segment_idx,
+    segments,
+):
+    if entry_backfill_count > 0:
+        return list(kept_segment), 0
+    if len(kept_segment) < 4:
+        return list(kept_segment), 0
+    early_cv = _compute_event_cadence_cv(kept_segment[:5])
+    if early_cv > min(0.10, float(ALL_IN_ONE_STABLE_ENTRY_MAX_CADENCE_CV)):
+        return list(kept_segment), 0
+    insert_count = max(0, min(2, int(keep_start_idx) - 2))
+    if (
+        insert_count <= 0
+        and int(keep_start_idx) == 0
+        and int(segment_idx) > 0
+        and str(start_reason) == "strong_high_dual"
+    ):
+        previous_segment = list(segments[segment_idx - 1])
+        previous_keep_start_idx, _ = _find_all_in_one_segment_start(previous_segment)
+        previous_segment_gap_ms = int(kept_segment[0].get("timestamp_ms", -1)) - int(
+            previous_segment[-1].get("timestamp_ms", -1)
+        )
+        if (
+            previous_keep_start_idx is None
+            and len(previous_segment) <= 3
+            and previous_segment_gap_ms >= 3000
+        ):
+            insert_count = 2
+    if insert_count <= 0:
+        return list(kept_segment), 0
+    filled_segment, inserted_count = _fill_session_head(
+        segment_events=kept_segment,
+        insert_count=insert_count,
+    )
+    return filled_segment, int(inserted_count)
+
+
+def _select_all_in_one_events(source_events, strict_guard_mode):
+    selected_events = []
+    pruned_weak_non_bilateral = 0
+    inserted_by_entry_backfill = 0
+    inserted_by_head_fill = 0
+    inserted_by_gap_fill = 0
+    candidate_events = []
+    for event in source_events:
+        event_copy = dict(event)
+        if strict_guard_mode and bool(STRICT_WEAK_NON_BILATERAL_PRUNE_ENABLED):
+            if _is_weak_non_bilateral_event(event_copy):
+                pruned_weak_non_bilateral += 1
+                continue
+        candidate_events.append(event_copy)
+
+    segments = _split_events_by_gap(
+        candidate_events,
+        gap_ms=int(round(max(0.0, float(STRICT_SESSION_SPLIT_GAP_SECONDS)) * 1000.0)),
+    )
+    confirmed_segments = 0
+    dropped_segments = 0
+    segment_debug_rows = []
+    for segment_idx, segment in enumerate(segments):
+        keep_start_idx, reason = _find_all_in_one_segment_start(segment)
+        segment_cv = _compute_event_cadence_cv(segment)
+        abs_fp_values = [
+            abs(float(item.get("foot_prominence", np.nan)))
+            for item in segment
+            if np.isfinite(float(item.get("foot_prominence", np.nan)))
+        ]
+        segment_abs_fp_median = float(np.median(abs_fp_values)) if abs_fp_values else 0.0
+        kept = keep_start_idx is not None
+        segment_debug_rows.append(
+            (
+                segment_idx,
+                int(len(segment)),
+                int(segment[0].get("timestamp_ms", -1)),
+                int(segment[-1].get("timestamp_ms", -1)),
+                float(segment_cv),
+                float(segment_abs_fp_median),
+                bool(kept),
+                reason or "rejected",
+            )
+        )
+        if keep_start_idx is None:
+            dropped_segments += 1
+            continue
+        kept_segment, entry_backfill_count = _backfill_all_in_one_entry(
+            segment_events=segment,
+            keep_start_idx=keep_start_idx,
+        )
+        inserted_by_entry_backfill += int(entry_backfill_count)
+        kept_segment, head_fill_count = _head_fill_all_in_one_entry(
+            kept_segment=kept_segment,
+            keep_start_idx=keep_start_idx,
+            entry_backfill_count=entry_backfill_count,
+            start_reason=reason,
+            segment_idx=segment_idx,
+            segments=segments,
+        )
+        inserted_by_head_fill += int(head_fill_count)
+        gap_fill_skip_prefix_pairs = 1 if keep_start_idx <= 0 and entry_backfill_count <= 0 else 0
+        if (
+            strict_guard_mode
+            and bool(STRICT_SESSION_GAP_FILL_ENABLED)
+            and len(kept_segment) >= max(3, int(STRICT_SESSION_GAP_FILL_MIN_EVENTS))
+            and _compute_event_cadence_cv(kept_segment)
+            <= float(STRICT_SESSION_GAP_FILL_MAX_CADENCE_CV)
+        ):
+            kept_segment, inserted_count = _fill_session_gaps(
+                segment_events=kept_segment,
+                min_ratio=float(ALL_IN_ONE_GAP_FILL_MIN_RATIO),
+                max_ratio=float(STRICT_SESSION_GAP_FILL_MAX_RATIO),
+                max_insert_per_gap=int(STRICT_SESSION_GAP_FILL_MAX_INSERT_PER_GAP),
+                max_total_insert=int(STRICT_SESSION_GAP_FILL_MAX_TOTAL_INSERT),
+                skip_prefix_pairs=gap_fill_skip_prefix_pairs,
+            )
+            inserted_by_gap_fill += int(inserted_count)
+        selected_events.extend(kept_segment)
+        confirmed_segments += 1
+
+    for idx, event in enumerate(selected_events, start=1):
+        event["count"] = idx
+
+    return selected_events, {
+        "pruned_weak_non_bilateral": int(pruned_weak_non_bilateral),
+        "inserted_by_entry_backfill": int(inserted_by_entry_backfill),
+        "inserted_by_head_fill": int(inserted_by_head_fill),
+        "inserted_by_gap_fill": int(inserted_by_gap_fill),
+        "confirmed_segments": int(confirmed_segments),
+        "dropped_segments": int(dropped_segments),
+        "segment_debug_rows": segment_debug_rows,
+    }
 
 
 def _postprocess_confirmed_events(
@@ -661,6 +987,7 @@ def run_pipeline(
         file_path = job["video_path"]
         capture_source = job.get("capture_source", file_path)
         is_realtime = bool(job.get("is_realtime", False))
+        all_in_one_enabled = bool(ALL_IN_ONE_ENGINE_ENABLED)
         use_live_fixed_lag_overlay = bool(LIVE_OVERLAY_FIXED_LAG_COUNT)
         # Realtime-only architecture: always finalize with fixed-lag confirmed events.
         use_fixed_lag_final = True
@@ -735,6 +1062,7 @@ def run_pipeline(
                 f"advanced_min_checks={runtime_motion_advanced_min_checks} "
                 f"active_motion_window={STRICT_ACTIVE_FOOT_MOTION_WINDOW} "
                 f"active_motion_min_ratio={STRICT_ACTIVE_FOOT_MOTION_MIN_RATIO:.2f} "
+                f"all_in_one_enabled={all_in_one_enabled} "
                 f"live_overlay_fixed_lag={use_live_fixed_lag_overlay} "
                 f"live_overlay_stream_post={bool(LIVE_OVERLAY_STREAM_POSTPROCESS)} "
                 f"fixed_lag_s={FIXED_LAG_SECONDS:.2f} "
@@ -854,6 +1182,8 @@ def run_pipeline(
         fixed_lag_confirmed_cursor = 0
         live_overlay_events = []
         live_overlay_source_count = -1
+        live_all_in_one_events = []
+        live_all_in_one_source_count = -1
         landmark_frame_numbers = []
         landmark_timestamps_ms = []
         min_jump_gap_frames = max(4, int(round(fps * MIN_JUMP_GAP_SECONDS)))
@@ -1365,7 +1695,16 @@ def run_pipeline(
 
                     overlay_jump_counter = raw_jump_counter
                     overlay_counter_mode = "raw"
-                    if use_live_fixed_lag_overlay:
+                    if all_in_one_enabled:
+                        if live_all_in_one_source_count != raw_jump_counter:
+                            live_all_in_one_events, _ = _select_all_in_one_events(
+                                detected_jump_events,
+                                strict_guard_mode=strict_guard_mode,
+                            )
+                            live_all_in_one_source_count = int(raw_jump_counter)
+                        overlay_jump_counter = int(len(live_all_in_one_events))
+                        overlay_counter_mode = "all_in_one"
+                    elif use_live_fixed_lag_overlay:
                         if bool(LIVE_OVERLAY_STREAM_POSTPROCESS):
                             if live_overlay_source_count != fixed_lag_confirmed_count:
                                 live_overlay_events, _ = _postprocess_confirmed_events(
@@ -1562,47 +1901,48 @@ def run_pipeline(
     
         postprocess_start = time.time()
         print(f"[POST] Starting post-processing: {stem}")
-        final_display_ts_ms = int(
-            last_frame_timestamp_ms + DISPLAY_TIME_ADVANCE_MS + fixed_lag_finalize_wait_ms
-        )
-        fixed_lag_confirmed_cursor = advance_fixed_lag_confirmed_events(
-            detected_jump_events=detected_jump_events,
-            confirmed_events=fixed_lag_confirmed_events,
-            confirmed_cursor=fixed_lag_confirmed_cursor,
-            current_display_ts_ms=final_display_ts_ms,
-            fixed_lag_ms=fixed_lag_ms,
-            fps=fps,
-        )
-        selected_events, postprocess_stats = _postprocess_confirmed_events(
-            fixed_lag_confirmed_events,
-            strict_guard_mode=strict_guard_mode,
-        )
-        pruned_weak_non_bilateral = int(postprocess_stats["pruned_weak_non_bilateral"])
-        pruned_by_session_filter = int(postprocess_stats["pruned_by_session_filter"])
-        pruned_by_session_strength = int(postprocess_stats["pruned_by_session_strength"])
-        pruned_by_run_min_events = int(postprocess_stats["pruned_by_run_min_events"])
-        inserted_by_gap_fill = int(postprocess_stats["inserted_by_gap_fill"])
-        inserted_by_head_fill = int(postprocess_stats["inserted_by_head_fill"])
-        session_split_gap_ms = int(postprocess_stats["session_split_gap_ms"])
-        session_min_events = int(postprocess_stats["session_min_events"])
-        session_max_cadence_cv = float(postprocess_stats["session_max_cadence_cv"])
-        kept_segments = int(postprocess_stats["kept_segments"])
-        dropped_segments = int(postprocess_stats["dropped_segments"])
-        bridged_short_segments = int(postprocess_stats["bridged_short_segments"])
-        segment_debug_rows = list(postprocess_stats["segment_debug_rows"])
-        if strict_guard_mode and bool(STRICT_SESSION_FILTER_ENABLED) and (
-            dropped_segments > 0 or bridged_short_segments > 0 or kept_segments > 0
-        ):
-            total_segments = kept_segments + dropped_segments
-            print(
-                f"[POST] session_filter kept_segments={kept_segments}/{total_segments} "
-                f"dropped_segments={dropped_segments} "
-                f"split_gap_ms={session_split_gap_ms} "
-                f"min_events={session_min_events} "
-                f"max_cadence_cv={session_max_cadence_cv:.2f} "
-                f"bridged_short_segments={bridged_short_segments}"
+        if all_in_one_enabled:
+            selected_events, all_in_one_stats = _select_all_in_one_events(
+                detected_jump_events,
+                strict_guard_mode=strict_guard_mode,
             )
-            if dropped_segments > 0 or bridged_short_segments > 0:
+            pruned_weak_non_bilateral = int(all_in_one_stats["pruned_weak_non_bilateral"])
+            inserted_by_entry_backfill = int(all_in_one_stats["inserted_by_entry_backfill"])
+            inserted_by_head_fill = int(all_in_one_stats["inserted_by_head_fill"])
+            inserted_by_gap_fill = int(all_in_one_stats["inserted_by_gap_fill"])
+            confirmed_segments = int(all_in_one_stats["confirmed_segments"])
+            dropped_segments = int(all_in_one_stats["dropped_segments"])
+            segment_debug_rows = list(all_in_one_stats["segment_debug_rows"])
+            pending_after_finalize = 0
+            print(
+                f"[POST] all_in_one_final_count raw={len(detected_jump_events)} "
+                f"final={len(selected_events)} "
+                f"confirmed_segments={confirmed_segments} "
+                f"dropped_segments={dropped_segments}"
+            )
+            if pruned_weak_non_bilateral > 0:
+                print(
+                    f"[POST] pruned_weak_non_bilateral events={pruned_weak_non_bilateral} "
+                    f"max_strength={float(STRICT_WEAK_NON_BILATERAL_MAX_STRENGTH):.2f}"
+                )
+            if inserted_by_entry_backfill > 0:
+                print(
+                    f"[POST] all_in_one_entry_backfill inserted={inserted_by_entry_backfill} "
+                    f"min_events={int(ALL_IN_ONE_ENTRY_BACKFILL_MIN_EVENTS)} "
+                    f"max_events={int(ALL_IN_ONE_ENTRY_BACKFILL_MAX_EVENTS)}"
+                )
+            if inserted_by_head_fill > 0:
+                print(
+                    f"[POST] all_in_one_head_fill inserted={inserted_by_head_fill} "
+                    f"max_insert=2"
+                )
+            if inserted_by_gap_fill > 0:
+                print(
+                    f"[POST] all_in_one_gap_fill inserted={inserted_by_gap_fill} "
+                    f"min_ratio={float(ALL_IN_ONE_GAP_FILL_MIN_RATIO):.2f} "
+                    f"max_ratio={float(STRICT_SESSION_GAP_FILL_MAX_RATIO):.2f}"
+                )
+            if dropped_segments > 0 or confirmed_segments > 0:
                 for (
                     seg_idx,
                     seg_len,
@@ -1614,52 +1954,110 @@ def run_pipeline(
                     seg_reason,
                 ) in segment_debug_rows:
                     print(
-                        f"[POST] session_filter_segment idx={seg_idx} "
+                        f"[POST] all_in_one_segment idx={seg_idx} "
                         f"len={seg_len} start_ts={seg_start_ts} end_ts={seg_end_ts} "
                         f"cv={seg_cv:.3f} abs_fp_median={seg_abs_fp_median:.6f} "
                         f"kept={seg_kept} reason={seg_reason}"
                     )
-        pending_after_finalize = max(0, len(detected_jump_events) - len(selected_events))
-        print(
-            f"[POST] fixed_lag_final_count first_pass={len(detected_jump_events)} "
-            f"final={len(selected_events)} "
-            f"pending_after_finalize={pending_after_finalize} "
-            f"fixed_lag_s={FIXED_LAG_SECONDS:.2f} "
-            f"finalize_wait_s={FIXED_LAG_FINALIZE_WAIT_SECONDS:.2f}"
-        )
-        if pruned_weak_non_bilateral > 0:
-            print(
-                f"[POST] pruned_weak_non_bilateral events={pruned_weak_non_bilateral} "
-                f"max_strength={float(STRICT_WEAK_NON_BILATERAL_MAX_STRENGTH):.2f}"
+        else:
+            final_display_ts_ms = int(
+                last_frame_timestamp_ms + DISPLAY_TIME_ADVANCE_MS + fixed_lag_finalize_wait_ms
             )
-        if pruned_by_session_strength > 0:
-            print(
-                f"[POST] pruned_by_session_strength events={pruned_by_session_strength} "
-                f"min_median_strength={float(STRICT_SESSION_MIN_MEDIAN_STRENGTH_RATIO):.2f}"
+            fixed_lag_confirmed_cursor = advance_fixed_lag_confirmed_events(
+                detected_jump_events=detected_jump_events,
+                confirmed_events=fixed_lag_confirmed_events,
+                confirmed_cursor=fixed_lag_confirmed_cursor,
+                current_display_ts_ms=final_display_ts_ms,
+                fixed_lag_ms=fixed_lag_ms,
+                fps=fps,
             )
-        if pruned_by_session_filter > 0:
-            print(
-                f"[POST] pruned_by_session_filter events={pruned_by_session_filter} "
-                f"split_gap_s={float(STRICT_SESSION_SPLIT_GAP_SECONDS):.2f} "
-                f"max_cadence_cv={float(STRICT_SESSION_MAX_CADENCE_CV):.2f}"
+            selected_events, postprocess_stats = _postprocess_confirmed_events(
+                fixed_lag_confirmed_events,
+                strict_guard_mode=strict_guard_mode,
             )
-        if pruned_by_run_min_events > 0:
+            pruned_weak_non_bilateral = int(postprocess_stats["pruned_weak_non_bilateral"])
+            pruned_by_session_filter = int(postprocess_stats["pruned_by_session_filter"])
+            pruned_by_session_strength = int(postprocess_stats["pruned_by_session_strength"])
+            pruned_by_run_min_events = int(postprocess_stats["pruned_by_run_min_events"])
+            inserted_by_gap_fill = int(postprocess_stats["inserted_by_gap_fill"])
+            inserted_by_head_fill = int(postprocess_stats["inserted_by_head_fill"])
+            session_split_gap_ms = int(postprocess_stats["session_split_gap_ms"])
+            session_min_events = int(postprocess_stats["session_min_events"])
+            session_max_cadence_cv = float(postprocess_stats["session_max_cadence_cv"])
+            kept_segments = int(postprocess_stats["kept_segments"])
+            dropped_segments = int(postprocess_stats["dropped_segments"])
+            bridged_short_segments = int(postprocess_stats["bridged_short_segments"])
+            segment_debug_rows = list(postprocess_stats["segment_debug_rows"])
+            if strict_guard_mode and bool(STRICT_SESSION_FILTER_ENABLED) and (
+                dropped_segments > 0 or bridged_short_segments > 0 or kept_segments > 0
+            ):
+                total_segments = kept_segments + dropped_segments
+                print(
+                    f"[POST] session_filter kept_segments={kept_segments}/{total_segments} "
+                    f"dropped_segments={dropped_segments} "
+                    f"split_gap_ms={session_split_gap_ms} "
+                    f"min_events={session_min_events} "
+                    f"max_cadence_cv={session_max_cadence_cv:.2f} "
+                    f"bridged_short_segments={bridged_short_segments}"
+                )
+                if dropped_segments > 0 or bridged_short_segments > 0:
+                    for (
+                        seg_idx,
+                        seg_len,
+                        seg_start_ts,
+                        seg_end_ts,
+                        seg_cv,
+                        seg_abs_fp_median,
+                        seg_kept,
+                        seg_reason,
+                    ) in segment_debug_rows:
+                        print(
+                            f"[POST] session_filter_segment idx={seg_idx} "
+                            f"len={seg_len} start_ts={seg_start_ts} end_ts={seg_end_ts} "
+                            f"cv={seg_cv:.3f} abs_fp_median={seg_abs_fp_median:.6f} "
+                            f"kept={seg_kept} reason={seg_reason}"
+                        )
+            pending_after_finalize = max(0, len(detected_jump_events) - len(selected_events))
             print(
-                f"[POST] pruned_by_run_min_events events={pruned_by_run_min_events} "
-                f"min_events={int(SESSION_MIN_EVENTS)}"
+                f"[POST] fixed_lag_final_count first_pass={len(detected_jump_events)} "
+                f"final={len(selected_events)} "
+                f"pending_after_finalize={pending_after_finalize} "
+                f"fixed_lag_s={FIXED_LAG_SECONDS:.2f} "
+                f"finalize_wait_s={FIXED_LAG_FINALIZE_WAIT_SECONDS:.2f}"
             )
-        if inserted_by_gap_fill > 0:
-            print(
-                f"[POST] session_gap_fill inserted={inserted_by_gap_fill} "
-                f"min_ratio={float(STRICT_SESSION_GAP_FILL_MIN_RATIO):.2f} "
-                f"max_ratio={float(STRICT_SESSION_GAP_FILL_MAX_RATIO):.2f}"
-            )
-        if inserted_by_head_fill > 0:
-            print(
-                f"[POST] session_head_fill inserted={inserted_by_head_fill} "
-                f"min_events={int(STRICT_SESSION_HEAD_FILL_MIN_EVENTS)} "
-                f"max_cadence_cv={float(STRICT_SESSION_HEAD_FILL_MAX_CADENCE_CV):.2f}"
-            )
+            if pruned_weak_non_bilateral > 0:
+                print(
+                    f"[POST] pruned_weak_non_bilateral events={pruned_weak_non_bilateral} "
+                    f"max_strength={float(STRICT_WEAK_NON_BILATERAL_MAX_STRENGTH):.2f}"
+                )
+            if pruned_by_session_strength > 0:
+                print(
+                    f"[POST] pruned_by_session_strength events={pruned_by_session_strength} "
+                    f"min_median_strength={float(STRICT_SESSION_MIN_MEDIAN_STRENGTH_RATIO):.2f}"
+                )
+            if pruned_by_session_filter > 0:
+                print(
+                    f"[POST] pruned_by_session_filter events={pruned_by_session_filter} "
+                    f"split_gap_s={float(STRICT_SESSION_SPLIT_GAP_SECONDS):.2f} "
+                    f"max_cadence_cv={float(STRICT_SESSION_MAX_CADENCE_CV):.2f}"
+                )
+            if pruned_by_run_min_events > 0:
+                print(
+                    f"[POST] pruned_by_run_min_events events={pruned_by_run_min_events} "
+                    f"min_events={int(SESSION_MIN_EVENTS)}"
+                )
+            if inserted_by_gap_fill > 0:
+                print(
+                    f"[POST] session_gap_fill inserted={inserted_by_gap_fill} "
+                    f"min_ratio={float(STRICT_SESSION_GAP_FILL_MIN_RATIO):.2f} "
+                    f"max_ratio={float(STRICT_SESSION_GAP_FILL_MAX_RATIO):.2f}"
+                )
+            if inserted_by_head_fill > 0:
+                print(
+                    f"[POST] session_head_fill inserted={inserted_by_head_fill} "
+                    f"min_events={int(STRICT_SESSION_HEAD_FILL_MIN_EVENTS)} "
+                    f"max_cadence_cv={float(STRICT_SESSION_HEAD_FILL_MAX_CADENCE_CV):.2f}"
+                )
         if not label_events:
             if ENABLE_OVERLAY_REFRESH:
                 overlay_ok, overlay_message = rewrite_tracked_video_count_overlay(
@@ -1754,12 +2152,14 @@ def run_pipeline(
     
         compared_detected_events = selected_eval["compared_detected_events"]
         outside_window_events = selected_eval["outside_window_events"]
+        confirmed_outside_window_events = selected_eval["confirmed_outside_window_events"]
         matched_events = selected_eval["matched_events"]
         strict_extra_detected = selected_eval["strict_extra_detected"]
         extra_detected = selected_eval["extra_detected"]
         full_strict_extra_detected = selected_eval["full_strict_extra_detected"]
         full_extra_detected = selected_eval["full_extra_detected"]
         gap_candidate_events = selected_eval["gap_candidate_events"]
+        boundary_candidate_events = selected_eval["boundary_candidate_events"]
         missed_labels = selected_eval["missed_labels"]
         strict_precision = selected_eval["strict_precision"]
         strict_recall = selected_eval["strict_recall"]
@@ -1803,7 +2203,8 @@ def run_pipeline(
         )
         print(
             f"[COMPARE] full_strict_extra_detected={len(full_strict_extra_detected)} "
-            f"(includes_outside_window={len(outside_window_events)})"
+            f"(outside_window={len(outside_window_events)} "
+            f"boundary_candidates={len(boundary_candidate_events)})"
         )
         print(
             f"[COMPARE] full_strict_precision={full_strict_precision:.3f} "
@@ -1813,6 +2214,7 @@ def run_pipeline(
         )
         print(
             f"[COMPARE] full_adjusted_extra_detected={len(full_extra_detected)} "
+            f"boundary_candidates={len(boundary_candidate_events)} "
             f"full_adjusted_precision={full_precision:.3f} "
             f"full_adjusted_recall={full_recall:.3f} "
             f"full_adjusted_f1={full_f1:.3f} "
@@ -1910,7 +2312,26 @@ def run_pipeline(
                     "detected_right_y": detected_item["right_point"][1],
                 }
             )
-        for detected_item in outside_window_events:
+        for detected_item in boundary_candidate_events:
+            report_rows.append(
+                {
+                    "status": "label_boundary_candidate",
+                    "label_timestamp_ms": np.nan,
+                    "detected_timestamp_ms": detected_item["timestamp_ms"],
+                    "time_error_ms": np.nan,
+                    "left_point_error_px": np.nan,
+                    "right_point_error_px": np.nan,
+                    "label_left_x": np.nan,
+                    "label_left_y": np.nan,
+                    "detected_left_x": detected_item["left_point"][0],
+                    "detected_left_y": detected_item["left_point"][1],
+                    "label_right_x": np.nan,
+                    "label_right_y": np.nan,
+                    "detected_right_x": detected_item["right_point"][0],
+                    "detected_right_y": detected_item["right_point"][1],
+                }
+            )
+        for detected_item in confirmed_outside_window_events:
             report_rows.append(
                 {
                     "status": "outside_label_window",
@@ -1951,6 +2372,7 @@ def run_pipeline(
                 "full_strict_extra_detected": len(full_strict_extra_detected),
                 "full_adjusted_extra_detected": len(full_extra_detected),
                 "label_gap_candidates": len(gap_candidate_events),
+                "label_boundary_candidates": len(boundary_candidate_events),
                 "label_window_trim_removed": 0,
                 "label_gap_trim_removed": 0,
                 "strict_precision": strict_precision,

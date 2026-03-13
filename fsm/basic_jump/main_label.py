@@ -4,7 +4,12 @@ import os
 import pandas as pd
 
 from jump_rope_pipeline import run_pipeline
-from jump_rope_settings import OUTPUT_DIR, TARGET_VIDEO_STEM, build_video_jobs, get_summary_csv_name
+from jump_rope_settings import (
+    OUTPUT_DIR,
+    TARGET_VIDEO_STEM,
+    build_video_jobs,
+    get_summary_csv_name,
+)
 
 
 def parse_args(argv=None):
@@ -13,6 +18,21 @@ def parse_args(argv=None):
         "--target-stem",
         default=TARGET_VIDEO_STEM,
         help="video stem in input/video (ex: 03)",
+    )
+    parser.add_argument(
+        "--demo-log",
+        action="store_true",
+        help="save a probe session folder (tracked video + frame log csv)",
+    )
+    parser.add_argument(
+        "--demo-log-dir",
+        default=f"{OUTPUT_DIR}/ux_probe",
+        help="base directory for probe session folders",
+    )
+    parser.add_argument(
+        "--demo-tag",
+        default="",
+        help="optional tag added to probe session folder names",
     )
     return parser.parse_args(argv)
 
@@ -24,6 +44,9 @@ def main(argv=None):
         return run_pipeline(
             target_stem=target_stem,
             require_label=True,
+            realtime_demo_log=args.demo_log,
+            realtime_demo_log_dir=args.demo_log_dir,
+            realtime_demo_tag=args.demo_tag,
         )
 
     jobs = build_video_jobs(require_label=True)
@@ -39,6 +62,9 @@ def main(argv=None):
             target_stem=stem,
             require_label=True,
             write_summary=False,
+            realtime_demo_log=args.demo_log,
+            realtime_demo_log_dir=args.demo_log_dir,
+            realtime_demo_tag=args.demo_tag,
         )
         all_rows.extend(rows)
 
