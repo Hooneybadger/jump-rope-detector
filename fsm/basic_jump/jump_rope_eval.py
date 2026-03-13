@@ -147,7 +147,6 @@ def rewrite_tracked_video_count_overlay(
     tracked_video_path,
     selected_events,
     label_events,
-    raw_online_count=None,
 ):
     if not os.path.isfile(tracked_video_path):
         return False, "tracked video not found"
@@ -171,98 +170,40 @@ def rewrite_tracked_video_count_overlay(
     ordered_labels = sorted(label_events, key=lambda item: int(item["timestamp_ms"]))
     final_detected_count = int(len(ordered_detected))
     final_label_count = int(len(ordered_labels))
-    raw_online_count = (
-        final_detected_count
-        if raw_online_count is None
-        else int(max(0, int(raw_online_count)))
-    )
     detected_idx = 0
     label_idx = 0
     frame_idx = -1
     last_timestamp_ms = -1
     last_display_ts_ms = -1
     last_frame = None
-    panel_left = max(0, width - 270)
+    panel_left = max(0, width - 110)
     panel_top = 0
     panel_right = width
-    panel_bottom = 162
+    panel_bottom = min(height, 62)
 
-    def draw_counter_panel(frame, current_detected_idx, current_label_idx):
-        count_delta = int(current_detected_idx) - int(current_label_idx)
-        delta_color = (0, 180, 0) if count_delta == 0 else (0, 0, 255)
-        pending_detected = max(0, final_detected_count - int(current_detected_idx))
-        pending_labels = max(0, final_label_count - int(current_label_idx))
-
-        # Hide the first-pass counters and redraw finalized counters from post-processed events.
+    def draw_counter_panel(frame, current_detected_idx, _current_label_idx):
+        # Redraw a compact counter panel with count only.
         cv2.rectangle(frame, (panel_left, panel_top), (panel_right, panel_bottom), (0, 0, 0), -1)
+        count_text = str(int(current_detected_idx))
+        font = cv2.FONT_HERSHEY_SIMPLEX
+        font_scale = 1.35
+        thickness = 3
+        (text_width, text_height), _ = cv2.getTextSize(
+            count_text,
+            font,
+            font_scale,
+            thickness,
+        )
+        text_x = max(panel_left + 8, panel_right - 10 - text_width)
+        text_y = max(panel_top + text_height + 8, panel_bottom - 14)
         cv2.putText(
             frame,
-            "Jumps",
-            (width - 130, 30),
-            cv2.FONT_HERSHEY_SIMPLEX,
-            0.8,
+            count_text,
+            (text_x, text_y),
+            font,
+            font_scale,
             (0, 0, 255),
-            2,
-            cv2.LINE_AA,
-        )
-        cv2.putText(
-            frame,
-            str(int(current_detected_idx)),
-            (width - 40, 30),
-            cv2.FONT_HERSHEY_SIMPLEX,
-            0.8,
-            (0, 0, 255),
-            2,
-            cv2.LINE_AA,
-        )
-        cv2.putText(
-            frame,
-            "Label",
-            (width - 130, 62),
-            cv2.FONT_HERSHEY_SIMPLEX,
-            0.8,
-            (255, 120, 0),
-            2,
-            cv2.LINE_AA,
-        )
-        cv2.putText(
-            frame,
-            str(int(current_label_idx)),
-            (width - 40, 62),
-            cv2.FONT_HERSHEY_SIMPLEX,
-            0.8,
-            (255, 120, 0),
-            2,
-            cv2.LINE_AA,
-        )
-        cv2.putText(
-            frame,
-            f"Delta {count_delta:+d}",
-            (width - 220, 94),
-            cv2.FONT_HERSHEY_SIMPLEX,
-            0.7,
-            delta_color,
-            2,
-            cv2.LINE_AA,
-        )
-        cv2.putText(
-            frame,
-            f"Online {raw_online_count}  Offline {final_detected_count}",
-            (width - 265, 122),
-            cv2.FONT_HERSHEY_SIMPLEX,
-            0.50,
-            (190, 190, 190),
-            1,
-            cv2.LINE_AA,
-        )
-        cv2.putText(
-            frame,
-            f"Pending J:{pending_detected} L:{pending_labels}",
-            (width - 265, 146),
-            cv2.FONT_HERSHEY_SIMPLEX,
-            0.50,
-            (190, 190, 190),
-            1,
+            thickness,
             cv2.LINE_AA,
         )
 
@@ -355,7 +296,7 @@ def rewrite_tracked_video_count_overlay(
     return True, (
         f"frames={refreshed_frame_count} end_wait_frames={int(extra_wait_frames)} "
         f"jumps={detected_idx}/{final_detected_count} labels={label_idx}/{final_label_count} "
-        f"online={raw_online_count} delta={final_delta:+d}"
+        f"delta={final_delta:+d}"
     )
 
 
@@ -398,6 +339,53 @@ def split_gap_candidate_events(extra_detected, label_events):
 
     return confirmed_extra, gap_candidates
 
+
+def split_boundary_candidate_events(outside_window_events, label_events):
+    if len(label_events) < 2 or not outside_window_events:
+        return list(outside_window_events), []
+
+    label_timestamps = [item["timestamp_ms"] for item in label_events]
+    intervals = np.diff(label_timestamps)
+    valid_intervals = intervals[intervals > 0]
+    if valid_intervals.size == 0:
+        return list(outside_window_events), []
+
+    median_gap = float(np.median(valid_intervals))
+    if not np.isfinite(median_gap) or median_gap <= 0.0:
+        return list(outside_window_events), []
+
+    max_ratio = float(max(1.0, BOUNDARY_CANDIDATE_MAX_RATIO))
+    max_boundary_delta_ms = float(median_gap) * max_ratio
+    max_head_events = max(0, int(BOUNDARY_CANDIDATE_MAX_HEAD_EVENTS))
+    max_tail_events = max(0, int(BOUNDARY_CANDIDATE_MAX_TAIL_EVENTS))
+    first_label_ts = int(label_timestamps[0])
+    last_label_ts = int(label_timestamps[-1])
+
+    head_candidates = []
+    tail_candidates = []
+    confirmed_outside = []
+    for event in sorted(outside_window_events, key=lambda item: int(item["timestamp_ms"])):
+        ts = int(event["timestamp_ms"])
+        if ts < first_label_ts:
+            delta_ms = float(first_label_ts - ts)
+            if delta_ms <= max_boundary_delta_ms and len(head_candidates) < max_head_events:
+                head_candidates.append(event)
+            else:
+                confirmed_outside.append(event)
+            continue
+        if ts > last_label_ts:
+            delta_ms = float(ts - last_label_ts)
+            if delta_ms <= max_boundary_delta_ms and len(tail_candidates) < max_tail_events:
+                tail_candidates.append(event)
+            else:
+                confirmed_outside.append(event)
+            continue
+        confirmed_outside.append(event)
+
+    boundary_candidates = list(head_candidates) + list(tail_candidates)
+    return confirmed_outside, boundary_candidates
+
+
 def evaluate_detected_events(detected_events, label_events, tolerance_ms):
     compared_detected_events, outside_window_events = filter_events_to_label_window(
         detected_events,
@@ -413,8 +401,16 @@ def evaluate_detected_events(detected_events, label_events, tolerance_ms):
         strict_extra_detected = extra_detected
     else:
         strict_extra_detected = strict_extra_detected_raw
-    full_strict_extra_detected = list(strict_extra_detected) + list(outside_window_events)
-    full_extra_detected = list(extra_detected) + list(outside_window_events)
+    confirmed_outside_window_events, boundary_candidate_events = split_boundary_candidate_events(
+        outside_window_events,
+        label_events,
+    )
+    if STRICT_IGNORE_BOUNDARY_CANDIDATES:
+        full_strict_extra_detected = list(strict_extra_detected) + list(confirmed_outside_window_events)
+        full_extra_detected = list(extra_detected) + list(confirmed_outside_window_events)
+    else:
+        full_strict_extra_detected = list(strict_extra_detected) + list(outside_window_events)
+        full_extra_detected = list(extra_detected) + list(outside_window_events)
     strict_precision, strict_recall, strict_f1, strict_accuracy = compute_metrics(
         len(matched_events),
         len(strict_extra_detected),
@@ -442,6 +438,8 @@ def evaluate_detected_events(detected_events, label_events, tolerance_ms):
     return {
         "compared_detected_events": compared_detected_events,
         "outside_window_events": outside_window_events,
+        "confirmed_outside_window_events": confirmed_outside_window_events,
+        "boundary_candidate_events": boundary_candidate_events,
         "matched_events": matched_events,
         "strict_extra_detected": strict_extra_detected,
         "extra_detected": extra_detected,

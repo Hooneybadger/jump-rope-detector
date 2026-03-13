@@ -44,8 +44,8 @@ def parse_args(argv=None):
 def main(argv=None):
     args = parse_args(argv)
     return run_pipeline(
-        mode="realtime",
         camera_index=args.camera_index,
+        use_realtime=True,
         realtime_fps_log_interval_s=args.fps_log_interval,
         realtime_demo_log=args.demo_log,
         realtime_demo_log_dir=args.demo_log_dir,

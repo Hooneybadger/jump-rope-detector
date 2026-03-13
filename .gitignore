@@ -1,5 +1,7 @@
 # Python virtual environments
 jump/
+.venv/
+venv/
 
 # Python cache
 __pycache__/
@@ -13,3 +15,6 @@ fsm/basic_jump/output/
 
 # Project inputs (large/raw data)
 fsm/basic_jump/input/
+
+# Agent Docs
+REALTIME_*
