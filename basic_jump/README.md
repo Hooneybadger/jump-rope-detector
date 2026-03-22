@@ -46,3 +46,4 @@ python basic_jump/run_realtime_counter.py --source 0 --save-output basic_jump/ar
 - 전체 Pose landmark가 `1초` 연속으로 보이면 준비 완료
 - 그 뒤 `3초` countdown 후 카운트 시작
 - countdown 중 landmark가 깨지면 준비 단계로 다시 돌아감
+- realtime에서는 추가로 `hip/foot motion validator`와 `min gap`을 적용해 손-only, 발-only, double-count를 줄인다
