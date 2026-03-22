@@ -209,5 +209,4 @@ __marimo__/
 # Big files
 */label/
 */video/
-
-# Codex
+*.mp4
