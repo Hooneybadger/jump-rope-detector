@@ -34,6 +34,13 @@ source activate
 PYTHONPATH=. python3 basic_jump/run_realtime_counter.py --source basic_jump/video/09.mp4
 ```
 
+시연 영상 저장:
+
+```bash
+source activate
+python basic_jump/run_realtime_counter.py --source 0 --save-output basic_jump/artifacts/realtime_demo.mp4
+```
+
 시작 조건:
 
 - 전체 Pose landmark가 `1초` 연속으로 보이면 준비 완료

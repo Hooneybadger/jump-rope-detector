@@ -28,6 +28,7 @@ mp_pose = mp.solutions.pose
 def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(description="Run the grouped-jump counter on a realtime stream.")
     parser.add_argument("--source", default="0", help="Camera index like `0` or a video file path.")
+    parser.add_argument("--save-output", default=None, help="Optional output video path for saving the realtime demo.")
     parser.add_argument("--no-display", action="store_true", help="Disable OpenCV window rendering.")
     parser.add_argument("--max-frames", type=int, default=None, help="Optional frame limit for smoke tests.")
     parser.add_argument("--ready-hold-seconds", type=float, default=1.0)
@@ -58,6 +59,21 @@ def _draw_overlay(frame, stream_state, running_count: int, full_body_ready: bool
         y += 34
 
 
+def _create_video_writer(path: str | Path, fps: float, frame_shape) -> cv2.VideoWriter:
+    path = Path(path)
+    path.parent.mkdir(parents=True, exist_ok=True)
+    height, width = frame_shape[:2]
+    writer = cv2.VideoWriter(
+        str(path),
+        cv2.VideoWriter_fourcc(*"mp4v"),
+        fps if fps > 0 else 30.0,
+        (width, height),
+    )
+    if not writer.isOpened():
+        raise RuntimeError(f"Unable to open output video for writing: {path}")
+    return writer
+
+
 def main() -> None:
     args = parse_args()
     capture, is_camera, source_label = _open_capture(args.source)
@@ -72,6 +88,7 @@ def main() -> None:
         countdown_seconds=args.countdown_seconds,
     )
     engine: RealtimeCounterEngine | None = None
+    writer: cv2.VideoWriter | None = None
 
     frame_idx = 0
     stream_start_sec = time.monotonic()
@@ -101,7 +118,7 @@ def main() -> None:
                 if event is not None:
                     print(f"[count] {event.running_count} @ frame={event.frame_idx} time={event.time_sec:.2f}s")
 
-            if not args.no_display:
+            if not args.no_display or args.save_output:
                 display_frame = frame.copy()
                 if result.pose_landmarks:
                     mp_drawing.draw_landmarks(
@@ -112,6 +129,13 @@ def main() -> None:
                     )
                 running_count = 0 if engine is None else engine.running_count
                 _draw_overlay(display_frame, stream_state, running_count, full_body_ready)
+
+                if args.save_output:
+                    if writer is None:
+                        writer = _create_video_writer(args.save_output, fps, display_frame.shape)
+                    writer.write(display_frame)
+
+            if not args.no_display:
                 cv2.imshow("basic_jump realtime counter", display_frame)
                 key = cv2.waitKey(1) & 0xFF
                 if key == ord("q"):
@@ -121,11 +145,15 @@ def main() -> None:
     finally:
         extractor.close()
         capture.release()
+        if writer is not None:
+            writer.release()
         if not args.no_display:
             cv2.destroyAllWindows()
 
     final_count = 0 if engine is None else engine.running_count
     print(f"[done] source={source_label} frames={frame_idx} final_count={final_count}")
+    if args.save_output:
+        print(f"[saved] {args.save_output}")
 
 
 if __name__ == "__main__":
