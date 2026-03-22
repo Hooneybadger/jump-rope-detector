@@ -1,11 +1,15 @@
 from __future__ import annotations
 
 import argparse
+import sys
 import time
 from pathlib import Path
 
 import cv2
 import mediapipe as mp
+
+if __package__ in {None, ""}:
+    sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
 from basic_jump.counter_engine import (
     EngineConfig,
