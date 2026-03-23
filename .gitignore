@@ -210,3 +210,7 @@ __marimo__/
 */label/
 */video/
 *.mp4
+
+# Codex
+AGENTS.md
+PLANS.md
