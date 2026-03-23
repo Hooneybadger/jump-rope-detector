@@ -408,83 +408,268 @@
 
 정리하면, **발 신호만으로 카운트하기보다 힙을 주신호로 두고 발을 접지 게이트로 쓰는 조합**이 가장 현실적이다.
 
-## 8. 실시간 카운팅 전략
+## 8. 구현된 실시간 카운팅 엔진 기술서
 
-### 전략 A
+이 절은 분석 결과를 실제 구현으로 옮긴 현재 엔진의 동작 원리를 기술한다. 구현은 `MediaPipe Pose -> signal 추출 -> start gate -> 상태기계 -> realtime 보호 필터` 순서로 동작한다.
 
-설명:
+핵심 원칙은 다음과 같다.
 
-- 사용 랜드마크:
-  - 좌/우 hip
-  - 좌/우 ankle
-  - 좌/우 heel
-  - 좌/우 knee
-- 특징:
-  - `mean_hip_y`
-  - `mean_foot_y = mean(ankle_y, heel_y)`
-  - 각 신호의 1차 차분(velocity)
-  - 좌우 발 y 차
-  - 좌우 발 x 간격(정규화 가능)
-- 판정 방식:
-  1. EMA 또는 짧은 이동평균으로 `mean_hip_y`, `mean_foot_y`를 안정화
-  2. `mean_foot_y`가 최근 접지 밴드에 들어오고 좌우 대칭 조건을 만족하면 `CONTACT` 상태 진입
-  3. `CONTACT` 상태에서 `mean_hip_y`의 velocity가 하강에서 상승으로 바뀌는 첫 시점을 카운트
-  4. 이후 `mean_foot_y`가 충분히 올라가면 `AIR` 상태로 복귀
-  5. `refractory period`를 둬 중복 카운트를 차단
+- 전체 영상 후처리 없이 프레임을 순차 처리한다.
+- centered window나 미래 프레임 peak picking을 사용하지 않는다.
+- 1카운트는 `접지 후 반등 전환`으로 정의한다.
+- 카운트 타이밍은 상태기계가 결정하고, realtime 오탐 억제는 별도 보호 필터가 담당한다.
 
-장점:
+### 8.1 입력 랜드마크와 신호 정의
 
-- 라벨의 실제 의미인 "접지-반등 이벤트 윈도우"와 가장 잘 맞음
-- 미래 프레임 없이 구현 가능
-- 라벨의 `±1~2 frame` 편차를 상태 기반으로 흡수 가능
-- `10.mp4`처럼 발 visibility가 약한 경우에도 힙 신호가 주축이 됨
+현재 엔진이 실제로 사용하는 핵심 랜드마크는 아래와 같다.
 
-단점:
+| 구분 | 랜드마크 | 사용 방식 |
+| ---- | -------- | --------- |
+| 중심축 | `LEFT_HIP`, `RIGHT_HIP` | 평균하여 `mean_hip_y` 계산 |
+| 발 접지축 | `LEFT_ANKLE`, `LEFT_HEEL`, `LEFT_FOOT_INDEX` | 좌측 `foot_y` 계산 |
+| 발 접지축 | `RIGHT_ANKLE`, `RIGHT_HEEL`, `RIGHT_FOOT_INDEX` | 우측 `foot_y` 계산 |
+| 스케일 정규화 | `LEFT_HIP-LEFT_ANKLE`, `RIGHT_HIP-RIGHT_ANKLE` | 평균 수직 길이로 `leg_length` 계산 |
 
-- 접지 밴드 추정이 카메라 구도/키/신발 높이에 따라 적응적이어야 함
-- 카메라 흔들림이 크면 절대 y만으로는 약해질 수 있음
+신호 계산 방식은 다음과 같다.
 
----
+- `mean_hip_y = (left_hip_y + right_hip_y) / 2`
+- `left_foot_y`, `right_foot_y`:
+  - 발목, 힐, 발끝 중 visibility가 `0.35` 이상인 점만 우선 평균
+  - 보이는 점이 없으면 세 점 전체 평균으로 fallback
+- `mean_foot_y = (left_foot_y + right_foot_y) / 2`
+- `leg_length`:
+  - `(|left_hip_y - left_ankle_y| + |right_hip_y - right_ankle_y|) / 2`
+  - 모든 임계치는 이 값으로 정규화한다.
+- `symmetry_y = |left_foot_y - right_foot_y|`
 
-### 전략 B
+관측성 기준:
 
-설명:
+- 힙 visibility는 좌우 모두 `>= 0.50`일 때만 `signal.detected=True`
+- 발은 세 후보점의 평균을 쓰므로, 발 단일 랜드마크 하나가 잠깐 흔들려도 완전히 끊기지 않도록 설계했다.
 
-- 평균 힙 y 또는 코 y의 peak detector만으로 카운트
-- 보조로 무릎 굴곡 또는 최소 refractory만 사용
+### 8.2 1카운트는 어떻게 판별하는가
 
-장점:
+한 번의 점프는 아래 순서를 만족할 때 1카운트로 인정된다.
 
-- 발이 일부 가려져도 동작 가능
-- 계산량이 작고 구현이 단순함
+1. `mean_foot_y`가 현재 바닥 밴드 근처에 있어야 한다.
+2. 좌우 발 높이 차가 작아야 한다.
+3. `mean_hip_y`가 먼저 하강해야 한다.
+4. 그 다음 프레임들에서 `mean_hip_y` velocity가 상승으로 전환되어야 한다.
+5. 직전 카운트와 충분한 간격이 있어야 한다.
 
-단점:
+이 정의를 코드 수준으로 쓰면 다음과 같다.
 
-- 스쿼트성 바운스, 상체 흔들림, 리듬 드리블에 취약
-- `09`, `10`처럼 빠른 리듬에서는 발 접지 정보 없이 오검출 가능성이 큼
+#### 1. causal smoothing
 
----
+- `mean_hip_y_raw`, `mean_foot_y_raw`에 EMA를 적용한다.
+- 기본 EMA:
+  - `hip alpha = 0.45`
+  - `foot alpha = 0.55`
+- 매우 빠른 cadence에서는 fast EMA로 전환한다.
+  - `fast hip alpha = 0.25`
+  - `fast foot alpha = 0.35`
 
-### 최종 추천 전략
+#### 2. 바닥 밴드 추정
 
-설명:
+절대 바닥 좌표를 고정하지 않고, 최근 발 높이로 `floor_y`를 온라인 추정한다.
 
-- **전략 A: 힙 주도 + 발 접지 게이트 상태기계**
+- 최초 프레임: `floor_y = mean_foot_y`
+- 이후:
+  - `floor_y = max(mean_foot_y, floor_y - floor_decay_ratio * leg_length)`
+  - 기본 `floor_decay_ratio = 0.004`
 
-왜 이 전략인가:
+이렇게 하면 사용자의 신장, 카메라 높이, 약간의 프레이밍 변화에 적응할 수 있다.
 
-- 라벨은 공중 정점이 아니라 접지/반등 윈도우를 가리킨다
-- 샘플 검증에서 힙 y는 라벨 시점과 가장 안정적으로 맞았다
-- 발 랜드마크는 접지 여부를 확인하는 데 유용하고, 힙은 반등 시작점을 안정적으로 준다
-- 실시간 시스템에서 허용 가능한 지연은 `1~2 frame (약 33~67ms)` 수준이면 충분하다
-- 전체 영상 후처리나 미래 프레임 의존 없이도 구현 가능하다
+#### 3. 접지 게이트
 
-UX 적합성:
+현재 프레임이 "양발 접지 상태"로 볼 수 있는지 다음 조건으로 판단한다.
 
-- 실시간 처리 가능
-- 후처리 없음
-- 전체 영상 분석 불필요
-- 미래 프레임 의존 없음
+- `mean_foot_y >= floor_y - 0.08 * leg_length`
+- `symmetry_y <= 0.12 * leg_length`
+
+즉, 발이 바닥 밴드 근처에 있고 좌우 발이 너무 비대칭이면 카운트 후보로 보지 않는다.
+
+#### 4. 반등 판정
+
+힙 y velocity 부호로 하강과 상승을 구분한다.
+
+- `descending`:
+  - `hip_vel >= 0.006 * leg_length`
+- `ascending`:
+  - `hip_vel <= -0.004 * leg_length`
+
+매우 빠른 cadence에서는 더 민감한 fast threshold로 전환한다.
+
+- `fast descending = 0.002 * leg_length`
+- `fast ascending = -0.001 * leg_length`
+
+#### 5. 상태기계
+
+상태는 `READY -> CONTACT -> REBOUND_LOCK` 세 단계다.
+
+| 상태 | 의미 | 전이 조건 |
+| ---- | ---- | --------- |
+| `READY` | 아직 접지 반등 이벤트가 확정되지 않음 | 접지 게이트가 참이면 `CONTACT` |
+| `CONTACT` | 양발 접지 상태에서 반등을 기다림 | 먼저 `descending`을 봐야 하고, 그 다음 `ascending`이면 카운트 |
+| `REBOUND_LOCK` | 방금 한 번 센 직후 중복 방지 구간 | 충분히 회복 후 다음 cycle에서만 해제 |
+
+실제 카운트가 올라가는 조건은 아래와 같다.
+
+- 현재 상태가 `CONTACT`
+- 이전에 `descending`을 이미 봄
+- 현재 프레임이 `ascending`
+- refractory 조건 충족
+
+즉, **양발 접지 상태에서 몸 중심이 아래로 내려갔다가 다시 위로 튀어오르는 첫 전환점**이 1카운트다.
+
+#### 6. 왜 이 시점이 1카운트인가
+
+이 시점은 라벨 의미와 가장 잘 맞는다.
+
+- 순수 공중 apex가 아니다.
+- 순수 착지 1프레임도 아니다.
+- 접지 구간 안에서의 `반등 시작점`에 가깝다.
+
+따라서 카운트는 접지 이후 `1~2 frame` 안에서 인과적으로 결정된다.
+
+### 8.3 realtime start gate
+
+카운팅은 영상이 시작되자마자 바로 켜지지 않는다. 사용자가 화면 안에 안정적으로 들어왔다고 판단된 뒤에 시작한다.
+
+현재 규칙은 다음과 같다.
+
+- landmark visibility threshold: `0.30`
+- ready 조건:
+  - 33개 전체 landmark 중 `97% 이상`이 보이는 상태
+- ready hold:
+  - 위 상태가 `1.0초` 연속 유지되어야 함
+- countdown:
+  - 그 뒤 `3.0초`
+- dropout tolerance:
+  - 준비/카운트다운 중 landmark가 잠깐 흔들려도 `0.35초` 이내면 유지
+
+이 단계는 jump count 자체와는 별개로, realtime UX를 위한 시작 안정화 단계다.
+
+### 8.4 realtime 보호 필터
+
+상태기계만으로는 "손만 흔들기", "발만 까딱하기", "한 점프 두 번 세기"를 완전히 막기 어렵다. 그래서 realtime 모드에는 상태기계 뒤에 한 겹의 보호 필터를 둔다.
+
+필터는 아래 윈도우 특징을 사용한다.
+
+- `motion_window_frames = 18`
+- `recent_window_frames = 5`
+- `hip_range_ratio = (max(hip) - min(hip)) / median(leg_length)`
+- `foot_range_ratio = (max(foot) - min(foot)) / median(leg_length)`
+- `recent_hip_range_ratio = recent 5 frame 기준 hip range / median(leg_length)`
+
+기본 통과 조건:
+
+- `hip_range_ratio >= 0.10`
+- `foot_range_ratio >= 0.065`
+- `recent_hip_range_ratio >= 0.05`
+- `min_gap >= 20 frame`
+
+역할은 다음과 같다.
+
+- `hip_range_ratio`: 발만 움직이고 몸 중심이 안 움직이는 경우 차단
+- `foot_range_ratio`: 손만 움직이고 발 접지 신호가 약한 경우 차단
+- `recent_hip_range_ratio`: 실제 반등이 아니라 작은 드리프트일 때 차단
+- `min_gap`: 같은 점프 안에서 두 번 세는 경우 차단
+
+주의:
+
+- 이 보호 필터는 realtime 오탐 억제용이다.
+- 테스트셋 `exact 1.00`을 맞춘 dataset evaluator의 핵심 엔진과는 목적이 다르다.
+
+### 8.5 빠른 cadence 적응 로직
+
+실사용에서 가장 큰 문제는 빠른 리듬에서 `fixed min_gap=20`이 너무 보수적이라는 점이었다. `02_realtime`처럼 실제 jump 간격이 `13~15 frame` 수준인 경우, 한 번씩 건너뛰며 undercount가 났다.
+
+이를 해결하기 위해 realtime 필터는 아래 조건에서 동적으로 완화된다.
+
+#### cadence lock 조건
+
+- 최근 `motion-valid candidate`의 hip/foot range 중앙값이 충분히 커야 한다.
+  - `candidate hip median >= 0.14`
+  - `candidate foot median >= 0.08`
+- 최근 candidate interval 기록이 최소 1개 이상 있어야 한다.
+
+여기서 `motion-valid candidate`는 다음을 만족하는 상태기계 이벤트다.
+
+- `hip_range_ratio >= 0.10`
+- `foot_range_ratio >= 0.065`
+
+즉, 아무 후보나 interval 학습에 쓰지 않고, 손-only/발-only 성격이 약한 후보만 cadence 학습에 사용한다.
+
+#### adaptive min gap
+
+cadence lock이 걸리면:
+
+- `raw_interval_median = median(recent candidate intervals)`
+- `adaptive_min_gap = clamp(round(0.8 * raw_interval_median), 10, 20)`
+
+동시에 recent hip 조건도 약간 완화한다.
+
+- `min_recent_hip_range_ratio: 0.05 -> 0.04`
+
+이 완화는 무제한으로 풀지 않고, 빠른 cadence에서 필요한 최소 수준만 낮추는 방식이다.
+
+### 8.6 트러블슈팅 기록
+
+실제 realtime 시연에서 관찰된 문제와 해결 방식은 아래와 같다.
+
+| 문제 | 원인 | 해결 방식 | 결과 |
+| ---- | ---- | --------- | ---- |
+| 손만 움직여도 count | 힙 velocity sign-change만으로 event가 발생할 수 있음 | `foot_range_ratio >= 0.065`와 recent motion 검사 추가 | 손-only 오탐 대폭 감소 |
+| 발만 움직여도 count | 발 접지 모양은 비슷하지만 몸 중심 반등이 없음 | `hip_range_ratio >= 0.10` 추가 | 발-only 오탐 차단 |
+| 한 점프에서 2번 count | 같은 rebound 안에서 지역적 velocity 전환이 두 번 발생 | `REBOUND_LOCK` + `min_gap` 적용 | double-count 감소 |
+| 빠른 cadence에서 undercount | `fixed min_gap=20`이 실제 리듬보다 큼 | candidate cadence 기반 adaptive gap 도입 | `02_realtime`에서 빠른 연속 점프 복구 |
+| counting 시작이 너무 늦음 | all landmarks 완전일치 + single-frame dropout 즉시 리셋 | ready ratio 방식과 `0.35s` dropout tolerance 도입 | start gate 지연 대폭 감소 |
+
+#### 사례 1. 빠른 cadence undercount
+
+사용자 시연 `02_realtime`에서 실제 20회를 수행했는데 9회만 카운트된 사례가 있었다.
+
+분석 결과:
+
+- 상태기계 raw 후보는 충분히 나왔지만
+- realtime 보호 필터의 `fixed min_gap=20`이 너무 커서
+- 실제 `13~15 frame` cadence의 점프를 절반 가까이 버리고 있었다.
+
+해결:
+
+- `motion-valid candidate interval` 기준 adaptive gap 도입
+- `recent_hip_range_ratio`를 `0.05 -> 0.04`로 소폭 완화
+
+결과:
+
+- 저장 시연 영상 `02_realtime.mp4` 재실행 기준 `final_count=20`
+
+#### 사례 2. counting start 지연
+
+저장 시연 영상 재실행에서 `COUNTING`이 `15.00s`에 시작되는 문제가 있었다. 이는 목표 UX와 맞지 않았다.
+
+원인:
+
+- 준비 조건이 사실상 `33개 landmark 전부 visible`과 같았고
+- countdown 중 한 프레임만 흔들려도 다시 `SEARCHING`으로 리셋됐다.
+
+해결:
+
+- ready 조건을 `visible ratio >= 0.97`로 변경
+- 준비/카운트다운 중 `0.35초` 이내 flicker는 허용
+
+결과:
+
+- 같은 저장 영상 기준 `COUNTING @ 15.00s -> 5.70s`
+- 사용자의 원래 live 로그 `COUNTING @ 6.76s`와도 크게 벗어나지 않는 수준으로 복구
+
+### 8.7 현재 구현에서의 한계
+
+- realtime 보호 필터는 설명 가능성과 실시간성을 우선한 heuristic이다.
+- irregular cadence, 한두 번의 큰 헛동작, 카메라 흔들림이 섞이면 추가 튜닝이 필요할 수 있다.
+- 저장된 overlay mp4 재생과 실제 live camera 입력은 Pose 품질이 완전히 같지 않다.
+- `01_realtime` 같은 음성/비정상 동작 샘플은 더 모아 regression set으로 관리하는 것이 바람직하다.
 
 ## 9. 리스크 및 불확실성
 
@@ -492,10 +677,6 @@ UX 적합성:
 - `ms-like` 그룹은 본질적으로 `±0.5 frame` 수준의 불확실성이 있다.
 - `02.kva`, `09.kva`의 구조 이상치는 전처리 없이 학습/평가에 넣으면 왜곡을 만든다.
 - `10.kva`는 헤더 메타데이터 오류가 있어, 향후 자동 매칭 로직은 헤더가 아니라 실제 파일명/해상도/길이를 우선해야 한다.
-- MediaPipe 라벨 프레임 관측성은 매우 좋았지만, 이는 양성 샘플 중심 분석이다. 비점프, 부분 가림, 카메라 흔들림, 발 잘림이 포함된 부정 사례 평가는 아직 없다.
-- 따라서 다음 단계 구현에서는
-  - 접지 상태기계
-  - 이상치 라벨 제외 규칙
-  - 부정 동작 샘플 검증
-  - 카메라/해상도 적응 임계치
-를 분리해 설계하는 것이 바람직하다.
+- 현재 realtime 엔진은 설명 가능한 heuristic 기반으로 동작하므로, 다른 카메라 구도와 조명에 대한 일반화는 별도 검증이 필요하다.
+- start gate는 개선되었지만, 전신 landmark visibility에 여전히 일부 의존한다. 실제 제품화 단계에서는 `핵심 관절 subset ready gate`가 더 적절할 수 있다.
+- MediaPipe 라벨 프레임 관측성은 매우 좋았지만, 이는 양성 샘플 중심 분석이다. 비점프, 부분 가림, 카메라 흔들림, 발 잘림이 포함된 부정 사례 평가는 아직 충분하지 않다.
