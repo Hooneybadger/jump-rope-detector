@@ -219,12 +219,19 @@ def main() -> None:
             if stream_state.phase != last_phase:
                 print(f"[phase] {last_phase} -> {stream_state.phase} @ {timestamp_sec:.2f}s")
                 last_phase = stream_state.phase
-                if stream_state.phase == "COUNTING":
+                if stream_state.phase == "COUNTDOWN":
                     engine = RealtimeCounterEngine(config)
+                elif stream_state.phase == "SEARCHING":
+                    engine = None
+                elif stream_state.phase == "COUNTING":
+                    if engine is None:
+                        engine = RealtimeCounterEngine(config)
                     accepted_count = 0
                     print("[count] counter armed")
 
-            if stream_state.phase == "COUNTING" and engine is not None:
+            if stream_state.phase == "COUNTDOWN" and engine is not None:
+                engine.warmup(signal)
+            elif stream_state.phase == "COUNTING" and engine is not None:
                 event = engine.step(signal)
                 if event is not None:
                     accepted_count = event.running_count
