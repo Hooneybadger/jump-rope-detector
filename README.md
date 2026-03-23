@@ -8,3 +8,9 @@ Create a virtual environment and install the project dependencies:
 bash scripts/setup_env.sh
 source activate
 ```
+
+## basic_jump
+
+The grouped-jump counter documentation lives here:
+
+- [basic_jump/README.md](basic_jump/README.md)

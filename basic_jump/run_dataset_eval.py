@@ -10,6 +10,8 @@ if __package__ in {None, ""}:
 from basic_jump.counter_engine import (
     EngineConfig,
     LabelWindowConfig,
+    SignalFrame,
+    VideoMeta,
     extract_signal_stream,
     load_ground_truth,
     run_dataset,
@@ -32,16 +34,20 @@ def parse_args() -> argparse.Namespace:
     return parser.parse_args()
 
 
+def build_signal_cache(video_dir: Path, stems: list[str]) -> dict[str, tuple[VideoMeta, list[SignalFrame]]]:
+    return {
+        stem: extract_signal_stream(video_dir / f"{stem}.mp4", EngineConfig())
+        for stem in stems
+    }
+
+
 def main() -> None:
     args = parse_args()
     video_dir = Path(args.video_dir)
     label_dir = Path(args.label_dir)
 
     ground_truth = load_ground_truth(label_dir, video_dir)
-    signal_cache = {}
-    for stem in sorted(ground_truth):
-        video_path = video_dir / f"{stem}.mp4"
-        signal_cache[stem] = extract_signal_stream(video_path, EngineConfig())
+    signal_cache = build_signal_cache(video_dir, sorted(ground_truth))
 
     window_config = LabelWindowConfig(
         start_offset_frames=args.label_start_offset,
