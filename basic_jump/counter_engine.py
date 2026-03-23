@@ -28,6 +28,18 @@ FOOT_LANDMARKS = {
     ),
 }
 ALL_POSE_LANDMARKS = tuple(mp_pose.PoseLandmark)
+CORE_READY_LANDMARKS = (
+    mp_pose.PoseLandmark.LEFT_HIP,
+    mp_pose.PoseLandmark.RIGHT_HIP,
+    mp_pose.PoseLandmark.LEFT_KNEE,
+    mp_pose.PoseLandmark.RIGHT_KNEE,
+    mp_pose.PoseLandmark.LEFT_ANKLE,
+    mp_pose.PoseLandmark.RIGHT_ANKLE,
+    mp_pose.PoseLandmark.LEFT_HEEL,
+    mp_pose.PoseLandmark.RIGHT_HEEL,
+    mp_pose.PoseLandmark.LEFT_FOOT_INDEX,
+    mp_pose.PoseLandmark.RIGHT_FOOT_INDEX,
+)
 
 
 @dataclass(frozen=True)
@@ -44,6 +56,8 @@ class EngineConfig:
     ascend_velocity_ratio: float = 0.004
     fast_descend_velocity_ratio: float = 0.002
     fast_ascend_velocity_ratio: float = 0.001
+    baseline_alpha_hip: float = 0.02
+    baseline_alpha_foot: float = 0.04
     floor_decay_ratio: float = 0.004
     min_refractory_frames: int = 4
     fast_min_refractory_frames: int = 2
@@ -355,6 +369,26 @@ def full_landmarks_visible(
     return landmark_visibility_ratio(result, visibility_threshold) >= required_ratio
 
 
+def core_landmark_visibility_ratio(result, visibility_threshold: float = 0.30) -> float:
+    if not result.pose_landmarks:
+        return 0.0
+    lms = result.pose_landmarks.landmark
+    visible_count = sum(
+        1
+        for landmark in CORE_READY_LANDMARKS
+        if float(lms[landmark.value].visibility) >= visibility_threshold
+    )
+    return visible_count / max(1, len(CORE_READY_LANDMARKS))
+
+
+def core_landmarks_visible(
+    result,
+    visibility_threshold: float = 0.30,
+    required_ratio: float = 0.80,
+) -> bool:
+    return core_landmark_visibility_ratio(result, visibility_threshold) >= required_ratio
+
+
 class PoseSignalExtractor:
     def __init__(self, config: EngineConfig):
         self.config = config
@@ -409,6 +443,9 @@ class _StateMachineCounter:
         self.prev_foot: float | None = None
         self.prev_hip_fast: float | None = None
         self.prev_foot_fast: float | None = None
+        self.prev_hip_motion: float | None = None
+        self.hip_baseline: float | None = None
+        self.foot_baseline: float | None = None
         self.saw_descent = False
         self.rebound_recovered = False
         self.last_count_frame: int | None = None
@@ -440,38 +477,35 @@ class _StateMachineCounter:
         fast_mode = len(self.interval_history) >= 3 and median(self.interval_history) <= self.config.fast_mode_cadence_threshold
         mean_hip_y = mean_hip_y_fast if fast_mode else mean_hip_y_std
         mean_foot_y = mean_foot_y_fast if fast_mode else mean_foot_y_std
-        prev_hip_y = self.prev_hip_fast if fast_mode else self.prev_hip
-        hip_vel = 0.0 if prev_hip_y is None else mean_hip_y - prev_hip_y
 
         self.prev_hip = mean_hip_y_std
         self.prev_foot = mean_foot_y_std
         self.prev_hip_fast = mean_hip_y_fast
         self.prev_foot_fast = mean_foot_y_fast
 
+        self.hip_baseline = self._ema(self.config.baseline_alpha_hip, mean_hip_y, self.hip_baseline)
+        self.foot_baseline = self._ema(self.config.baseline_alpha_foot, mean_foot_y, self.foot_baseline)
+        hip_motion = mean_hip_y - self.hip_baseline
+        foot_motion = mean_foot_y - self.foot_baseline
+        hip_vel = 0.0 if self.prev_hip_motion is None else hip_motion - self.prev_hip_motion
+        self.prev_hip_motion = hip_motion
+
         if self.floor_y is None:
-            self.floor_y = mean_foot_y
+            self.floor_y = foot_motion
         else:
-            self.floor_y = max(mean_foot_y, self.floor_y - self.config.floor_decay_ratio * signal.leg_length)
-        return mean_foot_y, hip_vel, signal.leg_length, fast_mode
+            self.floor_y = max(foot_motion, self.floor_y - self.config.floor_decay_ratio * signal.leg_length)
+        return foot_motion, hip_vel, signal.leg_length, fast_mode
 
-    def warmup(self, signal: SignalFrame) -> None:
-        if not signal.detected:
-            return
-        self._update_filtered_signal(signal)
-        self.state = "READY"
-        self.saw_descent = False
-        self.rebound_recovered = False
-
-    def step(self, signal: SignalFrame) -> CounterEvent | None:
+    def _advance(self, signal: SignalFrame, allow_count: bool) -> CounterEvent | None:
         if not signal.detected:
             return None
         assert signal.left_foot_y is not None
         assert signal.right_foot_y is not None
-        mean_foot_y, hip_vel, leg_length, fast_mode = self._update_filtered_signal(signal)
+        foot_motion, hip_vel, leg_length, fast_mode = self._update_filtered_signal(signal)
 
         contact_threshold = self.floor_y - (self.config.contact_margin_ratio * leg_length)
         symmetry_y = abs(signal.left_foot_y - signal.right_foot_y)
-        contact_gate = mean_foot_y >= contact_threshold and symmetry_y <= (
+        contact_gate = foot_motion >= contact_threshold and symmetry_y <= (
             self.config.symmetry_y_ratio * leg_length
         )
         descend_ratio = self.config.fast_descend_velocity_ratio if fast_mode else self.config.descend_velocity_ratio
@@ -508,19 +542,27 @@ class _StateMachineCounter:
             and ascending
             and enough_refractory
         ):
+            self.state = "REBOUND_LOCK"
+            self.saw_descent = False
+            self.rebound_recovered = ascending
+            if not allow_count:
+                return None
             if self.last_count_frame is not None:
                 self.interval_history.append(signal.frame_idx - self.last_count_frame)
             self.running_count += 1
             self.last_count_frame = signal.frame_idx
-            self.state = "REBOUND_LOCK"
-            self.saw_descent = False
-            self.rebound_recovered = ascending
             return CounterEvent(
                 frame_idx=signal.frame_idx,
                 time_sec=signal.time_sec,
                 running_count=self.running_count,
         )
         return None
+
+    def warmup(self, signal: SignalFrame) -> None:
+        self._advance(signal, allow_count=False)
+
+    def step(self, signal: SignalFrame) -> CounterEvent | None:
+        return self._advance(signal, allow_count=True)
 
 
 class RealtimeCounterEngine:
