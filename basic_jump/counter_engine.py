@@ -286,11 +286,22 @@ def pose_result_to_signal(
     )
 
 
-def full_landmarks_visible(result, visibility_threshold: float = 0.30) -> bool:
+def landmark_visibility_ratio(result, visibility_threshold: float = 0.30) -> float:
     if not result.pose_landmarks:
-        return False
+        return 0.0
     lms = result.pose_landmarks.landmark
-    return all(float(lms[landmark.value].visibility) >= visibility_threshold for landmark in ALL_POSE_LANDMARKS)
+    visible_count = sum(
+        1 for landmark in ALL_POSE_LANDMARKS if float(lms[landmark.value].visibility) >= visibility_threshold
+    )
+    return visible_count / max(1, len(ALL_POSE_LANDMARKS))
+
+
+def full_landmarks_visible(
+    result,
+    visibility_threshold: float = 0.30,
+    required_ratio: float = 1.0,
+) -> bool:
+    return landmark_visibility_ratio(result, visibility_threshold) >= required_ratio
 
 
 class PoseSignalExtractor:
@@ -445,17 +456,32 @@ class RealtimeCounterEngine:
 
 
 class RealtimeStartGate:
-    def __init__(self, ready_hold_seconds: float = 1.0, countdown_seconds: float = 3.0):
+    def __init__(
+        self,
+        ready_hold_seconds: float = 1.0,
+        countdown_seconds: float = 3.0,
+        ready_dropout_seconds: float = 0.35,
+    ):
         self.ready_hold_seconds = ready_hold_seconds
         self.countdown_seconds = countdown_seconds
+        self.ready_dropout_seconds = ready_dropout_seconds
         self.phase = "SEARCHING"
         self.ready_since_sec: float | None = None
+        self.last_ready_sec: float | None = None
         self.countdown_end_sec: float | None = None
         self.count_started_at_sec: float | None = None
 
     def update(self, full_body_ready: bool, timestamp_sec: float) -> StreamState:
+        if full_body_ready:
+            self.last_ready_sec = timestamp_sec
+
+        ready_active = full_body_ready or (
+            self.last_ready_sec is not None
+            and (timestamp_sec - self.last_ready_sec) <= self.ready_dropout_seconds
+        )
+
         if self.phase == "SEARCHING":
-            if full_body_ready:
+            if ready_active:
                 if self.ready_since_sec is None:
                     self.ready_since_sec = timestamp_sec
                 if (timestamp_sec - self.ready_since_sec) >= self.ready_hold_seconds:
@@ -464,7 +490,7 @@ class RealtimeStartGate:
             else:
                 self.ready_since_sec = None
         elif self.phase == "COUNTDOWN":
-            if not full_body_ready:
+            if not ready_active:
                 self.phase = "SEARCHING"
                 self.ready_since_sec = None
                 self.countdown_end_sec = None
@@ -492,6 +518,7 @@ class RealtimeStartGate:
     def reset(self) -> None:
         self.phase = "SEARCHING"
         self.ready_since_sec = None
+        self.last_ready_sec = None
         self.countdown_end_sec = None
         self.count_started_at_sec = None
 
