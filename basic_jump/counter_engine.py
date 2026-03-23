@@ -421,10 +421,10 @@ class _StateMachineCounter:
             return value
         return alpha * value + (1.0 - alpha) * previous
 
-    def step(self, signal: SignalFrame) -> CounterEvent | None:
-        if not signal.detected:
-            return None
-
+    def _update_filtered_signal(
+        self,
+        signal: SignalFrame,
+    ) -> tuple[float, float, float, bool]:
         assert signal.left_hip_y is not None
         assert signal.right_hip_y is not None
         assert signal.left_foot_y is not None
@@ -442,6 +442,7 @@ class _StateMachineCounter:
         mean_foot_y = mean_foot_y_fast if fast_mode else mean_foot_y_std
         prev_hip_y = self.prev_hip_fast if fast_mode else self.prev_hip
         hip_vel = 0.0 if prev_hip_y is None else mean_hip_y - prev_hip_y
+
         self.prev_hip = mean_hip_y_std
         self.prev_foot = mean_foot_y_std
         self.prev_hip_fast = mean_hip_y_fast
@@ -451,17 +452,33 @@ class _StateMachineCounter:
             self.floor_y = mean_foot_y
         else:
             self.floor_y = max(mean_foot_y, self.floor_y - self.config.floor_decay_ratio * signal.leg_length)
+        return mean_foot_y, hip_vel, signal.leg_length, fast_mode
 
-        contact_threshold = self.floor_y - (self.config.contact_margin_ratio * signal.leg_length)
+    def warmup(self, signal: SignalFrame) -> None:
+        if not signal.detected:
+            return
+        self._update_filtered_signal(signal)
+        self.state = "READY"
+        self.saw_descent = False
+        self.rebound_recovered = False
+
+    def step(self, signal: SignalFrame) -> CounterEvent | None:
+        if not signal.detected:
+            return None
+        assert signal.left_foot_y is not None
+        assert signal.right_foot_y is not None
+        mean_foot_y, hip_vel, leg_length, fast_mode = self._update_filtered_signal(signal)
+
+        contact_threshold = self.floor_y - (self.config.contact_margin_ratio * leg_length)
         symmetry_y = abs(signal.left_foot_y - signal.right_foot_y)
         contact_gate = mean_foot_y >= contact_threshold and symmetry_y <= (
-            self.config.symmetry_y_ratio * signal.leg_length
+            self.config.symmetry_y_ratio * leg_length
         )
         descend_ratio = self.config.fast_descend_velocity_ratio if fast_mode else self.config.descend_velocity_ratio
         ascend_ratio = self.config.fast_ascend_velocity_ratio if fast_mode else self.config.ascend_velocity_ratio
         min_refractory = self.config.fast_min_refractory_frames if fast_mode else self.config.min_refractory_frames
-        descending = hip_vel >= (descend_ratio * signal.leg_length)
-        ascending = hip_vel <= -(ascend_ratio * signal.leg_length)
+        descending = hip_vel >= (descend_ratio * leg_length)
+        ascending = hip_vel <= -(ascend_ratio * leg_length)
         enough_refractory = (
             self.last_count_frame is None
             or (signal.frame_idx - self.last_count_frame) >= min_refractory
@@ -672,6 +689,13 @@ class RealtimeCounterEngine:
             return False
         recent_to_hip_ratio = metrics["recent_hip_range_ratio"] / max(metrics["hip_range_ratio"], 1e-6)
         return recent_to_hip_ratio < self.config.stale_tail_guard_recent_to_hip_ratio
+
+    def warmup(self, signal: SignalFrame) -> None:
+        self.last_decision = None
+        if not signal.detected:
+            return
+        self._update_motion_history(signal)
+        self.state_engine.warmup(signal)
 
     def step(self, signal: SignalFrame) -> CounterEvent | None:
         self.last_decision = None
