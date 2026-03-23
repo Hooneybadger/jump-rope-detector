@@ -26,7 +26,7 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--grid-search", action="store_true", help="Run a small config sweep before final evaluation.")
     parser.add_argument("--search-limit", type=int, default=None, help="Optional limit for the small config sweep.")
     parser.add_argument("--label-start-offset", type=int, default=-15, help="Frame offset applied before the first GT label.")
-    parser.add_argument("--label-end-offset", type=int, default=0, help="Frame offset applied after the last GT label.")
+    parser.add_argument("--label-end-offset", type=int, default=3, help="Frame offset applied after the last GT label.")
     parser.add_argument("--warmup-frames", type=int, default=4, help="Warmup frames processed before counting starts.")
     parser.add_argument("--output", default="basic_jump/artifacts/dataset_eval_results.json")
     return parser.parse_args()
@@ -39,8 +39,9 @@ def main() -> None:
 
     ground_truth = load_ground_truth(label_dir, video_dir)
     signal_cache = {}
-    for video_path in sorted(video_dir.glob("*.mp4")):
-        signal_cache[video_path.stem] = extract_signal_stream(video_path, EngineConfig())
+    for stem in sorted(ground_truth):
+        video_path = video_dir / f"{stem}.mp4"
+        signal_cache[stem] = extract_signal_stream(video_path, EngineConfig())
 
     window_config = LabelWindowConfig(
         start_offset_frames=args.label_start_offset,
@@ -63,6 +64,11 @@ def main() -> None:
             f"error={result.count_error:+d} exact={result.exact_match} "
             f"window=[{result.eval_start_frame},{result.eval_end_frame}]"
         )
+    print(f"Overall Count Accuracy: {summary['overall_count_accuracy']:.4f}")
+    print(
+        f"Total Count: predicted={summary['total_predicted_count']} "
+        f"gt={summary['total_gt_count']} signed_error={summary['signed_total_error']:+d}"
+    )
     print(f"Exact Video Count Accuracy: {summary['exact_video_count_accuracy']:.4f}")
     print(f"Total Abs Error: {summary['total_abs_error']}")
     print(f"Saved summary to: {args.output}")

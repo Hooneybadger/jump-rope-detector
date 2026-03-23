@@ -15,14 +15,51 @@
     "floor_decay_ratio": 0.004,
     "min_refractory_frames": 4,
     "fast_min_refractory_frames": 2,
-    "fast_mode_cadence_threshold": 7
+    "fast_mode_cadence_threshold": 7,
+    "motion_window_frames": 18,
+    "recent_window_frames": 5,
+    "min_hip_range_ratio": 0.045,
+    "min_foot_range_ratio": 0.035,
+    "min_recent_hip_range_ratio": 0.032,
+    "max_foot_to_hip_ratio": 2.5,
+    "guard_low_hip_range_ratio": 0.09,
+    "guard_high_foot_range_ratio": 0.12,
+    "guard_recent_hip_range_ratio": 0.04,
+    "balanced_override_hip_range_ratio": 0.075,
+    "balanced_override_foot_range_ratio": 0.065,
+    "balanced_override_recent_hip_ratio": 0.024,
+    "balanced_override_min_ratio": 0.6,
+    "balanced_override_max_ratio": 1.5,
+    "extended_override_hip_range_ratio": 0.055,
+    "extended_override_foot_range_ratio": 0.1,
+    "extended_override_recent_hip_ratio": 0.028,
+    "extended_override_min_ratio": 1.6,
+    "extended_override_max_ratio": 2.0,
+    "extended_override_recent_to_hip_ratio": 0.45,
+    "foot_floor_override_hip_range_ratio": 0.1,
+    "foot_floor_override_foot_range_ratio": 0.028,
+    "foot_floor_override_recent_hip_ratio": 0.06,
+    "foot_floor_override_max_ratio": 0.31,
+    "stale_tail_guard_hip_range_ratio": 0.2,
+    "stale_tail_guard_recent_to_hip_ratio": 0.177,
+    "min_count_gap_frames": 9,
+    "adaptive_gap_enabled": true,
+    "adaptive_gap_factor": 0.7,
+    "adaptive_gap_history": 5,
+    "adaptive_gap_min_intervals": 1,
+    "adaptive_gap_floor_frames": 4,
+    "adaptive_motion_hip_ratio": 0.06,
+    "adaptive_motion_foot_ratio": 0.05,
+    "adaptive_recent_hip_enabled": true,
+    "adaptive_recent_hip_floor": 0.032
   },
   "label_window": {
     "start_offset_frames": -15,
-    "end_offset_frames": 0,
+    "end_offset_frames": 3,
     "warmup_frames": 4
   },
   "summary": {
+    "overall_count_accuracy": 1.0,
     "exact_video_count_accuracy": 1.0,
     "videos": [
       {
@@ -32,7 +69,7 @@
         "count_error": 0,
         "exact_match": true,
         "eval_start_frame": 81,
-        "eval_end_frame": 990,
+        "eval_end_frame": 993,
         "predicted_frames": [
           86,
           99,
@@ -131,9 +168,8 @@
         "count_error": 0,
         "exact_match": true,
         "eval_start_frame": 147,
-        "eval_end_frame": 367,
+        "eval_end_frame": 370,
         "predicted_frames": [
-          150,
           165,
           180,
           195,
@@ -147,7 +183,8 @@
           312,
           326,
           341,
-          355
+          355,
+          370
         ]
       },
       {
@@ -157,9 +194,8 @@
         "count_error": 0,
         "exact_match": true,
         "eval_start_frame": 26,
-        "eval_end_frame": 279,
+        "eval_end_frame": 282,
         "predicted_frames": [
-          28,
           43,
           58,
           73,
@@ -175,7 +211,8 @@
           221,
           237,
           252,
-          267
+          267,
+          282
         ]
       },
       {
@@ -185,7 +222,7 @@
         "count_error": 0,
         "exact_match": true,
         "eval_start_frame": 18,
-        "eval_end_frame": 130,
+        "eval_end_frame": 133,
         "predicted_frames": [
           21,
           35,
@@ -204,7 +241,7 @@
         "count_error": 0,
         "exact_match": true,
         "eval_start_frame": 47,
-        "eval_end_frame": 2455,
+        "eval_end_frame": 2458,
         "predicted_frames": [
           50,
           64,
@@ -413,7 +450,7 @@
         "count_error": 0,
         "exact_match": true,
         "eval_start_frame": 138,
-        "eval_end_frame": 3971,
+        "eval_end_frame": 3974,
         "predicted_frames": [
           141,
           155,
@@ -686,7 +723,7 @@
         "count_error": 0,
         "exact_match": true,
         "eval_start_frame": 308,
-        "eval_end_frame": 6305,
+        "eval_end_frame": 6308,
         "predicted_frames": [
           311,
           325,
@@ -1201,7 +1238,7 @@
         "count_error": 0,
         "exact_match": true,
         "eval_start_frame": 23,
-        "eval_end_frame": 237,
+        "eval_end_frame": 240,
         "predicted_frames": [
           28,
           41,
@@ -1228,9 +1265,8 @@
         "count_error": 0,
         "exact_match": true,
         "eval_start_frame": 160,
-        "eval_end_frame": 1085,
+        "eval_end_frame": 1088,
         "predicted_frames": [
-          168,
           177,
           185,
           192,
@@ -1361,7 +1397,8 @@
           1056,
           1063,
           1070,
-          1079
+          1079,
+          1088
         ]
       },
       {
@@ -1371,9 +1408,8 @@
         "count_error": 0,
         "exact_match": true,
         "eval_start_frame": 50,
-        "eval_end_frame": 972,
+        "eval_end_frame": 975,
         "predicted_frames": [
-          59,
           67,
           75,
           80,
@@ -1506,7 +1542,8 @@
           940,
           950,
           956,
-          966
+          966,
+          975
         ]
       },
       {
@@ -1516,9 +1553,8 @@
         "count_error": 0,
         "exact_match": true,
         "eval_start_frame": 142,
-        "eval_end_frame": 398,
+        "eval_end_frame": 401,
         "predicted_frames": [
-          145,
           160,
           172,
           184,
@@ -1537,10 +1573,14 @@
           347,
           359,
           373,
-          386
+          386,
+          400
         ]
       }
     ],
+    "total_gt_count": 1394,
+    "total_predicted_count": 1394,
+    "signed_total_error": 0,
     "total_abs_error": 0
   }
 }

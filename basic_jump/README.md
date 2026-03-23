@@ -38,13 +38,14 @@
 
 - 손만 흔든 경우: 발 움직임 범위가 부족하면 reject한다.
 - 발만 까딱한 경우: 힙 움직임 범위가 부족하면 reject한다.
+- 발 움직임이 힙 움직임보다 과도하게 큰 경우: `foot_to_hip_ratio`와 `foot_dominant_low_hip` guard로 reject한다.
 - 같은 점프를 두 번 세는 경우: `lock + min gap`으로 차단한다.
 - 빠른 리듬에서는: 최근 jump 간격을 보고 `min gap`을 자동으로 줄여 undercount를 막는다.
 
 여기서 두 용어의 역할은 다르다.
 
 - `lock`: 한 번 count한 직후 바로 다음 후보를 받지 않고, 몸이 다시 충분히 올라갔다가 다음 하강 cycle이 시작된 것이 확인될 때까지 기다리는 상태다.
-- `min gap`: 연속 두 count 사이에 필요한 최소 프레임 간격이다. realtime 보호 필터에서 마지막 accepted count와 현재 후보 사이 간격을 보고, 너무 가까우면 최종 count를 올리지 않는다.
+- `min gap`: 연속 두 count 사이에 필요한 최소 프레임 간격이다. unified 엔진의 최종 accept 단계에서 마지막 accepted count와 현재 후보 사이 간격을 보고, 너무 가까우면 count를 올리지 않는다.
 
 즉, `lock`은 상태기계 내부 중복 방지이고, `min gap`은 최종 accepted count 단계의 안전장치다.
 
@@ -67,6 +68,11 @@
 - 반대로 너무 짧으면: 한 점프 안의 흔들림을 두 번 세는 double-count가 다시 늘어난다.
 
 현재 구현은 이 균형을 맞추기 위해, 평소에는 보수적으로 막고 빠른 cadence가 확인되면 `min gap`을 자동 완화하는 쪽을 사용한다.
+
+추가로 현재 엔진은 아래 두 guard를 함께 쓴다.
+
+- `foot_to_hip_ratio`: 발 range가 힙 range를 비정상적으로 크게 압도하면 reject한다.
+- `foot_dominant_low_hip`: 발 range는 큰데 힙 range와 최근 힙 range가 약하면, 발장난이나 꼬리 흔들림으로 보고 reject한다.
 
 
 ### 5. 언제 카운팅을 시작하는가

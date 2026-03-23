@@ -410,14 +410,14 @@
 
 ## 8. 구현된 실시간 카운팅 엔진 기술서
 
-이 절은 분석 결과를 실제 구현으로 옮긴 현재 엔진의 동작 원리를 기술한다. 구현은 `MediaPipe Pose -> signal 추출 -> start gate -> 상태기계 -> realtime 보호 필터` 순서로 동작한다.
+이 절은 분석 결과를 실제 구현으로 옮긴 현재 엔진의 동작 원리를 기술한다. 구현은 `MediaPipe Pose -> signal 추출 -> start gate -> unified counter engine` 순서로 동작한다.
 
 핵심 원칙은 다음과 같다.
 
 - 전체 영상 후처리 없이 프레임을 순차 처리한다.
 - centered window나 미래 프레임 peak picking을 사용하지 않는다.
 - 1카운트는 `접지 후 반등 전환`으로 정의한다.
-- 카운트 타이밍은 상태기계가 결정하고, realtime 오탐 억제는 별도 보호 필터가 담당한다.
+- 카운트 타이밍과 오탐 억제는 같은 unified counter engine 안에서 함께 결정된다.
 
 ### 8.1 입력 랜드마크와 신호 정의
 
@@ -550,11 +550,11 @@
 
 이 단계는 jump count 자체와는 별개로, realtime UX를 위한 시작 안정화 단계다.
 
-### 8.4 realtime 보호 필터
+### 8.4 unified motion guard
 
-상태기계만으로는 "손만 흔들기", "발만 까딱하기", "한 점프 두 번 세기"를 완전히 막기 어렵다. 그래서 realtime 모드에는 상태기계 뒤에 한 겹의 보호 필터를 둔다.
+상태기계만으로는 "손만 흔들기", "발만 까딱하기", "한 점프 두 번 세기"를 완전히 막기 어렵다. 현재 구현은 상태기계 뒤에 별도 엔진을 두지 않고, 같은 `RealtimeCounterEngine.step()` 안에서 motion guard를 함께 적용한다.
 
-필터는 아래 윈도우 특징을 사용한다.
+guard는 아래 윈도우 특징을 사용한다.
 
 - `motion_window_frames = 18`
 - `recent_window_frames = 5`
@@ -564,40 +564,44 @@
 
 기본 통과 조건:
 
-- `hip_range_ratio >= 0.10`
-- `foot_range_ratio >= 0.065`
-- `recent_hip_range_ratio >= 0.05`
-- `min_gap >= 20 frame`
+- `hip_range_ratio >= 0.045`
+- `foot_range_ratio >= 0.035`
+- `recent_hip_range_ratio >= 0.032`
+- `foot_to_hip_ratio <= 2.5`
+- `min_gap >= 9 frame`
 
 역할은 다음과 같다.
 
 - `hip_range_ratio`: 발만 움직이고 몸 중심이 안 움직이는 경우 차단
 - `foot_range_ratio`: 손만 움직이고 발 접지 신호가 약한 경우 차단
 - `recent_hip_range_ratio`: 실제 반등이 아니라 작은 드리프트일 때 차단
+- `foot_to_hip_ratio`: 발 signal만 과도하게 큰 꼬리 구간이나 발장난 차단
+- `foot_dominant_low_hip`: 발 range는 큰데 힙 반등은 약한 구간 차단
 - `min_gap`: 같은 점프 안에서 두 번 세는 경우 차단
 
-주의:
+중요한 점:
 
-- 이 보호 필터는 realtime 오탐 억제용이다.
-- 테스트셋 `exact 1.00`을 맞춘 dataset evaluator의 핵심 엔진과는 목적이 다르다.
+- 이 guard는 realtime 전용 별도 엔진이 아니다.
+- dataset evaluator와 realtime runner가 같은 `RealtimeCounterEngine`을 사용한다.
+- 따라서 현재 count emission logic은 평가와 실사용이 동일하다.
 
 ### 8.5 빠른 cadence 적응 로직
 
-실사용에서 가장 큰 문제는 빠른 리듬에서 `fixed min_gap=20`이 너무 보수적이라는 점이었다. `02_realtime`처럼 실제 jump 간격이 `13~15 frame` 수준인 경우, 한 번씩 건너뛰며 undercount가 났다.
+실사용에서 가장 큰 문제는 빠른 리듬에서 고정 기준이 너무 보수적이라는 점이었다. `02_realtime`처럼 실제 jump 간격이 `13~15 frame` 수준인 경우, 고정 gap과 과도한 recent-hip 기준이 undercount를 만들었다.
 
-이를 해결하기 위해 realtime 필터는 아래 조건에서 동적으로 완화된다.
+이를 해결하기 위해 unified engine은 아래 조건에서 동적으로 완화된다.
 
 #### cadence lock 조건
 
 - 최근 `motion-valid candidate`의 hip/foot range 중앙값이 충분히 커야 한다.
-  - `candidate hip median >= 0.14`
-  - `candidate foot median >= 0.08`
+  - `candidate hip median >= 0.06`
+  - `candidate foot median >= 0.05`
 - 최근 candidate interval 기록이 최소 1개 이상 있어야 한다.
 
 여기서 `motion-valid candidate`는 다음을 만족하는 상태기계 이벤트다.
 
-- `hip_range_ratio >= 0.10`
-- `foot_range_ratio >= 0.065`
+- `hip_range_ratio >= 0.045`
+- `foot_range_ratio >= 0.035`
 
 즉, 아무 후보나 interval 학습에 쓰지 않고, 손-only/발-only 성격이 약한 후보만 cadence 학습에 사용한다.
 
@@ -606,11 +610,11 @@
 cadence lock이 걸리면:
 
 - `raw_interval_median = median(recent candidate intervals)`
-- `adaptive_min_gap = clamp(round(0.8 * raw_interval_median), 10, 20)`
+- `adaptive_min_gap = clamp(round(0.8 * raw_interval_median), 5, 9)`
 
 동시에 recent hip 조건도 약간 완화한다.
 
-- `min_recent_hip_range_ratio: 0.05 -> 0.04`
+- `adaptive_recent_hip_floor = 0.032`
 
 이 완화는 무제한으로 풀지 않고, 빠른 cadence에서 필요한 최소 수준만 낮추는 방식이다.
 
@@ -620,10 +624,10 @@ cadence lock이 걸리면:
 
 | 문제 | 원인 | 해결 방식 | 결과 |
 | ---- | ---- | --------- | ---- |
-| 손만 움직여도 count | 힙 velocity sign-change만으로 event가 발생할 수 있음 | `foot_range_ratio >= 0.065`와 recent motion 검사 추가 | 손-only 오탐 대폭 감소 |
-| 발만 움직여도 count | 발 접지 모양은 비슷하지만 몸 중심 반등이 없음 | `hip_range_ratio >= 0.10` 추가 | 발-only 오탐 차단 |
+| 손만 움직여도 count | 힙 velocity sign-change만으로 event가 발생할 수 있음 | `foot_range_ratio`와 recent hip 검사 추가 | 손-only 오탐 감소 |
+| 발만 움직여도 count | 발 signal만 크고 힙 반등은 약함 | `hip_range_ratio`, `foot_to_hip_ratio`, `foot_dominant_low_hip` 추가 | 발-only 오탐 차단 |
 | 한 점프에서 2번 count | 같은 rebound 안에서 지역적 velocity 전환이 두 번 발생 | `REBOUND_LOCK` + `min_gap` 적용 | double-count 감소 |
-| 빠른 cadence에서 undercount | `fixed min_gap=20`이 실제 리듬보다 큼 | candidate cadence 기반 adaptive gap 도입 | `02_realtime`에서 빠른 연속 점프 복구 |
+| 빠른 cadence에서 undercount | 고정 gap이 실제 리듬보다 큼 | candidate cadence 기반 adaptive gap 도입 | `02_realtime`에서 빠른 연속 점프 복구 |
 | counting 시작이 너무 늦음 | all landmarks 완전일치 + single-frame dropout 즉시 리셋 | ready ratio 방식과 `0.35s` dropout tolerance 도입 | start gate 지연 대폭 감소 |
 
 #### 사례 1. 빠른 cadence undercount
@@ -633,13 +637,13 @@ cadence lock이 걸리면:
 분석 결과:
 
 - 상태기계 raw 후보는 충분히 나왔지만
-- realtime 보호 필터의 `fixed min_gap=20`이 너무 커서
+- unified engine의 고정 gap 기준이 실제 cadence보다 커서
 - 실제 `13~15 frame` cadence의 점프를 절반 가까이 버리고 있었다.
 
 해결:
 
 - `motion-valid candidate interval` 기준 adaptive gap 도입
-- `recent_hip_range_ratio`를 `0.05 -> 0.04`로 소폭 완화
+- `adaptive_recent_hip_floor`를 둬 빠른 cadence에서만 recent-hip 완화
 
 결과:
 
@@ -666,7 +670,7 @@ cadence lock이 걸리면:
 
 ### 8.7 현재 구현에서의 한계
 
-- realtime 보호 필터는 설명 가능성과 실시간성을 우선한 heuristic이다.
+- unified motion guard는 설명 가능성과 실시간성을 우선한 heuristic이다.
 - irregular cadence, 한두 번의 큰 헛동작, 카메라 흔들림이 섞이면 추가 튜닝이 필요할 수 있다.
 - 저장된 overlay mp4 재생과 실제 live camera 입력은 Pose 품질이 완전히 같지 않다.
 - `01_realtime` 같은 음성/비정상 동작 샘플은 더 모아 regression set으로 관리하는 것이 바람직하다.
@@ -674,6 +678,7 @@ cadence lock이 걸리면:
 ## 9. 리스크 및 불확실성
 
 - 라벨은 "접지 이벤트 윈도우"에는 일관되지만, 모든 영상에서 동일한 단일 프레임 규약으로 찍힌 것은 아니다.
+- 현재 dataset 평가는 `first_label - 15 frame`에서 시작하고, `last_label + 3 frame`까지 허용하는 쪽이 라벨 의미와 더 잘 맞았다.
 - `ms-like` 그룹은 본질적으로 `±0.5 frame` 수준의 불확실성이 있다.
 - `02.kva`, `09.kva`의 구조 이상치는 전처리 없이 학습/평가에 넣으면 왜곡을 만든다.
 - `10.kva`는 헤더 메타데이터 오류가 있어, 향후 자동 매칭 로직은 헤더가 아니라 실제 파일명/해상도/길이를 우선해야 한다.

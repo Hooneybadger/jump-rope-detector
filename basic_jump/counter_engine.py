@@ -48,6 +48,42 @@ class EngineConfig:
     min_refractory_frames: int = 4
     fast_min_refractory_frames: int = 2
     fast_mode_cadence_threshold: int = 7
+    motion_window_frames: int = 18
+    recent_window_frames: int = 5
+    min_hip_range_ratio: float = 0.045
+    min_foot_range_ratio: float = 0.035
+    min_recent_hip_range_ratio: float = 0.032
+    max_foot_to_hip_ratio: float = 2.5
+    guard_low_hip_range_ratio: float = 0.09
+    guard_high_foot_range_ratio: float = 0.12
+    guard_recent_hip_range_ratio: float = 0.04
+    balanced_override_hip_range_ratio: float = 0.075
+    balanced_override_foot_range_ratio: float = 0.065
+    balanced_override_recent_hip_ratio: float = 0.024
+    balanced_override_min_ratio: float = 0.60
+    balanced_override_max_ratio: float = 1.50
+    extended_override_hip_range_ratio: float = 0.055
+    extended_override_foot_range_ratio: float = 0.100
+    extended_override_recent_hip_ratio: float = 0.028
+    extended_override_min_ratio: float = 1.60
+    extended_override_max_ratio: float = 2.00
+    extended_override_recent_to_hip_ratio: float = 0.45
+    foot_floor_override_hip_range_ratio: float = 0.10
+    foot_floor_override_foot_range_ratio: float = 0.028
+    foot_floor_override_recent_hip_ratio: float = 0.060
+    foot_floor_override_max_ratio: float = 0.31
+    stale_tail_guard_hip_range_ratio: float = 0.20
+    stale_tail_guard_recent_to_hip_ratio: float = 0.177
+    min_count_gap_frames: int = 9
+    adaptive_gap_enabled: bool = True
+    adaptive_gap_factor: float = 0.70
+    adaptive_gap_history: int = 5
+    adaptive_gap_min_intervals: int = 1
+    adaptive_gap_floor_frames: int = 4
+    adaptive_motion_hip_ratio: float = 0.06
+    adaptive_motion_foot_ratio: float = 0.05
+    adaptive_recent_hip_enabled: bool = True
+    adaptive_recent_hip_floor: float = 0.032
 
     def to_dict(self) -> dict[str, float | int]:
         return asdict(self)
@@ -89,6 +125,21 @@ class CounterEvent:
     frame_idx: int
     time_sec: float
     running_count: int
+
+
+@dataclass
+class CounterDecision:
+    frame_idx: int
+    time_sec: float
+    accepted: bool
+    reason: str
+    hip_range_ratio: float
+    foot_range_ratio: float
+    recent_hip_range_ratio: float
+    foot_to_hip_ratio: float
+    min_gap_frames: int
+    min_recent_hip_ratio: float
+    cadence_locked: bool
 
 
 @dataclass(frozen=True)
@@ -349,7 +400,7 @@ def extract_signal_stream(video_path: str | Path, config: EngineConfig) -> tuple
     return video_meta, signals
 
 
-class RealtimeCounterEngine:
+class _StateMachineCounter:
     def __init__(self, config: EngineConfig):
         self.config = config
         self.state = "READY"
@@ -455,6 +506,249 @@ class RealtimeCounterEngine:
         return None
 
 
+class RealtimeCounterEngine:
+    def __init__(self, config: EngineConfig):
+        self.config = config
+        self.state_engine = _StateMachineCounter(config)
+        self.hip_history: deque[float] = deque(maxlen=config.motion_window_frames)
+        self.foot_history: deque[float] = deque(maxlen=config.motion_window_frames)
+        self.leg_history: deque[float] = deque(maxlen=config.motion_window_frames)
+        self.recent_hip_history: deque[float] = deque(maxlen=config.recent_window_frames)
+        self.candidate_interval_history: deque[int] = deque(maxlen=config.adaptive_gap_history)
+        self.candidate_hip_history: deque[float] = deque(maxlen=config.adaptive_gap_history)
+        self.candidate_foot_history: deque[float] = deque(maxlen=config.adaptive_gap_history)
+        self.last_candidate_frame: int | None = None
+        self.last_accepted_frame: int | None = None
+        self.accepted_running_count = 0
+        self.last_decision: CounterDecision | None = None
+
+    def _update_motion_history(self, signal: SignalFrame) -> None:
+        if not signal.detected:
+            return
+        assert signal.left_hip_y is not None
+        assert signal.right_hip_y is not None
+        assert signal.left_foot_y is not None
+        assert signal.right_foot_y is not None
+        assert signal.leg_length is not None
+
+        mean_hip = (signal.left_hip_y + signal.right_hip_y) / 2.0
+        mean_foot = (signal.left_foot_y + signal.right_foot_y) / 2.0
+        self.hip_history.append(mean_hip)
+        self.foot_history.append(mean_foot)
+        self.leg_history.append(signal.leg_length)
+        self.recent_hip_history.append(mean_hip)
+
+    def motion_metrics(self) -> dict[str, float]:
+        if not self.hip_history or not self.foot_history or not self.leg_history:
+            return {
+                "hip_range_ratio": 0.0,
+                "foot_range_ratio": 0.0,
+                "recent_hip_range_ratio": 0.0,
+                "foot_to_hip_ratio": 0.0,
+            }
+        leg_median = median(self.leg_history)
+        hip_range_ratio = (max(self.hip_history) - min(self.hip_history)) / leg_median
+        foot_range_ratio = (max(self.foot_history) - min(self.foot_history)) / leg_median
+        foot_to_hip_ratio = foot_range_ratio / max(hip_range_ratio, 1e-6)
+        recent_hip_range_ratio = 0.0
+        if len(self.recent_hip_history) >= self.config.recent_window_frames:
+            recent_hip_range_ratio = (
+                max(self.recent_hip_history) - min(self.recent_hip_history)
+            ) / leg_median
+        return {
+            "hip_range_ratio": hip_range_ratio,
+            "foot_range_ratio": foot_range_ratio,
+            "recent_hip_range_ratio": recent_hip_range_ratio,
+            "foot_to_hip_ratio": foot_to_hip_ratio,
+        }
+
+    def _observe_candidate(self, frame_idx: int, metrics: dict[str, float]) -> None:
+        motion_valid = (
+            metrics["hip_range_ratio"] >= self.config.min_hip_range_ratio
+            and metrics["foot_range_ratio"] >= self.config.min_foot_range_ratio
+        )
+        if not motion_valid:
+            return
+        if self.last_candidate_frame is not None and frame_idx > self.last_candidate_frame:
+            self.candidate_interval_history.append(frame_idx - self.last_candidate_frame)
+        self.last_candidate_frame = frame_idx
+        self.candidate_hip_history.append(metrics["hip_range_ratio"])
+        self.candidate_foot_history.append(metrics["foot_range_ratio"])
+
+    def _cadence_locked(self) -> bool:
+        if not self.config.adaptive_gap_enabled:
+            return False
+        if len(self.candidate_interval_history) < self.config.adaptive_gap_min_intervals:
+            return False
+        if not self.candidate_hip_history or not self.candidate_foot_history:
+            return False
+        return (
+            median(self.candidate_hip_history) >= self.config.adaptive_motion_hip_ratio
+            and median(self.candidate_foot_history) >= self.config.adaptive_motion_foot_ratio
+        )
+
+    def _effective_limits(self) -> tuple[int, float, bool]:
+        min_gap_frames = self.config.min_count_gap_frames
+        min_recent_hip_ratio = self.config.min_recent_hip_range_ratio
+        cadence_locked = self._cadence_locked()
+
+        if cadence_locked:
+            raw_interval_median = median(self.candidate_interval_history)
+            min_gap_frames = max(
+                self.config.adaptive_gap_floor_frames,
+                min(
+                    self.config.min_count_gap_frames,
+                    int(round(raw_interval_median * self.config.adaptive_gap_factor)),
+                ),
+            )
+            if self.config.adaptive_recent_hip_enabled:
+                min_recent_hip_ratio = max(
+                    self.config.adaptive_recent_hip_floor,
+                    self.config.min_recent_hip_range_ratio * 0.8,
+                )
+        return min_gap_frames, min_recent_hip_ratio, cadence_locked
+
+    def _reject(
+        self,
+        candidate: CounterEvent,
+        reason: str,
+        metrics: dict[str, float],
+        min_gap_frames: int,
+        min_recent_hip_ratio: float,
+        cadence_locked: bool,
+    ) -> None:
+        self.last_decision = CounterDecision(
+            frame_idx=candidate.frame_idx,
+            time_sec=candidate.time_sec,
+            accepted=False,
+            reason=reason,
+            hip_range_ratio=metrics["hip_range_ratio"],
+            foot_range_ratio=metrics["foot_range_ratio"],
+            recent_hip_range_ratio=metrics["recent_hip_range_ratio"],
+            foot_to_hip_ratio=metrics["foot_to_hip_ratio"],
+            min_gap_frames=min_gap_frames,
+            min_recent_hip_ratio=min_recent_hip_ratio,
+            cadence_locked=cadence_locked,
+        )
+
+    def _balanced_motion_override(self, metrics: dict[str, float], cadence_locked: bool) -> bool:
+        if not cadence_locked:
+            return False
+        return (
+            metrics["hip_range_ratio"] >= self.config.balanced_override_hip_range_ratio
+            and metrics["foot_range_ratio"] >= self.config.balanced_override_foot_range_ratio
+            and metrics["recent_hip_range_ratio"] >= self.config.balanced_override_recent_hip_ratio
+            and self.config.balanced_override_min_ratio
+            <= metrics["foot_to_hip_ratio"]
+            <= self.config.balanced_override_max_ratio
+        )
+
+    def _extended_motion_override(self, metrics: dict[str, float], cadence_locked: bool) -> bool:
+        if not cadence_locked:
+            return False
+        recent_to_hip_ratio = metrics["recent_hip_range_ratio"] / max(metrics["hip_range_ratio"], 1e-6)
+        return (
+            metrics["hip_range_ratio"] >= self.config.extended_override_hip_range_ratio
+            and metrics["foot_range_ratio"] >= self.config.extended_override_foot_range_ratio
+            and metrics["recent_hip_range_ratio"] >= self.config.extended_override_recent_hip_ratio
+            and self.config.extended_override_min_ratio
+            <= metrics["foot_to_hip_ratio"]
+            <= self.config.extended_override_max_ratio
+            and recent_to_hip_ratio >= self.config.extended_override_recent_to_hip_ratio
+        )
+
+    def _foot_floor_override(self, metrics: dict[str, float]) -> bool:
+        return (
+            metrics["hip_range_ratio"] >= self.config.foot_floor_override_hip_range_ratio
+            and metrics["foot_range_ratio"] >= self.config.foot_floor_override_foot_range_ratio
+            and metrics["recent_hip_range_ratio"] >= self.config.foot_floor_override_recent_hip_ratio
+            and metrics["foot_to_hip_ratio"] <= self.config.foot_floor_override_max_ratio
+        )
+
+    def _stale_tail_reject(self, metrics: dict[str, float], cadence_locked: bool) -> bool:
+        if not cadence_locked:
+            return False
+        if metrics["hip_range_ratio"] < self.config.stale_tail_guard_hip_range_ratio:
+            return False
+        recent_to_hip_ratio = metrics["recent_hip_range_ratio"] / max(metrics["hip_range_ratio"], 1e-6)
+        return recent_to_hip_ratio < self.config.stale_tail_guard_recent_to_hip_ratio
+
+    def step(self, signal: SignalFrame) -> CounterEvent | None:
+        self.last_decision = None
+        if not signal.detected:
+            return None
+
+        self._update_motion_history(signal)
+        candidate = self.state_engine.step(signal)
+        if candidate is None:
+            return None
+
+        metrics = self.motion_metrics()
+        self._observe_candidate(candidate.frame_idx, metrics)
+        min_gap_frames, min_recent_hip_ratio, cadence_locked = self._effective_limits()
+
+        required_history = max(3, self.config.motion_window_frames // 2)
+        if len(self.hip_history) < required_history:
+            self._reject(candidate, "insufficient_window", metrics, min_gap_frames, min_recent_hip_ratio, cadence_locked)
+            return None
+        if (
+            self.last_accepted_frame is not None
+            and (candidate.frame_idx - self.last_accepted_frame) < min_gap_frames
+        ):
+            self._reject(candidate, "min_gap", metrics, min_gap_frames, min_recent_hip_ratio, cadence_locked)
+            return None
+        if metrics["hip_range_ratio"] < self.config.min_hip_range_ratio:
+            self._reject(candidate, "hip_range", metrics, min_gap_frames, min_recent_hip_ratio, cadence_locked)
+            return None
+        if (
+            metrics["foot_range_ratio"] < self.config.min_foot_range_ratio
+            and not self._foot_floor_override(metrics)
+        ):
+            self._reject(candidate, "foot_range", metrics, min_gap_frames, min_recent_hip_ratio, cadence_locked)
+            return None
+        if (
+            metrics["recent_hip_range_ratio"] < min_recent_hip_ratio
+            and not self._balanced_motion_override(metrics, cadence_locked)
+            and not self._extended_motion_override(metrics, cadence_locked)
+        ):
+            self._reject(candidate, "recent_hip_range", metrics, min_gap_frames, min_recent_hip_ratio, cadence_locked)
+            return None
+        if metrics["foot_to_hip_ratio"] > self.config.max_foot_to_hip_ratio:
+            self._reject(candidate, "foot_to_hip_ratio", metrics, min_gap_frames, min_recent_hip_ratio, cadence_locked)
+            return None
+        if (
+            metrics["hip_range_ratio"] < self.config.guard_low_hip_range_ratio
+            and metrics["foot_range_ratio"] >= self.config.guard_high_foot_range_ratio
+            and metrics["recent_hip_range_ratio"] < self.config.guard_recent_hip_range_ratio
+        ):
+            self._reject(candidate, "foot_dominant_low_hip", metrics, min_gap_frames, min_recent_hip_ratio, cadence_locked)
+            return None
+        if self._stale_tail_reject(metrics, cadence_locked):
+            self._reject(candidate, "stale_tail", metrics, min_gap_frames, min_recent_hip_ratio, cadence_locked)
+            return None
+
+        self.last_accepted_frame = candidate.frame_idx
+        self.accepted_running_count += 1
+        self.last_decision = CounterDecision(
+            frame_idx=candidate.frame_idx,
+            time_sec=candidate.time_sec,
+            accepted=True,
+            reason="accepted",
+            hip_range_ratio=metrics["hip_range_ratio"],
+            foot_range_ratio=metrics["foot_range_ratio"],
+            recent_hip_range_ratio=metrics["recent_hip_range_ratio"],
+            foot_to_hip_ratio=metrics["foot_to_hip_ratio"],
+            min_gap_frames=min_gap_frames,
+            min_recent_hip_ratio=min_recent_hip_ratio,
+            cadence_locked=cadence_locked,
+        )
+        return CounterEvent(
+            frame_idx=candidate.frame_idx,
+            time_sec=candidate.time_sec,
+            running_count=self.accepted_running_count,
+        )
+
+
 class RealtimeStartGate:
     def __init__(
         self,
@@ -550,7 +844,8 @@ def run_counter_on_signals(
     if effective_end_frame is None:
         return events
 
-    start_index = max(0, start_frame - warmup_frames)
+    effective_warmup = max(warmup_frames, config.motion_window_frames)
+    start_index = max(0, start_frame - effective_warmup)
     for signal in signals[start_index:]:
         if signal.frame_idx > effective_end_frame:
             break
@@ -597,10 +892,17 @@ def run_dataset(
 
 def summarize_results(results: list[VideoResult]) -> dict[str, object]:
     exact_matches = sum(result.exact_match for result in results)
+    total_gt_count = sum(result.gt_count for result in results)
+    total_predicted_count = sum(result.predicted_count for result in results)
+    total_abs_error = sum(abs(result.count_error) for result in results)
     summary = {
+        "overall_count_accuracy": (1.0 - (total_abs_error / total_gt_count)) if total_gt_count else 0.0,
         "exact_video_count_accuracy": exact_matches / len(results) if results else 0.0,
         "videos": [asdict(result) for result in results],
-        "total_abs_error": sum(abs(result.count_error) for result in results),
+        "total_gt_count": total_gt_count,
+        "total_predicted_count": total_predicted_count,
+        "signed_total_error": total_predicted_count - total_gt_count,
+        "total_abs_error": total_abs_error,
     }
     return summary
 
@@ -608,36 +910,26 @@ def summarize_results(results: list[VideoResult]) -> dict[str, object]:
 def default_search_configs(limit: int | None = None) -> list[EngineConfig]:
     configs = [
         EngineConfig(
-            ema_alpha_hip=values[0],
-            ema_alpha_foot=values[1],
-            fast_ema_alpha_hip=values[2],
-            fast_ema_alpha_foot=values[3],
-            contact_margin_ratio=values[4],
-            symmetry_y_ratio=values[5],
-            descend_velocity_ratio=values[6],
-            ascend_velocity_ratio=values[7],
-            fast_descend_velocity_ratio=values[8],
-            fast_ascend_velocity_ratio=values[9],
-            floor_decay_ratio=values[10],
-            min_refractory_frames=values[11],
-            fast_min_refractory_frames=values[12],
-            fast_mode_cadence_threshold=values[13],
+            min_hip_range_ratio=values[0],
+            min_foot_range_ratio=values[1],
+            min_recent_hip_range_ratio=values[2],
+            adaptive_recent_hip_floor=values[3],
+            min_count_gap_frames=values[4],
+            max_foot_to_hip_ratio=values[5],
+            guard_low_hip_range_ratio=values[6],
+            guard_high_foot_range_ratio=values[7],
+            guard_recent_hip_range_ratio=values[8],
         )
         for values in product(
-            [0.45, 0.55],
-            [0.55],
-            [0.20, 0.25],
-            [0.35],
-            [0.08],
-            [0.10, 0.12],
-            [0.006, 0.008],
-            [0.004, 0.006],
-            [0.002, 0.003],
-            [0.001],
-            [0.004],
-            [4],
-            [1, 2],
-            [7],
+            [0.045, 0.05, 0.055],
+            [0.035, 0.04, 0.045],
+            [0.032, 0.035, 0.04],
+            [0.028, 0.03, 0.032],
+            [9, 10],
+            [2.5, 3.0],
+            [0.09, 0.10],
+            [0.12],
+            [0.04, 0.05],
         )
     ]
     if limit is not None:
@@ -656,10 +948,15 @@ def search_best_config(
     for config in default_search_configs(limit):
         summary = summarize_results(run_dataset(signal_cache, ground_truth, config, window_config))
         if (
-            summary["exact_video_count_accuracy"] > best_summary["exact_video_count_accuracy"]
+            summary["overall_count_accuracy"] > best_summary["overall_count_accuracy"]
             or (
-                summary["exact_video_count_accuracy"] == best_summary["exact_video_count_accuracy"]
+                summary["overall_count_accuracy"] == best_summary["overall_count_accuracy"]
                 and summary["total_abs_error"] < best_summary["total_abs_error"]
+            )
+            or (
+                summary["overall_count_accuracy"] == best_summary["overall_count_accuracy"]
+                and summary["total_abs_error"] == best_summary["total_abs_error"]
+                and summary["exact_video_count_accuracy"] > best_summary["exact_video_count_accuracy"]
             )
         ):
             best_config = config
