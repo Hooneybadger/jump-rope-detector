@@ -1,12 +1,9 @@
 from __future__ import annotations
 
 import argparse
-from collections import deque
-from dataclasses import dataclass
 import sys
 import time
 from pathlib import Path
-from statistics import median
 
 import cv2
 import mediapipe as mp
@@ -28,141 +25,6 @@ mp_drawing_styles = mp.solutions.drawing_styles
 mp_pose = mp.solutions.pose
 
 
-@dataclass(frozen=True)
-class RealtimeFilterConfig:
-    motion_window_frames: int = 18
-    recent_window_frames: int = 5
-    min_hip_range_ratio: float = 0.10
-    min_foot_range_ratio: float = 0.065
-    min_recent_hip_range_ratio: float = 0.05
-    min_count_gap_frames: int = 20
-    adaptive_gap_enabled: bool = True
-    adaptive_gap_factor: float = 0.80
-    adaptive_gap_history: int = 5
-    adaptive_gap_min_intervals: int = 1
-    adaptive_gap_floor_frames: int = 10
-    adaptive_motion_hip_ratio: float = 0.14
-    adaptive_motion_foot_ratio: float = 0.08
-    adaptive_recent_hip_enabled: bool = True
-    adaptive_recent_hip_floor: float = 0.04
-
-
-class RealtimeCountFilter:
-    def __init__(self, config: RealtimeFilterConfig):
-        self.config = config
-        self.hip_history: deque[float] = deque(maxlen=config.motion_window_frames)
-        self.foot_history: deque[float] = deque(maxlen=config.motion_window_frames)
-        self.leg_history: deque[float] = deque(maxlen=config.motion_window_frames)
-        self.recent_hip_history: deque[float] = deque(maxlen=config.recent_window_frames)
-        self.candidate_interval_history: deque[int] = deque(maxlen=config.adaptive_gap_history)
-        self.candidate_hip_history: deque[float] = deque(maxlen=config.adaptive_gap_history)
-        self.candidate_foot_history: deque[float] = deque(maxlen=config.adaptive_gap_history)
-        self.last_candidate_frame: int | None = None
-        self.last_accepted_frame: int | None = None
-
-    def update(self, signal) -> None:
-        if not signal.detected:
-            return
-        mean_hip = (signal.left_hip_y + signal.right_hip_y) / 2.0
-        mean_foot = (signal.left_foot_y + signal.right_foot_y) / 2.0
-        self.hip_history.append(mean_hip)
-        self.foot_history.append(mean_foot)
-        self.leg_history.append(signal.leg_length)
-        self.recent_hip_history.append(mean_hip)
-
-    def metrics(self) -> dict[str, float]:
-        if not self.hip_history or not self.foot_history or not self.leg_history:
-            return {"hip_range_ratio": 0.0, "foot_range_ratio": 0.0, "recent_hip_range_ratio": 0.0}
-        leg_median = median(self.leg_history)
-        hip_range_ratio = (max(self.hip_history) - min(self.hip_history)) / leg_median
-        foot_range_ratio = (max(self.foot_history) - min(self.foot_history)) / leg_median
-        recent_hip_range_ratio = 0.0
-        if len(self.recent_hip_history) >= self.config.recent_window_frames:
-            recent_hip_range_ratio = (
-                max(self.recent_hip_history) - min(self.recent_hip_history)
-            ) / leg_median
-        return {
-            "hip_range_ratio": hip_range_ratio,
-            "foot_range_ratio": foot_range_ratio,
-            "recent_hip_range_ratio": recent_hip_range_ratio,
-        }
-
-    def _cadence_locked(self) -> bool:
-        if not self.config.adaptive_gap_enabled:
-            return False
-        if len(self.candidate_interval_history) < self.config.adaptive_gap_min_intervals:
-            return False
-        if not self.candidate_hip_history or not self.candidate_foot_history:
-            return False
-        return (
-            median(self.candidate_hip_history) >= self.config.adaptive_motion_hip_ratio
-            and median(self.candidate_foot_history) >= self.config.adaptive_motion_foot_ratio
-        )
-
-    def effective_limits(self) -> dict[str, float]:
-        min_gap_frames = self.config.min_count_gap_frames
-        min_recent_hip_ratio = self.config.min_recent_hip_range_ratio
-        cadence_locked = self._cadence_locked()
-
-        if cadence_locked:
-            raw_interval_median = median(self.candidate_interval_history)
-            min_gap_frames = max(
-                self.config.adaptive_gap_floor_frames,
-                min(
-                    self.config.min_count_gap_frames,
-                    int(round(raw_interval_median * self.config.adaptive_gap_factor)),
-                ),
-            )
-            if self.config.adaptive_recent_hip_enabled:
-                min_recent_hip_ratio = max(
-                    self.config.adaptive_recent_hip_floor,
-                    self.config.min_recent_hip_range_ratio * 0.8,
-                )
-
-        return {
-            "min_gap_frames": float(min_gap_frames),
-            "min_recent_hip_ratio": min_recent_hip_ratio,
-            "cadence_locked": 1.0 if cadence_locked else 0.0,
-        }
-
-    def accept(self, frame_idx: int) -> tuple[bool, str, dict[str, float]]:
-        if len(self.hip_history) < max(3, self.config.motion_window_frames // 2):
-            return False, "insufficient_window", self.effective_limits()
-
-        metrics = self.metrics()
-        self.observe_candidate(frame_idx, metrics)
-        limits = self.effective_limits()
-        min_gap_frames = int(round(limits["min_gap_frames"]))
-        if (
-            self.last_accepted_frame is not None
-            and (frame_idx - self.last_accepted_frame) < min_gap_frames
-        ):
-            return False, "min_gap", limits
-
-        if metrics["hip_range_ratio"] < self.config.min_hip_range_ratio:
-            return False, "hip_range", limits
-        if metrics["foot_range_ratio"] < self.config.min_foot_range_ratio:
-            return False, "foot_range", limits
-        if metrics["recent_hip_range_ratio"] < limits["min_recent_hip_ratio"]:
-            return False, "recent_hip_range", limits
-
-        self.last_accepted_frame = frame_idx
-        return True, "accepted", limits
-
-    def observe_candidate(self, frame_idx: int, metrics: dict[str, float]) -> None:
-        motion_valid = (
-            metrics["hip_range_ratio"] >= self.config.min_hip_range_ratio
-            and metrics["foot_range_ratio"] >= self.config.min_foot_range_ratio
-        )
-        if not motion_valid:
-            return
-        if self.last_candidate_frame is not None and frame_idx > self.last_candidate_frame:
-            self.candidate_interval_history.append(frame_idx - self.last_candidate_frame)
-        self.last_candidate_frame = frame_idx
-        self.candidate_hip_history.append(metrics["hip_range_ratio"])
-        self.candidate_foot_history.append(metrics["foot_range_ratio"])
-
-
 def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(description="Run the grouped-jump counter on a realtime stream.")
     parser.add_argument("--source", default="0", help="Camera index like `0` or a video file path.")
@@ -175,10 +37,10 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--ready-visible-ratio", type=float, default=0.97)
     parser.add_argument("--ready-dropout-seconds", type=float, default=0.35)
     parser.add_argument("--motion-window-frames", type=int, default=18)
-    parser.add_argument("--min-hip-range-ratio", type=float, default=0.10)
-    parser.add_argument("--min-foot-range-ratio", type=float, default=0.065)
-    parser.add_argument("--min-recent-hip-range-ratio", type=float, default=0.05)
-    parser.add_argument("--min-count-gap-frames", type=int, default=20)
+    parser.add_argument("--min-hip-range-ratio", type=float, default=0.045)
+    parser.add_argument("--min-foot-range-ratio", type=float, default=0.035)
+    parser.add_argument("--min-recent-hip-range-ratio", type=float, default=0.032)
+    parser.add_argument("--min-count-gap-frames", type=int, default=9)
     parser.add_argument("--disable-adaptive-filter", action="store_true", help="Disable cadence-adaptive realtime thresholds.")
     parser.add_argument("--debug-filter", action="store_true", help="Print rejected count candidates and reasons.")
     return parser.parse_args()
@@ -314,7 +176,14 @@ def main() -> None:
         raise RuntimeError(f"Unable to open stream source: {args.source}")
 
     fps = float(capture.get(cv2.CAP_PROP_FPS) or 30.0)
-    config = EngineConfig()
+    config = EngineConfig(
+        motion_window_frames=args.motion_window_frames,
+        min_hip_range_ratio=args.min_hip_range_ratio,
+        min_foot_range_ratio=args.min_foot_range_ratio,
+        min_recent_hip_range_ratio=args.min_recent_hip_range_ratio,
+        min_count_gap_frames=args.min_count_gap_frames,
+        adaptive_gap_enabled=not args.disable_adaptive_filter,
+    )
     extractor = PoseSignalExtractor(config)
     gate = RealtimeStartGate(
         ready_hold_seconds=args.ready_hold_seconds,
@@ -322,16 +191,6 @@ def main() -> None:
         ready_dropout_seconds=args.ready_dropout_seconds,
     )
     engine: RealtimeCounterEngine | None = None
-    count_filter = RealtimeCountFilter(
-        RealtimeFilterConfig(
-            motion_window_frames=args.motion_window_frames,
-            min_hip_range_ratio=args.min_hip_range_ratio,
-            min_foot_range_ratio=args.min_foot_range_ratio,
-            min_recent_hip_range_ratio=args.min_recent_hip_range_ratio,
-            min_count_gap_frames=args.min_count_gap_frames,
-            adaptive_gap_enabled=not args.disable_adaptive_filter,
-        )
-    )
     writer: cv2.VideoWriter | None = None
     accepted_count = 0
     count_pulse_total_frames = 10
@@ -362,30 +221,27 @@ def main() -> None:
                 last_phase = stream_state.phase
                 if stream_state.phase == "COUNTING":
                     engine = RealtimeCounterEngine(config)
-                    count_filter = RealtimeCountFilter(count_filter.config)
                     accepted_count = 0
                     print("[count] counter armed")
 
             if stream_state.phase == "COUNTING" and engine is not None:
-                count_filter.update(signal)
                 event = engine.step(signal)
                 if event is not None:
-                    accepted, reason, limits = count_filter.accept(event.frame_idx)
-                    if accepted:
-                        accepted_count += 1
-                        count_pulse_remaining_frames = count_pulse_total_frames
-                        print(f"[count] {accepted_count} @ frame={event.frame_idx} time={event.time_sec:.2f}s")
-                    elif args.debug_filter:
-                        metrics = count_filter.metrics()
-                        print(
-                            f"[reject] frame={event.frame_idx} reason={reason} "
-                            f"hip_range={metrics['hip_range_ratio']:.3f} "
-                            f"foot_range={metrics['foot_range_ratio']:.3f} "
-                            f"recent_hip={metrics['recent_hip_range_ratio']:.3f} "
-                            f"min_gap={int(round(limits['min_gap_frames']))} "
-                            f"min_recent_hip={limits['min_recent_hip_ratio']:.3f} "
-                            f"adaptive={int(round(limits['cadence_locked']))}"
-                        )
+                    accepted_count = event.running_count
+                    count_pulse_remaining_frames = count_pulse_total_frames
+                    print(f"[count] {accepted_count} @ frame={event.frame_idx} time={event.time_sec:.2f}s")
+                elif args.debug_filter and engine.last_decision is not None and not engine.last_decision.accepted:
+                    decision = engine.last_decision
+                    print(
+                        f"[reject] frame={decision.frame_idx} reason={decision.reason} "
+                        f"hip_range={decision.hip_range_ratio:.3f} "
+                        f"foot_range={decision.foot_range_ratio:.3f} "
+                        f"recent_hip={decision.recent_hip_range_ratio:.3f} "
+                        f"foot_to_hip={decision.foot_to_hip_ratio:.2f} "
+                        f"min_gap={decision.min_gap_frames} "
+                        f"min_recent_hip={decision.min_recent_hip_ratio:.3f} "
+                        f"adaptive={int(decision.cadence_locked)}"
+                    )
 
             if not args.no_display or args.save_output:
                 display_frame = frame.copy()

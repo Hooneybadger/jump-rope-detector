@@ -2,710 +2,344 @@
 
 ## 목표
 
-`/basic_jump/video` 테스트셋과 대응 Kinovea 라벨을 사용해,
-**MediaPipe 기반 모아뛰기 실시간/준실시간 e2e 카운터**를 구현하기 위한 상세 실행계획을 정의한다.
+`/basic_jump/video` 테스트셋 평가와 realtime 실행이 **같은 카운트 로직**을 사용하도록 통합한다.
 
-최종 목표는 다음이다.
+최종 목표는 다음 두 가지를 동시에 만족하는 것이다.
 
-- 테스트셋 기준 `count accuracy = 1.00`
-- 프레임 순차 처리 기반
-- 후처리 없음
-- 전체 영상 미래 프레임 의존 없음
-- 허용 지연 `최대 1~2프레임`
+- 테스트셋 11개 영상 기준 `Overall Count Accuracy = 1.00`
+- realtime에서도 같은 엔진이 causal하게 동작
 
----
+보조 지표:
 
-## 전제
+- 테스트셋 11개 영상 기준 `Exact Video Count Accuracy = 1.00`
 
-현재까지의 분석 결과는 [basic_jump/docs/analysis_template.md](/home/ubuntu/jump-rope-detector/basic_jump/docs/analysis_template.md)에 정리되어 있으며, 구현 계획은 다음 결론을 고정 전제로 사용한다.
+핵심 원칙:
 
-- 라벨은 공중 apex가 아니라 `접지-반등 이벤트 윈도우`에 가깝다.
-- `1카운트`는 `양발 접지 후 하강이 끝나고 다시 상승으로 전환되는 1회의 반등 이벤트`로 정의한다.
-- 가장 유력한 전략은 `힙 주도 + 발 접지 게이트 상태기계`이다.
-- 영상은 30fps CFR로 보는 것이 타당하다.
-- 라벨은 파일군별 시간축 변환이 필요하다.
-- 테스트셋 기준 e2e 성능을 먼저 맞춘다.
+- `평가용 엔진`과 `실사용 엔진`의 count emission 규칙은 하나여야 한다.
+- 같은 입력 signal이 들어오면 dataset eval과 realtime이 같은 frame에서 같은 count를 내야 한다.
+- `start gate`와 `UI`는 세션 제어/입출력 계층으로 분리할 수 있지만, count를 올리는 판단식은 분리하지 않는다.
 
 ---
 
-## 현재 코드베이스 상태
+## 현재 진단
 
-현재 저장소는 구현 코드가 거의 없고, 다음만 존재한다.
+현재 구현은 완전히 분리된 두 엔진은 아니지만, **count emission 경로가 하나로 통합되어 있다고 보기도 어렵다.**
 
-- 문서: `AGENTS.md`, `PLANS.md`, `basic_jump/docs/analysis_template.md`
-- 데이터: `basic_jump/label/*.kva`, `basic_jump/video/*.mp4`
-- 환경: `requirements.txt`, `scripts/setup_env.sh`
+현재 구조:
 
-현재 없는 것:
+- 공통:
+  - `MediaPipe -> SignalFrame`
+  - `RealtimeCounterEngine`
+- dataset eval:
+  - `run_counter_on_signals()`에서 `RealtimeCounterEngine`만 사용
+- realtime:
+  - `RealtimeCounterEngine`
+  - 그 뒤에 `RealtimeCountFilter`
+  - 그 바깥에 `RealtimeStartGate`
 
-- 라벨 파서
-- 비디오 로더
-- MediaPipe 추출기
-- 온라인 feature 추출기
-- 실시간 카운터
-- 평가기
-- 실험/튜닝 코드
-- 테스트 코드
+즉 현재는:
 
-따라서 구현은 사실상 새 모듈 구조를 정의하는 것부터 시작해야 한다.
+- dataset 평가는 `state machine raw event`를 센다.
+- realtime은 `state machine raw event`를 다시 `RealtimeCountFilter`로 거른 뒤 센다.
 
----
+이 구조의 문제:
 
-## 성공 기준
+- dataset `1.00`은 raw event 기준 성능이고
+- realtime 카운트는 filtered event 기준 성능이라
+- 둘이 같은 지표라고 보기 어렵다.
 
-### 1차 수용 기준
+사용자 지적은 타당하다.
 
-- `11개 영상 전체`에 대해 최종 예측 카운트가 GT 최종 카운트와 모두 일치
-- 즉 `Exact Video Count Accuracy = 11/11 = 1.00`
+> 상태엔진과 realtime 카운트 로직이 다르면, 상태엔진 평가지표를 realtime 평가지표로 사용할 수 없다.
 
-정의:
+따라서 앞으로의 목표는:
 
-- `Exact Video Count Accuracy = 일치한 영상 수 / 전체 영상 수`
-
-### 2차 진단 지표
-
-최종 목표는 위 1차 기준이지만, 디버깅과 병목 분해를 위해 아래 지표를 함께 기록한다.
-
-- `MAE of final count = 0`
-- 이벤트 정합 F1
-- 이벤트 precision / recall
-- 카운트 emission delay
-- video별 오차 분해
-
-이벤트 정합은 라벨이 단일 프레임 정답이 아니라 이벤트 윈도우라는 점을 반영해, 개발 단계에서는 `±2 frame` tolerance로 진단한다. 단, 최종 합격 기준은 어디까지나 **영상별 총카운트 완전 일치**다.
+- `state machine + filter`를 합쳐 **하나의 단일 카운터 엔진**으로 만들고
+- dataset eval도 그 엔진을 그대로 쓰게 만드는 것이다.
 
 ---
 
-## 비협상 제약
+## 통합 원칙
 
-- 프레임을 순차 처리하며 카운트를 내야 한다.
-- 미래 프레임 전체를 보는 offline peak detection은 금지한다.
-- 후처리 배치 보정은 금지한다.
-- 허용 가능한 지연은 `1~2프레임`이다.
-- 실험/평가/파라미터 탐색은 병렬화할 수 있지만, 최종 카운터 로직은 실시간 추론 가능해야 한다.
-- 실험 코드와 실제 카운터 코드는 분리한다.
-- 라벨 시간축과 이상치는 평가 파이프라인에서 명시적으로 처리한다.
+### 1. 단일 count emission path
 
----
+카운트는 오직 한 곳에서만 올라가야 한다.
 
-## GT(정답) 정의 정책
+- 현재의 `RealtimeCounterEngine.step()`와
+- 현재의 `RealtimeCountFilter.accept()`
 
-구현 전에 평가용 GT를 먼저 고정해야 한다. 이 단계가 흐리면 `accuracy 1.00` 목표 자체가 흔들린다.
+이 둘을 분리해서 유지하지 않고, 하나의 `step()` 안에서 최종 accepted count가 결정되게 만든다.
 
-### 라벨 시간축 정규화
+### 2. 단일 파라미터 집합
 
-- `01/02/04/08`: `Timestamp / 1000` 후 `round(sec * 30)`로 프레임 변환
-- `03/05/06/07/09/10/11`: `Timestamp / 512`로 프레임 변환
+평가와 realtime이 같은 로직을 쓴다면, 임계치도 한 묶음이어야 한다.
 
-### 라벨 이상치 처리 규칙
+따라서 아래 파라미터는 하나의 config로 합친다.
 
-다음 규칙을 GT normalizer에 명시적으로 넣는다.
+- 상태기계 파라미터
+  - EMA
+  - contact margin
+  - symmetry
+  - velocity threshold
+  - refractory
+- realtime 보호 파라미터
+  - hip/foot range 조건
+  - recent hip 조건
+  - min gap
+  - adaptive cadence 조건
 
-1. `Drawings`가 없는 이벤트
+### 3. start gate는 count logic가 아니다
 
-- 예: `01.kva` index 31
-- 규칙: `카운트 이벤트는 유지`, 좌표만 missing 처리
-- 이유: 시간축상 리듬이 연속적이고, count GT는 이벤트 존재가 더 중요함
+`RealtimeStartGate`는 count emission 규칙이 아니라 세션 시작 조건이다.
 
-2. 한 점프가 두 개의 한발 이벤트로 쪼개진 경우
+따라서:
 
-- 예: `02.kva` index 5, 6 (`7854ms`, `7867ms`)
-- 규칙: `1개 이벤트로 merge`
-- merge 조건:
-  - 연속 이벤트
-  - 각 이벤트가 1개 foot point만 가짐
-  - 시간 차가 `<= 1 frame` 또는 `<= 20ms`
-- 이 규칙이 맞다면 `02`의 GT 카운트는 raw 16이 아니라 normalized 15가 된다.
-- 현재 이 해석이 가장 타당해 보이지만, 구현 시 GT builder unit test에서 다시 고정 검증한다.
+- realtime에서는 유지 가능
+- dataset eval에서는 label window가 시작 구간을 대신하므로 적용하지 않아도 됨
 
-3. 한 이벤트에 4개 pencil이 중복 기입된 경우
+단, start gate 때문에 count 판정식 자체가 달라져서는 안 된다.
 
-- 예: `09.kva` index 3
-- 규칙: `1개 이벤트 유지`, 좌표는 2개 대표점으로 dedup
+### 4. debug 정보와 count 판정 분리
 
-4. 헤더 파일명 불일치
+통합 이후에도 디버깅은 필요하다.
 
-- 예: `10.kva`
-- 규칙: `파일 stem 우선`, 해상도/길이/분석 결과를 보조 근거로 사용
+하지만 다음은 분리한다.
 
-### GT 산출물
+- `count를 올릴지 말지`
+- `왜 reject됐는지 설명하는 debug metadata`
 
-GT builder는 최종적으로 다음을 만들어야 한다.
-
-- video별 normalized event frame list
-- video별 final count
-- anomaly report
-- evaluation manifest
+즉, 최종 엔진은 하나이고, debug 정보는 부가 출력으로만 남긴다.
 
 ---
 
-## 제안 모듈 구조
+## 목표 구조
 
-실험 코드와 실제 카운터 코드를 분리하기 위해 아래 구조를 제안한다.
+통합 후 목표 구조는 아래와 같다.
 
-### 실제 구현 코드
+### 단일 엔진
 
-- `src/jump_counter/__init__.py`
-- `src/jump_counter/config.py`
-- `src/jump_counter/types.py`
-- `src/jump_counter/labels/parser.py`
-- `src/jump_counter/labels/normalize.py`
-- `src/jump_counter/io/video_reader.py`
-- `src/jump_counter/pose/mediapipe_runner.py`
-- `src/jump_counter/features/online_features.py`
-- `src/jump_counter/counter/state_machine.py`
-- `src/jump_counter/pipeline/e2e.py`
-- `src/jump_counter/eval/metrics.py`
-- `src/jump_counter/eval/evaluator.py`
+- 파일:
+  - `basic_jump/counter_engine.py`
+- 새 역할:
+  - `UnifiedCounterConfig`
+  - `UnifiedCounterEngine`
+  - `step(signal) -> AcceptedEvent | None`
+  - optional debug snapshot
 
-### 실험/튜닝 코드
+이 엔진 내부에서 모두 처리한다.
 
-- `experiments/build_gt_manifest.py`
-- `experiments/run_pose_cache.py`
-- `experiments/analyze_feature_alignment.py`
-- `experiments/search_counter_params.py`
-- `experiments/inspect_failures.py`
-- `experiments/run_regression_suite.py`
+- contact state machine
+- rebound lock
+- motion window feature
+- min gap
+- adaptive cadence
+- final accept / reject
 
-### 실행 진입점
+### dataset eval
 
-- `scripts/run_counter.py`
-- `scripts/evaluate_counter.py`
-- `scripts/tune_counter.py`
+- `run_counter_on_signals()`가 `UnifiedCounterEngine`을 직접 사용
+- 더 이상 dataset 경로에서 raw state-machine event만 세지 않음
+- 평가 결과는 realtime과 같은 acceptance logic 기준이 됨
 
-### 테스트
+### realtime
 
-- `tests/test_label_parser.py`
-- `tests/test_label_normalizer.py`
-- `tests/test_video_reader.py`
-- `tests/test_online_features.py`
-- `tests/test_state_machine.py`
-- `tests/test_e2e_eval.py`
+- `run_realtime_counter.py`는 아래만 담당
+  - camera/file input
+  - MediaPipe extraction
+  - start gate
+  - UI
+  - save-output
+- count logic은 unified engine만 호출
 
-### 산출물 경로
-
-- `artifacts/manifests/`
-- `artifacts/pose_cache/`
-- `artifacts/eval/`
-
-`artifacts`는 재현 가능한 실험 결과를 저장하되, 최종 카운터 로직은 이 캐시에 의존하지 않도록 한다.
+즉 realtime runner에서는 `RealtimeCountFilter`가 사라지거나, 최소한 별도 count 판단기로 존재하지 않게 된다.
 
 ---
 
-## 모듈별 역할 정의
+## 마일스톤
 
-### 1. 라벨 파서
+### M1. 기준선 고정
 
-입력:
+목표:
 
-- `basic_jump/label/*.kva`
+- 현재 동작을 통합 전 baseline으로 고정
 
-출력:
+기록할 기준:
 
-- raw keyframe records
-- raw timestamp
-- raw point lists
-- file-level metadata
-
-검증:
-
-- XML 파싱 성공
-- 11개 파일 전부 로드 가능
-- 구조 이상치가 보고서와 동일하게 탐지됨
-
-### 2. 라벨 정규화기
-
-입력:
-
-- raw label records
-- video metadata
-
-출력:
-
-- normalized event frame list
-- normalized event count
-- anomaly merge/drop logs
-
-검증:
-
-- `ms-like`, `tick-like` 시간축 변환이 정확함
-- `02` split event merge 여부가 명시적으로 기록됨
-- `10` 매칭이 `10.mp4`로 고정됨
-
-### 3. 비디오 로더
+- dataset eval exact accuracy
+- `02_realtime` 결과
+- `01_realtime` 결과
+- 주요 reject reason
 
 입력:
 
 - `basic_jump/video/*.mp4`
+- `basic_jump/label/*.kva`
+- `01_realtime.mp4`, `02_realtime.mp4`
 
 출력:
 
-- sequential frame stream
-- frame_idx
-- timestamp_sec
-- metadata
+- baseline 수치 메모
+- 통합 전/후 비교 기준
 
 검증:
 
-- 30fps 순차 읽기
-- 랜덤 접근이 아닌 순차 인터페이스 제공
-- metadata가 GT builder와 일치
+- baseline 로그가 재현 가능해야 함
 
-### 4. MediaPipe 추출기
+### M2. 엔진 통합
+
+목표:
+
+- `RealtimeCountFilter` 로직을 `counter_engine.py` 안으로 합친다.
+
+해야 할 일:
+
+- `EngineConfig`와 `RealtimeFilterConfig`를 하나로 통합
+- state machine raw candidate와 final accepted count를 같은 엔진에서 처리
+- `run_counter_on_signals()`가 통합 엔진을 사용하게 변경
+- realtime runner에서 별도 accept 단계 제거
 
 입력:
 
-- frame stream
+- `SignalFrame`
 
 출력:
 
-- landmark packet
-- visibility
-- pose detection success flag
+- accepted `CounterEvent`
+- optional debug decision
 
 검증:
 
-- 전체 라벨 프레임 기준 pose detection rate 재현
-- landmark missing 상황에서 graceful fallback
-- 최종 카운터와 실험 캐시 모두 같은 인터페이스 사용
+- 같은 입력 신호에 대해 dataset eval과 realtime이 같은 count frame을 내는지 확인
 
-### 5. 온라인 feature 추출기
+### M3. 재튜닝
 
-입력:
+목표:
 
-- landmark packet sequence
+- 통합 엔진 기준으로 다시 `1.00`을 맞춘다.
 
-출력:
+해야 할 일:
 
-- `mean_hip_y`
-- `mean_foot_y`
-- `hip_vel`
-- `foot_vel`
-- `left_right_foot_gap`
-- `left_right_foot_y_diff`
-- `ground_contact_candidate`
+- 현재 dataset `1.00`이 깨지는지 확인
+- 통합 config 기준으로 small sweep
+- fast cadence와 false positive 억제의 균형 재조정
 
 검증:
 
-- 모든 feature는 현재/과거 프레임만 사용
-- smoothing이 causal임
-- 라벨 이벤트 윈도우에서 hip/foot feature가 분석 보고서 결론을 재현
+- `Overall Count Accuracy = 1.00`
+- `Exact Video Count Accuracy = 1.00`
+- `Total Abs Error = 0`
 
-### 6. 실시간 카운터
+### M4. realtime 회귀 검증
 
-입력:
+목표:
 
-- feature stream
+- 통합 엔진이 realtime에서도 망가지지 않았는지 확인
 
-출력:
+검증 대상:
 
-- count emission event
-- emitted frame index
-- running total count
-- optional debug state
+- `02_realtime`: 빠른 cadence undercount 재발 여부
+- `01_realtime`: false positive 폭증 여부
+- counting start 이후 frame-level count emission 안정성
 
-검증:
+성공 기준:
 
-- 상태 전이가 causal
-- emission delay `<= 2 frame`
-- duplicate count 억제
+- `02_realtime`에서 빠른 연속 점프를 놓치지 않음
+- `01_realtime`에서 false positive가 크게 증가하지 않음
 
-### 7. 평가기
+### M5. 문서/실행 경로 정리
 
-입력:
+목표:
 
-- normalized GT events
-- predicted emissions
+- README, 기술 문서, 실행 스크립트가 새 구조를 정확히 설명하도록 정리
 
-출력:
+수정 대상:
 
-- exact video count accuracy
-- MAE
-- event precision/recall/F1
-- delay statistics
-- per-video failure report
-
-검증:
-
-- 동일 입력에 대해 deterministic
-- raw/normalized GT 차이를 별도 로그로 남김
+- `basic_jump/README.md`
+- `basic_jump/docs/analysis_template.md`
+- 필요 시 `run_dataset_eval.py`, `run_realtime_counter.py`
 
 ---
 
-## 핵심 알고리즘 설계 방향
+## 검증 기준
 
-최종 카운터는 `힙 주도 + 발 접지 게이트 상태기계`를 기본으로 한다.
+통합 이후 검증은 아래 순서로 본다.
 
-### 상태기계 초안
+### 1. 정합성
 
-- `INIT`
-- `AIR_OR_RISING`
-- `CONTACT_CANDIDATE`
-- `CONTACT_CONFIRMED`
-- `COUNT_EMITTED`
+- dataset eval과 realtime이 **같은 count logic**을 호출하는가
 
-### 핵심 판정 흐름
+### 2. 정답 성능
 
-1. `mean_foot_y`와 `left_right_foot_y_diff`로 양발 접지 후보를 감지
-2. 접지 후보 상태에서 `mean_hip_y`의 하강 종료와 상승 전환을 탐지
-3. 그 전환 시점에 `1 count` emit
-4. `refractory`와 `air reset`으로 중복 카운트를 차단
+- 11개 테스트셋 overall count accuracy = `1.00`
+- 11개 테스트셋 total abs error = `0`
+- 11개 테스트셋 exact accuracy = `1.00`
 
-### 필요한 온라인 적응
+### 3. 인과성
 
-정확도 1.00을 위해 단순 고정 threshold보다 다음 적응 요소가 필요할 가능성이 높다.
+- centered window 없음
+- 미래 프레임 전체 의존 없음
+- frame 순차 처리만으로 동작
 
-- running baseline 기반 foot floor 추정
-- torso length 또는 hip-ankle length 기반 y 정규화
-- 최근 inter-count interval 기반 cadence-adaptive refractory
-- visibility 저하 시 hip 중심 fallback
+### 4. realtime UX
 
-중요:
-
-- 이 적응은 모두 `현재/과거 프레임`만 사용해야 한다.
-- video 전체를 보고 threshold를 나중에 다시 맞추는 방식은 금지한다.
+- counting start 이후 count emission이 지연 없이 자연스러운가
+- 빠른 cadence에서 undercount / double-count가 과도하지 않은가
 
 ---
 
-## 실행 Milestone
+## 리스크
 
-### M0. 구현 골격 준비
+### 1. dataset 1.00 붕괴 위험
 
-목표:
+현재 dataset `1.00`은 unified engine과 label window 조합 기준으로 맞춰져 있다.
 
-- 패키지 구조와 공통 타입, 설정 구조 정의
+통합 필터가 들어오면:
 
-입력:
+- dataset 카운트가 줄어들거나
+- 일부 영상에서 miss가 생길 수 있다.
 
-- 없음
+이건 통합 과정에서 가장 먼저 확인해야 하는 리스크다.
 
-출력:
+### 2. false positive 억제 약화 위험
 
-- `src/`, `experiments/`, `tests/`, `scripts/` 골격
+반대로 dataset exact를 지키려고 filter를 약하게 만들면 realtime false positive가 다시 늘어날 수 있다.
 
-검증:
+### 3. start gate와 count logic의 경계 혼동
 
-- import smoke test
-- 기본 CLI 진입점 동작
+start gate는 세션 제어일 뿐 count logic이 아니다.
 
-### M1. GT 빌더 고정
+이 둘을 다시 섞어버리면:
 
-목표:
+- 평가와 실사용 비교가 다시 흐려진다.
 
-- 평가용 정답 이벤트/정답 count를 재현 가능하게 고정
-
-입력:
-
-- `.kva`, `.mp4`
-
-출력:
-
-- normalized GT manifest
-
-검증:
-
-- 11개 영상 모두 manifest 생성
-- anomaly 처리 로그 생성
-- `02` merge 정책을 unit test로 고정
-
-병목:
-
-- GT 정의가 흔들리면 이후 accuracy 1.00 수치가 무의미해진다
-
-### M2. 순차 비디오 + MediaPipe 파이프라인
-
-목표:
-
-- 프레임 순차 처리 기반 landmark 추출기 완성
-
-입력:
-
-- video path
-
-출력:
-
-- frame-by-frame landmark stream
-
-검증:
-
-- 라벨 프레임 기준 detection rate 재현
-- 처리량 측정
-- 캐시 없이도 e2e 실행 가능
-
-### M3. 온라인 feature 추출기
-
-목표:
-
-- 상태기계가 쓸 수 있는 causal feature 정의
-
-입력:
-
-- landmark stream
-
-출력:
-
-- online feature stream
-
-검증:
-
-- 샘플 영상에서 라벨 윈도우와 feature phase 정렬 확인
-- smoothing/velocity 계산이 causal인지 테스트
-
-### M4. Counter v1
-
-목표:
-
-- 첫 번째 실시간 상태기계 구현
-
-입력:
-
-- feature stream
-
-출력:
-
-- running count
-- count emission events
-
-검증:
-
-- `01`, `03`, `05` 같은 대표 영상에서 수동 디버깅
-- emission delay 측정
-
-### M5. 평가 리그 구축
-
-목표:
-
-- 전체 11개 영상에 대한 자동 평가 체인 구축
-
-입력:
-
-- GT manifest
-- e2e counter outputs
-
-출력:
-
-- count accuracy
-- MAE
-- per-video report
-
-검증:
-
-- one-command evaluation 가능
-- 실험 결과가 artifacts에 저장
-
-### M6. 병렬 파라미터 탐색
-
-목표:
-
-- universal parameter set으로 `11/11` exact match 달성
-
-입력:
-
-- feature cache 또는 landmark cache
-- search space
-
-출력:
-
-- best parameter set
-- leaderboard
-
-검증:
-
-- 16 CPU 병렬 탐색
-- best config가 실제 e2e sequential run에서도 동일 결과 재현
-
-튜닝 대상:
-
-- smoothing 강도
-- contact threshold
-- hip velocity hysteresis
-- min contact frames
-- min airborne frames
-- refractory frames
-- visibility fallback 규칙
-- cadence adaptation 강도
-
-### M7. 실패 케이스 분해
-
-목표:
-
-- 정확도 1.00이 안 나올 경우, 병목을 구조적으로 분해
-
-입력:
-
-- 실패 영상 리스트
-
-출력:
-
-- failure taxonomy
-
-검증:
-
-- 각 실패를 아래 범주 중 하나로 분류
-
-분해 범주:
-
-- GT 문제
-- timestamp normalization 문제
-- pose missing 문제
-- feature phase drift 문제
-- fast cadence duplicate 문제
-- low visibility fallback 문제
-- state hysteresis 문제
-
-### M8. 리그레션 고정
-
-목표:
-
-- accuracy 1.00 달성 후 회귀 방지
-
-입력:
-
-- best config
-
-출력:
-
-- golden expected counts
-- regression tests
-
-검증:
-
-- 코드 변경 후 11개 전부 재검증
-- `Exact Video Count Accuracy = 1.00` 유지
-
----
-
-## 정확도 1.00 달성을 위한 튜닝 전략
-
-### 원칙
-
-- 최종 로직은 causal
-- 튜닝은 병렬/offline 가능
-- 탐색 대상은 파라미터이지, 미래 프레임 의존 알고리즘이 아니다
-
-### 단계별 전략
-
-1. GT부터 고정
-
-- 라벨 정규화와 anomaly merge 규칙을 먼저 고정
-
-2. landmark cache 생성
-
-- MediaPipe 추론 비용을 분리해 탐색 속도를 높임
-- 단, 최종 평가는 반드시 raw video → sequential landmark → counter의 e2e로 다시 수행
-
-3. universal threshold 먼저 탐색
-
-- video별 임시 threshold는 사용하지 않음
-- 먼저 전역 파라미터로 `11/11`이 가능한지 확인
-
-4. 안 되면 causal adaptation 추가
-
-- running floor estimate
-- normalized hip amplitude
-- cadence-adaptive refractory
-- visibility-aware fallback
-
-5. 다시 global search
-
-- 적응 규칙을 포함한 전역 파라미터 탐색 수행
-
-6. 마지막에 failure-specific debugging
-
-- `09`, `10` 같은 빠른 리듬/세로 영상이 우선 점검 대상이 될 가능성이 높음
-
-### 병렬화 포인트
-
-- video별 pose cache 생성 병렬화
-- 파라미터 조합 평가 병렬화
-- regression suite 병렬화
-
-### 탐색 공간 축소 원칙
-
-- smoothing 길이는 `1~3 frame` 수준만 탐색
-- refractory는 jump cadence 기반 합리적 범위만 탐색
-- contact threshold는 normalized coordinate 기준 좁은 범위 탐색
-
----
-
-## 정확도 1.00이 안 나올 때의 우선 병목
-
-1. GT normalizer가 잘못되어 정답 count 자체가 흔들리는 경우
-2. `02` split event 같은 anomaly가 평가를 오염시키는 경우
-3. 빠른 cadence에서 한 점프를 2번 세는 duplicate 문제
-4. 접지 구간이 길어져 한 점프를 0번 세는 miss 문제
-5. `10.mp4`류의 visibility 저하로 foot gate가 흔들리는 경우
-6. ms-like 그룹에서 frame rounding으로 emission timing이 밀리는 경우
-
-우선순위는 항상 다음 순서로 둔다.
-
-- GT 문제
-- timestamp 문제
-- state machine 문제
-- MediaPipe 문제
-
----
-
-## 과적합 위험
-
-테스트셋 기준 1.00을 먼저 만드는 것은 현재 목표에 부합하지만, 동시에 과적합 위험을 명확히 안고 간다.
-
-- 11개 영상 전체를 보고 threshold를 맞추면 데이터셋 특화 규칙이 생길 수 있다.
-- 카메라 구도, 피사체 키, 신발 높이, 배경, 점프 리듬 분포가 제한적이다.
-- `02` anomaly merge 같은 규칙이 현재 셋에만 맞을 수 있다.
-
-따라서 구현 단계에서는 아래를 반드시 분리한다.
-
-- `테스트셋 최적화용 파라미터 탐색`
-- `일반화 가능한 causal 규칙`
-
----
-
-## 일반화 리스크
-
-- 더 낮은 해상도
-- 발 일부 잘림
-- 비정면 촬영
-- 카메라 흔들림
-- 더 느리거나 더 빠른 cadence
-- 초보자의 비대칭 jump
-- rope가 보이지 않거나 상체 흔들림이 큰 경우
-
-현재 계획은 이 리스크를 완전히 해소하지 않는다. 현재 단계의 목표는 **테스트셋 e2e 정확도 1.00을 재현 가능한 방식으로 달성하는 것**이다.
-
----
-
-## 이번 단계의 산출물
-
-이번 계획 단계가 끝나면 다음이 명확해야 한다.
-
-- 필요한 모듈 구조
-- GT builder 정책
-- milestone별 입력/출력/검증 방식
-- 평가 기준
-- 튜닝 전략
-- 병목 분해 순서
-- PLANS 문서 갱신
+따라서 통합 범위는 `count emission logic`으로 한정해야 한다.
 
 ---
 
 ## 현재 상태
 
-- [x] 분석 결과 문서화
-- [x] 구현 목표 재정의
-- [x] 모듈 구조 초안 정의
-- [x] milestone 정의
-- [x] GT 정책 정의
-- [x] 튜닝 전략 정의
-- [x] 리스크 분리
-- [x] 실제 구현 시작
-- [x] MVP label parser / video loader / MediaPipe / realtime counter 구현
-- [x] label-start window evaluator 반영
-- [x] `/basic_jump/video` 기준 exact count accuracy 1.00 달성
-- [x] 실시간 스트림 검증용 runner 추가
+- 통합 필요성: 확인 완료
+- 구조 차이 분석: 완료
+- 계획 문서 갱신: 완료
+- 코드 통합: 완료
+- 현재 unified engine 기본값 결과:
+  - dataset eval `Overall Count Accuracy = 1.0000`
+  - dataset eval `Exact Video Count Accuracy = 1.0000`
+  - dataset eval `Total Abs Error = 0`
+  - dataset eval `Total Count = 1394 / 1394`
+  - `01_realtime = 3`
+  - `02_realtime = 20`
+- 현재 남은 핵심 리스크:
+  - 테스트셋 밖 cadence/구도 변화에서 현재 threshold가 그대로 유지되는지 검증이 부족함
+  - `RealtimeStartGate`는 count logic와 분리되어 있지만, 실제 카메라 환경에서 landmark flicker가 심하면 start UX가 달라질 수 있음
+
+---
 
 ## 다음 액션
 
-- 현재 MVP 로직을 유지한 채 predicted event frame과 GT event frame의 정렬 오차를 계량화한다.
-- `basic_jump/` 코드를 `src` 기반 구조로 옮길지 여부는 정확도 회귀 테스트를 먼저 만든 뒤 결정한다.
-- 카메라 실측에서 `full landmark ready 1초 -> 3초 countdown` UX가 과도하게 엄격한지 확인한다.
+다음 구현 턴의 우선순위는 아래 순서다.
+
+1. 현재 `Total Abs Error = 0` 상태를 regression baseline으로 고정
+2. 실제 카메라 입력에서 start gate와 count emission이 계속 안정적인지 smoke test 확대
+3. `01_realtime`, `02_realtime` 외 추가 positive/negative realtime 샘플로 회귀 세트 확장
+4. threshold 민감도 범위를 기록해서 향후 회귀 시 어떤 파라미터가 깨졌는지 빠르게 찾을 수 있게 정리
