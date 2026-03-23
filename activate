@@ -1,0 +1,12 @@
+#!/usr/bin/env bash
+
+PROJECT_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+ACTIVATE_SCRIPT="${PROJECT_ROOT}/.venv/bin/activate"
+
+if [ ! -f "${ACTIVATE_SCRIPT}" ]; then
+  echo "Virtual environment not found at ${ACTIVATE_SCRIPT}" >&2
+  echo "Run: bash scripts/setup_env.sh" >&2
+  return 1 2>/dev/null || exit 1
+fi
+
+source "${ACTIVATE_SCRIPT}"
