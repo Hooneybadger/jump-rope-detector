@@ -53,6 +53,25 @@ def _open_capture(source: str) -> tuple[cv2.VideoCapture, bool, str]:
     return cv2.VideoCapture(str(path)), False, str(path)
 
 
+def _frame_timestamp(frame_idx: int, fps: float, is_camera: bool, stream_start_sec: float) -> float:
+    if is_camera:
+        return time.monotonic() - stream_start_sec
+    return frame_idx / fps if fps > 0 else 0.0
+
+
+def _ensure_engine(
+    engine: RealtimeCounterEngine | None,
+    stream_phase: str,
+    count_ready: bool,
+    config: EngineConfig,
+) -> RealtimeCounterEngine | None:
+    if stream_phase == "SEARCHING" and not count_ready:
+        return None
+    if engine is None and count_ready:
+        engine = RealtimeCounterEngine(config)
+    return engine
+
+
 def _phase_color(phase: str) -> tuple[int, int, int]:
     if phase == "COUNTING":
         return (90, 190, 120)
@@ -207,7 +226,7 @@ def main() -> None:
             if args.max_frames is not None and frame_idx >= args.max_frames:
                 break
 
-            timestamp_sec = (time.monotonic() - stream_start_sec) if is_camera else (frame_idx / fps if fps > 0 else 0.0)
+            timestamp_sec = _frame_timestamp(frame_idx, fps, is_camera, stream_start_sec)
             signal, result = extractor.process_bgr_frame(frame, frame_idx, timestamp_sec)
             count_ready = core_landmarks_visible(
                 result,
@@ -215,24 +234,18 @@ def main() -> None:
                 args.ready_visible_ratio,
             )
             stream_state = gate.update(count_ready, timestamp_sec)
+            phase_changed = stream_state.phase != last_phase
+            engine = _ensure_engine(engine, stream_state.phase, count_ready, config)
 
-            if stream_state.phase != last_phase:
+            if phase_changed:
                 print(f"[phase] {last_phase} -> {stream_state.phase} @ {timestamp_sec:.2f}s")
-                last_phase = stream_state.phase
-                if stream_state.phase == "SEARCHING" and not count_ready:
-                    engine = None
-                elif stream_state.phase == "COUNTING":
-                    if engine is None:
-                        engine = RealtimeCounterEngine(config)
+                if stream_state.phase == "COUNTING":
                     accepted_count = 0
                     print("[count] counter armed")
-
-            if stream_state.phase != "COUNTING" and count_ready and engine is None:
-                engine = RealtimeCounterEngine(config)
-
+                last_phase = stream_state.phase
             if stream_state.phase != "COUNTING" and engine is not None:
                 engine.warmup(signal)
-            elif stream_state.phase == "COUNTING" and engine is not None:
+            elif engine is not None:
                 event = engine.step(signal)
                 if event is not None:
                     accepted_count = event.running_count

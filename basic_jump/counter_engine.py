@@ -1,7 +1,6 @@
 from __future__ import annotations
 
 import json
-import time
 import xml.etree.ElementTree as ET
 from collections import deque
 from dataclasses import asdict, dataclass
@@ -27,7 +26,6 @@ FOOT_LANDMARKS = {
         mp_pose.PoseLandmark.RIGHT_FOOT_INDEX,
     ),
 }
-ALL_POSE_LANDMARKS = tuple(mp_pose.PoseLandmark)
 CORE_READY_LANDMARKS = (
     mp_pose.PoseLandmark.LEFT_HIP,
     mp_pose.PoseLandmark.RIGHT_HIP,
@@ -351,34 +349,25 @@ def pose_result_to_signal(
     )
 
 
-def landmark_visibility_ratio(result, visibility_threshold: float = 0.30) -> float:
+def _mean_pose_values(signal: SignalFrame) -> tuple[float, float, float]:
+    assert signal.left_hip_y is not None
+    assert signal.right_hip_y is not None
+    assert signal.left_foot_y is not None
+    assert signal.right_foot_y is not None
+    assert signal.leg_length is not None
+    mean_hip_y = (signal.left_hip_y + signal.right_hip_y) / 2.0
+    mean_foot_y = (signal.left_foot_y + signal.right_foot_y) / 2.0
+    return mean_hip_y, mean_foot_y, signal.leg_length
+
+
+def _landmark_visibility_ratio(result, landmarks, visibility_threshold: float = 0.30) -> float:
     if not result.pose_landmarks:
         return 0.0
     lms = result.pose_landmarks.landmark
     visible_count = sum(
-        1 for landmark in ALL_POSE_LANDMARKS if float(lms[landmark.value].visibility) >= visibility_threshold
+        1 for landmark in landmarks if float(lms[landmark.value].visibility) >= visibility_threshold
     )
-    return visible_count / max(1, len(ALL_POSE_LANDMARKS))
-
-
-def full_landmarks_visible(
-    result,
-    visibility_threshold: float = 0.30,
-    required_ratio: float = 1.0,
-) -> bool:
-    return landmark_visibility_ratio(result, visibility_threshold) >= required_ratio
-
-
-def core_landmark_visibility_ratio(result, visibility_threshold: float = 0.30) -> float:
-    if not result.pose_landmarks:
-        return 0.0
-    lms = result.pose_landmarks.landmark
-    visible_count = sum(
-        1
-        for landmark in CORE_READY_LANDMARKS
-        if float(lms[landmark.value].visibility) >= visibility_threshold
-    )
-    return visible_count / max(1, len(CORE_READY_LANDMARKS))
+    return visible_count / max(1, len(landmarks))
 
 
 def core_landmarks_visible(
@@ -386,7 +375,7 @@ def core_landmarks_visible(
     visibility_threshold: float = 0.30,
     required_ratio: float = 0.80,
 ) -> bool:
-    return core_landmark_visibility_ratio(result, visibility_threshold) >= required_ratio
+    return _landmark_visibility_ratio(result, CORE_READY_LANDMARKS, visibility_threshold) >= required_ratio
 
 
 class PoseSignalExtractor:
@@ -462,14 +451,7 @@ class _StateMachineCounter:
         self,
         signal: SignalFrame,
     ) -> tuple[float, float, float, bool]:
-        assert signal.left_hip_y is not None
-        assert signal.right_hip_y is not None
-        assert signal.left_foot_y is not None
-        assert signal.right_foot_y is not None
-        assert signal.leg_length is not None
-
-        mean_hip_y_raw = (signal.left_hip_y + signal.right_hip_y) / 2.0
-        mean_foot_y_raw = (signal.left_foot_y + signal.right_foot_y) / 2.0
+        mean_hip_y_raw, mean_foot_y_raw, leg_length = _mean_pose_values(signal)
         mean_hip_y_std = self._ema(self.config.ema_alpha_hip, mean_hip_y_raw, self.prev_hip)
         mean_foot_y_std = self._ema(self.config.ema_alpha_foot, mean_foot_y_raw, self.prev_foot)
         mean_hip_y_fast = self._ema(self.config.fast_ema_alpha_hip, mean_hip_y_raw, self.prev_hip_fast)
@@ -493,8 +475,8 @@ class _StateMachineCounter:
         if self.floor_y is None:
             self.floor_y = foot_motion
         else:
-            self.floor_y = max(foot_motion, self.floor_y - self.config.floor_decay_ratio * signal.leg_length)
-        return foot_motion, hip_vel, signal.leg_length, fast_mode
+            self.floor_y = max(foot_motion, self.floor_y - self.config.floor_decay_ratio * leg_length)
+        return foot_motion, hip_vel, leg_length, fast_mode
 
     def _advance(self, signal: SignalFrame, allow_count: bool) -> CounterEvent | None:
         if not signal.detected:
@@ -584,17 +566,10 @@ class RealtimeCounterEngine:
     def _update_motion_history(self, signal: SignalFrame) -> None:
         if not signal.detected:
             return
-        assert signal.left_hip_y is not None
-        assert signal.right_hip_y is not None
-        assert signal.left_foot_y is not None
-        assert signal.right_foot_y is not None
-        assert signal.leg_length is not None
-
-        mean_hip = (signal.left_hip_y + signal.right_hip_y) / 2.0
-        mean_foot = (signal.left_foot_y + signal.right_foot_y) / 2.0
+        mean_hip, mean_foot, leg_length = _mean_pose_values(signal)
         self.hip_history.append(mean_hip)
         self.foot_history.append(mean_foot)
-        self.leg_history.append(signal.leg_length)
+        self.leg_history.append(leg_length)
         self.recent_hip_history.append(mean_hip)
 
     def motion_metrics(self) -> dict[str, float]:
