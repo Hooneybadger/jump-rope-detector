@@ -329,8 +329,13 @@ start gate는 세션 제어일 뿐 count logic이 아니다.
   - dataset eval `Total Count = 1394 / 1394`
   - `01_realtime = 3`
   - `02_realtime = 20`
+  - realtime 개선 사항:
+    - start gate를 `full body` 대신 `jump core landmarks` 기준으로 완화
+    - ready/countdown 동안 shadow warmup으로 초기 jump 상태를 보존
+    - `slow baseline`으로 앞/뒤 이동 저주파 드리프트를 분리
 - 현재 남은 핵심 리스크:
   - 테스트셋 밖 cadence/구도 변화에서 현재 threshold가 그대로 유지되는지 검증이 부족함
+  - synthetic zoom drift smoke test에서는 `zoom_out`은 유지됐지만 `zoom_in`은 초기 `+1` overcount가 남아 실제 전진 동작 샘플 검증이 더 필요함
   - `RealtimeStartGate`는 count logic와 분리되어 있지만, 실제 카메라 환경에서 landmark flicker가 심하면 start UX가 달라질 수 있음
 
 ---
@@ -340,6 +345,7 @@ start gate는 세션 제어일 뿐 count logic이 아니다.
 다음 구현 턴의 우선순위는 아래 순서다.
 
 1. 현재 `Total Abs Error = 0` 상태를 regression baseline으로 고정
-2. 실제 카메라 입력에서 start gate와 count emission이 계속 안정적인지 smoke test 확대
-3. `01_realtime`, `02_realtime` 외 추가 positive/negative realtime 샘플로 회귀 세트 확장
-4. threshold 민감도 범위를 기록해서 향후 회귀 시 어떤 파라미터가 깨졌는지 빠르게 찾을 수 있게 정리
+2. 실제 전진/후진 jump 샘플을 추가해서 synthetic zoom 결과와 실제 카메라 동작이 같은지 검증
+3. 실제 카메라 입력에서 start gate와 count emission이 계속 안정적인지 smoke test 확대
+4. `01_realtime`, `02_realtime` 외 추가 positive/negative realtime 샘플로 회귀 세트 확장
+5. threshold 민감도 범위를 기록해서 향후 회귀 시 어떤 파라미터가 깨졌는지 빠르게 찾을 수 있게 정리

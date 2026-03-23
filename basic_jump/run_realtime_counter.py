@@ -16,7 +16,7 @@ from basic_jump.counter_engine import (
     PoseSignalExtractor,
     RealtimeCounterEngine,
     RealtimeStartGate,
-    full_landmarks_visible,
+    core_landmarks_visible,
 )
 
 
@@ -34,7 +34,7 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--ready-hold-seconds", type=float, default=1.0)
     parser.add_argument("--countdown-seconds", type=float, default=3.0)
     parser.add_argument("--ready-visibility-threshold", type=float, default=0.30)
-    parser.add_argument("--ready-visible-ratio", type=float, default=0.97)
+    parser.add_argument("--ready-visible-ratio", type=float, default=0.80)
     parser.add_argument("--ready-dropout-seconds", type=float, default=0.35)
     parser.add_argument("--motion-window-frames", type=int, default=18)
     parser.add_argument("--min-hip-range-ratio", type=float, default=0.045)
@@ -105,7 +105,7 @@ def _draw_overlay(
     frame,
     stream_state,
     running_count: int,
-    full_body_ready: bool,
+    count_ready: bool,
     countdown_total_sec: float,
     count_pulse_progress: float,
 ) -> None:
@@ -134,7 +134,7 @@ def _draw_overlay(
     count_color = (245, 245, 245) if pulse <= 0.0 else (255, 255, 255)
     _draw_text(frame, str(running_count), (panel_x + 32, panel_y + 72), count_scale, count_color, count_thickness)
     _draw_text(frame, stream_state.phase.lower(), (panel_x + 120, panel_y + 34), 0.58, accent, 1)
-    status_line = "Full body ready" if full_body_ready else "Align full body"
+    status_line = "Ready to count" if count_ready else "Align hips and feet"
     _draw_text(frame, status_line, (panel_x + 120, panel_y + 60), 0.54, (220, 220, 220), 1)
 
     if stream_state.phase == "SEARCHING":
@@ -209,19 +209,17 @@ def main() -> None:
 
             timestamp_sec = (time.monotonic() - stream_start_sec) if is_camera else (frame_idx / fps if fps > 0 else 0.0)
             signal, result = extractor.process_bgr_frame(frame, frame_idx, timestamp_sec)
-            full_body_ready = full_landmarks_visible(
+            count_ready = core_landmarks_visible(
                 result,
                 args.ready_visibility_threshold,
                 args.ready_visible_ratio,
             )
-            stream_state = gate.update(full_body_ready, timestamp_sec)
+            stream_state = gate.update(count_ready, timestamp_sec)
 
             if stream_state.phase != last_phase:
                 print(f"[phase] {last_phase} -> {stream_state.phase} @ {timestamp_sec:.2f}s")
                 last_phase = stream_state.phase
-                if stream_state.phase == "COUNTDOWN":
-                    engine = RealtimeCounterEngine(config)
-                elif stream_state.phase == "SEARCHING":
+                if stream_state.phase == "SEARCHING" and not count_ready:
                     engine = None
                 elif stream_state.phase == "COUNTING":
                     if engine is None:
@@ -229,7 +227,10 @@ def main() -> None:
                     accepted_count = 0
                     print("[count] counter armed")
 
-            if stream_state.phase == "COUNTDOWN" and engine is not None:
+            if stream_state.phase != "COUNTING" and count_ready and engine is None:
+                engine = RealtimeCounterEngine(config)
+
+            if stream_state.phase != "COUNTING" and engine is not None:
                 engine.warmup(signal)
             elif stream_state.phase == "COUNTING" and engine is not None:
                 event = engine.step(signal)
@@ -268,7 +269,7 @@ def main() -> None:
                     display_frame,
                     stream_state,
                     accepted_count,
-                    full_body_ready,
+                    count_ready,
                     args.countdown_seconds,
                     count_pulse_progress,
                 )
