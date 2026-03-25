@@ -1,0 +1,16 @@
+Alternating Jump Dataset Evaluation
+
+Config: {'ema_alpha_hip': 0.45, 'ema_alpha_foot': 0.55, 'foot_visibility_threshold': 0.3, 'hip_visibility_threshold': 0.5, 'baseline_alpha_hip': 0.03, 'floor_decay_ratio': 0.004, 'contact_margin_ratio': 0.08, 'side_diff_ratio': 0.03, 'side_release_ratio': 0.04, 'knee_dominance_weight': 0.75, 'support_streak_frames': 1, 'motion_window_frames': 14, 'recent_window_frames': 6, 'min_foot_diff_ratio': 0.04, 'min_hip_motion_ratio': 0.0, 'min_hip_range_ratio': 0.0, 'min_recent_hip_range_ratio': 0.0, 'descend_velocity_ratio': -1.0, 'min_count_gap_frames': 1, 'adaptive_gap_enabled': True, 'adaptive_gap_factor': 0.7, 'adaptive_gap_history': 6, 'adaptive_gap_min_intervals': 2, 'adaptive_gap_floor_frames': 2, 'rearm_after_gap_factor': 1.6, 'rearm_after_gap_min_frames': 8, 'rearm_fast_interval_min': 100, 'rearm_fast_interval_max': 9, 'rearm_interval_spread_max': 3, 'miss_recovery_enabled': True, 'miss_recovery_factor': 1.7, 'miss_recovery_fast_interval_min': 6, 'miss_recovery_fast_interval_max': 9, 'miss_recovery_interval_spread_max': 100, 'miss_recovery_max_additional_counts': 5, 'relaxed_contact_enabled': True, 'relaxed_contact_margin_ratio': 0.16, 'relaxed_contact_min_support_ratio': 0.12, 'relaxed_contact_gap_factor': 0.8, 'relaxed_contact_fast_interval_min': 4, 'relaxed_contact_fast_interval_max': 6, 'relaxed_contact_interval_spread_max': 2}
+Label window: {'start_offset_frames': 0, 'end_offset_frames': 2, 'warmup_frames': 8}
+
+01: predicted=21 gt=21 error=+0 exact=True window=[90,178]
+02: predicted=15 gt=15 error=+0 exact=True window=[27,202]
+03: predicted=138 gt=138 error=+0 exact=True window=[0,752]
+05: predicted=229 gt=229 error=+0 exact=True window=[1837,3672]
+06: predicted=236 gt=236 error=+0 exact=True window=[2015,3845]
+07: predicted=228 gt=228 error=+0 exact=True window=[1353,3145]
+
+Overall Count Accuracy: 1.0000
+Total Count: predicted=867 gt=867 signed_error=+0
+Exact Video Count Accuracy: 1.0000
+Total Abs Error: 0
