@@ -9,7 +9,7 @@ import cv2
 if __package__ in {None, ""}:
     sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
-from basic_jump.counter_engine import (
+from alternating_jump.counter_engine import (
     EngineConfig,
     LabelEvent,
     LabelWindowConfig,
@@ -26,18 +26,18 @@ from basic_jump.counter_engine import (
 
 
 def parse_args() -> argparse.Namespace:
-    parser = argparse.ArgumentParser(description="Run the grouped-jump dataset evaluator.")
-    parser.add_argument("--video-dir", default="basic_jump/video")
-    parser.add_argument("--label-dir", default="basic_jump/label")
+    parser = argparse.ArgumentParser(description="Run the alternating-jump dataset evaluator.")
+    parser.add_argument("--video-dir", default="alternating_jump/video")
+    parser.add_argument("--label-dir", default="alternating_jump/label")
     parser.add_argument("--grid-search", action="store_true", help="Run a small config sweep before final evaluation.")
-    parser.add_argument("--search-limit", type=int, default=None, help="Optional limit for the small config sweep.")
-    parser.add_argument("--label-start-offset", type=int, default=-15, help="Frame offset applied before the first GT label.")
-    parser.add_argument("--label-end-offset", type=int, default=3, help="Frame offset applied after the last GT label.")
-    parser.add_argument("--warmup-frames", type=int, default=4, help="Warmup frames processed before counting starts.")
-    parser.add_argument("--output", default="basic_jump/artifacts/dataset_eval_results.json")
+    parser.add_argument("--search-limit", type=int, default=None, help="Optional limit for the config sweep.")
+    parser.add_argument("--label-start-offset", type=int, default=0, help="Frame offset applied before the first GT label.")
+    parser.add_argument("--label-end-offset", type=int, default=2, help="Frame offset applied after the last GT label.")
+    parser.add_argument("--warmup-frames", type=int, default=8, help="Warmup frames processed before counting starts.")
+    parser.add_argument("--output", default="alternating_jump/artifacts/dataset_eval_results.json")
     parser.add_argument(
         "--output-dir",
-        default="basic_jump/output",
+        default="alternating_jump/output",
         help="Directory that receives the latest JSON summary and a readable text report.",
     )
     parser.add_argument(
@@ -55,8 +55,9 @@ def parse_args() -> argparse.Namespace:
 
 
 def build_signal_cache(video_dir: Path, stems: list[str]) -> dict[str, tuple[VideoMeta, list[SignalFrame]]]:
+    base_config = EngineConfig()
     return {
-        stem: extract_signal_stream(video_dir / f"{stem}.mp4", EngineConfig())
+        stem: extract_signal_stream(video_dir / f"{stem}.mp4", base_config)
         for stem in stems
     }
 
@@ -68,7 +69,7 @@ def render_text_report(
     summary: dict[str, object],
 ) -> str:
     lines = [
-        "Basic Jump Dataset Evaluation",
+        "Alternating Jump Dataset Evaluation",
         "",
         f"Config: {config.to_dict()}",
         f"Label window: {window_config.to_dict()}",
@@ -260,7 +261,14 @@ def render_validation_video(
             )
             _draw_text(frame, f"Pred {pred_count}/{result.predicted_count}", (48, 118), 0.64, (255, 255, 255), 2)
             _draw_text(frame, f"GT {gt_count}/{result.gt_count}", (220, 118), 0.64, (232, 232, 232), 2)
-            _draw_text(frame, "MATCH" if counts_match else "CHECK", (350, 118), 0.64, accent, 2)
+            _draw_text(
+                frame,
+                "MATCH" if counts_match else "CHECK",
+                (350, 118),
+                0.64,
+                accent,
+                2,
+            )
 
             event_text = "Pred event"
             if pred_hits > 1:
@@ -273,9 +281,11 @@ def render_validation_video(
             _draw_progress_bar(frame, (48, 154), (panel_w - 68, 10), progress, accent)
 
             if pred_pulse > 0:
-                cv2.rectangle(frame, (8, 8), (width - 8, height - 8), (84, 214, 255), thickness=2)
+                border_color = (84, 214, 255)
+                cv2.rectangle(frame, (8, 8), (width - 8, height - 8), border_color, thickness=2)
             if gt_pulse > 0:
-                cv2.rectangle(frame, (12, 12), (width - 12, height - 12), (255, 196, 72), thickness=1)
+                marker_color = (255, 196, 72)
+                cv2.rectangle(frame, (12, 12), (width - 12, height - 12), marker_color, thickness=1)
 
             writer.write(frame)
             frame_idx += 1
