@@ -247,3 +247,23 @@ python basic_jump/run_realtime_counter.py --source 0
 source activate
 python basic_jump/run_realtime_counter.py --source 0 --save-output basic_jump/artifacts/realtime_demo.mp4
 ```
+
+데이터셋 검증:
+
+```bash
+source activate
+MPLCONFIGDIR=/tmp/mpl python basic_jump/run_dataset_eval.py
+```
+
+검증 결과 UI 영상 생성:
+
+```bash
+source activate
+MPLCONFIGDIR=/tmp/mpl python basic_jump/run_dataset_eval.py --render-videos
+```
+
+생성 결과:
+
+- `basic_jump/output/dataset_eval_results.json`
+- `basic_jump/output/dataset_eval_report.txt`
+- `basic_jump/output/validation_videos/*.mp4`

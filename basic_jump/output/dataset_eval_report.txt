@@ -1,0 +1,21 @@
+Basic Jump Dataset Evaluation
+
+Config: {'ema_alpha_hip': 0.45, 'ema_alpha_foot': 0.55, 'fast_ema_alpha_hip': 0.25, 'fast_ema_alpha_foot': 0.35, 'foot_visibility_threshold': 0.35, 'hip_visibility_threshold': 0.5, 'contact_margin_ratio': 0.08, 'symmetry_y_ratio': 0.12, 'descend_velocity_ratio': 0.006, 'ascend_velocity_ratio': 0.004, 'fast_descend_velocity_ratio': 0.002, 'fast_ascend_velocity_ratio': 0.001, 'baseline_alpha_hip': 0.02, 'baseline_alpha_foot': 0.04, 'floor_decay_ratio': 0.004, 'min_refractory_frames': 4, 'fast_min_refractory_frames': 2, 'fast_mode_cadence_threshold': 7, 'motion_window_frames': 18, 'recent_window_frames': 5, 'min_hip_range_ratio': 0.045, 'min_foot_range_ratio': 0.035, 'min_recent_hip_range_ratio': 0.032, 'max_foot_to_hip_ratio': 2.5, 'guard_low_hip_range_ratio': 0.09, 'guard_high_foot_range_ratio': 0.12, 'guard_recent_hip_range_ratio': 0.04, 'balanced_override_hip_range_ratio': 0.075, 'balanced_override_foot_range_ratio': 0.065, 'balanced_override_recent_hip_ratio': 0.024, 'balanced_override_min_ratio': 0.6, 'balanced_override_max_ratio': 1.5, 'extended_override_hip_range_ratio': 0.055, 'extended_override_foot_range_ratio': 0.1, 'extended_override_recent_hip_ratio': 0.028, 'extended_override_min_ratio': 1.6, 'extended_override_max_ratio': 2.0, 'extended_override_recent_to_hip_ratio': 0.45, 'foot_floor_override_hip_range_ratio': 0.1, 'foot_floor_override_foot_range_ratio': 0.028, 'foot_floor_override_recent_hip_ratio': 0.06, 'foot_floor_override_max_ratio': 0.31, 'stale_tail_guard_hip_range_ratio': 0.2, 'stale_tail_guard_recent_to_hip_ratio': 0.177, 'min_count_gap_frames': 9, 'adaptive_gap_enabled': True, 'adaptive_gap_factor': 0.7, 'adaptive_gap_history': 5, 'adaptive_gap_min_intervals': 1, 'adaptive_gap_floor_frames': 4, 'adaptive_motion_hip_ratio': 0.06, 'adaptive_motion_foot_ratio': 0.05, 'adaptive_recent_hip_enabled': True, 'adaptive_recent_hip_floor': 0.032}
+Label window: {'start_offset_frames': -15, 'end_offset_frames': 3, 'warmup_frames': 4}
+
+01: predicted=88 gt=88 error=+0 exact=True window=[81,993]
+02: predicted=15 gt=15 error=+0 exact=True window=[147,370]
+03: predicted=17 gt=17 error=+0 exact=True window=[26,282]
+04: predicted=8 gt=8 error=+0 exact=True window=[18,133]
+05: predicted=198 gt=198 error=+0 exact=True window=[47,2458]
+06: predicted=262 gt=262 error=+0 exact=True window=[138,3974]
+07: predicted=504 gt=504 error=+0 exact=True window=[308,6308]
+08: predicted=16 gt=16 error=+0 exact=True window=[23,240]
+09: predicted=132 gt=132 error=+0 exact=True window=[160,1088]
+10: predicted=134 gt=134 error=+0 exact=True window=[50,975]
+11: predicted=20 gt=20 error=+0 exact=True window=[142,401]
+
+Overall Count Accuracy: 1.0000
+Total Count: predicted=1394 gt=1394 signed_error=+0
+Exact Video Count Accuracy: 1.0000
+Total Abs Error: 0
