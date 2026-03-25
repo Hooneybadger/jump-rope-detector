@@ -3,6 +3,7 @@ from __future__ import annotations
 import argparse
 import sys
 import time
+from dataclasses import replace
 from pathlib import Path
 
 import cv2
@@ -26,6 +27,7 @@ mp_pose = mp.solutions.pose
 
 
 def parse_args() -> argparse.Namespace:
+    base_config = EngineConfig()
     parser = argparse.ArgumentParser(description="Run the alternating-jump counter on a realtime stream.")
     parser.add_argument("--source", default="0", help="Camera index like `0` or a video file path.")
     parser.add_argument("--save-output", default=None, help="Optional output video path for saving the realtime demo.")
@@ -36,14 +38,35 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--ready-visibility-threshold", type=float, default=0.30)
     parser.add_argument("--ready-visible-ratio", type=float, default=0.80)
     parser.add_argument("--ready-dropout-seconds", type=float, default=0.35)
-    parser.add_argument("--side-diff-ratio", type=float, default=EngineConfig.side_diff_ratio)
-    parser.add_argument("--min-foot-diff-ratio", type=float, default=EngineConfig.min_foot_diff_ratio)
-    parser.add_argument("--min-hip-motion-ratio", type=float, default=EngineConfig.min_hip_motion_ratio)
-    parser.add_argument("--min-recent-hip-range-ratio", type=float, default=EngineConfig.min_recent_hip_range_ratio)
-    parser.add_argument("--descend-velocity-ratio", type=float, default=EngineConfig.descend_velocity_ratio)
-    parser.add_argument("--min-count-gap-frames", type=int, default=EngineConfig.min_count_gap_frames)
-    parser.add_argument("--support-streak-frames", type=int, default=EngineConfig.support_streak_frames)
+    parser.add_argument("--side-diff-ratio", type=float, default=base_config.side_diff_ratio)
+    parser.add_argument("--min-foot-diff-ratio", type=float, default=base_config.min_foot_diff_ratio)
+    parser.add_argument("--min-hip-motion-ratio", type=float, default=base_config.min_hip_motion_ratio)
+    parser.add_argument("--min-recent-hip-range-ratio", type=float, default=base_config.min_recent_hip_range_ratio)
+    parser.add_argument("--descend-velocity-ratio", type=float, default=base_config.descend_velocity_ratio)
+    parser.add_argument("--min-count-gap-frames", type=int, default=base_config.min_count_gap_frames)
+    parser.add_argument("--support-streak-frames", type=int, default=base_config.support_streak_frames)
+    parser.add_argument("--min-hip-range-ratio", type=float, default=base_config.min_hip_range_ratio)
+    parser.add_argument("--dual-air-min-ratio", type=float, default=base_config.dual_air_min_ratio)
+    parser.add_argument(
+        "--arm-missing-dual-air-min-active-frames",
+        type=int,
+        default=base_config.arm_missing_dual_air_min_active_frames,
+    )
+    parser.add_argument("--arm-motion-min-ratio", type=float, default=base_config.arm_motion_min_ratio)
+    parser.add_argument(
+        "--arm-opposition-activation-ratio",
+        type=float,
+        default=base_config.arm_opposition_activation_ratio,
+    )
+    parser.add_argument(
+        "--arm-opposition-min-ratio",
+        type=float,
+        default=base_config.arm_opposition_min_ratio,
+    )
     parser.add_argument("--disable-adaptive-filter", action="store_true", help="Disable cadence-adaptive realtime thresholds.")
+    parser.add_argument("--disable-strict-alternation", action="store_true", help="Allow same-side re-entry without opposite-side confirmation.")
+    parser.add_argument("--disable-dual-air-guard", action="store_true", help="Disable the airborne jump-shape guard.")
+    parser.add_argument("--require-arm-motion", action="store_true", help="Enable the shared wrist-motion guard.")
     parser.add_argument("--debug-filter", action="store_true", help="Print rejected count candidates and reasons.")
     return parser.parse_args()
 
@@ -197,15 +220,26 @@ def main() -> None:
         raise RuntimeError(f"Unable to open stream source: {args.source}")
 
     fps = float(capture.get(cv2.CAP_PROP_FPS) or 30.0)
-    config = EngineConfig(
+    base_config = EngineConfig()
+    config = replace(
+        base_config,
         side_diff_ratio=args.side_diff_ratio,
         min_foot_diff_ratio=args.min_foot_diff_ratio,
         min_hip_motion_ratio=args.min_hip_motion_ratio,
+        min_hip_range_ratio=args.min_hip_range_ratio,
         min_recent_hip_range_ratio=args.min_recent_hip_range_ratio,
         descend_velocity_ratio=args.descend_velocity_ratio,
         min_count_gap_frames=args.min_count_gap_frames,
         support_streak_frames=args.support_streak_frames,
         adaptive_gap_enabled=not args.disable_adaptive_filter,
+        strict_alternation_enabled=not args.disable_strict_alternation,
+        dual_air_required=not args.disable_dual_air_guard,
+        dual_air_min_ratio=args.dual_air_min_ratio,
+        arm_missing_dual_air_min_active_frames=args.arm_missing_dual_air_min_active_frames,
+        arm_motion_required=args.require_arm_motion,
+        arm_motion_min_ratio=args.arm_motion_min_ratio,
+        arm_opposition_activation_ratio=args.arm_opposition_activation_ratio,
+        arm_opposition_min_ratio=args.arm_opposition_min_ratio,
     )
     extractor = PoseSignalExtractor(config)
     gate = RealtimeStartGate(
@@ -244,6 +278,8 @@ def main() -> None:
             if phase_changed:
                 print(f"[phase] {last_phase} -> {stream_state.phase} @ {timestamp_sec:.2f}s")
                 if stream_state.phase == "COUNTING":
+                    if engine is not None:
+                        engine.begin_count_phase()
                     accepted_count = 0
                     print("[count] counter armed")
                 last_phase = stream_state.phase
@@ -261,6 +297,10 @@ def main() -> None:
                         f"[reject] frame={decision.frame_idx} side={decision.side} reason={decision.reason} "
                         f"hip_range={decision.hip_range_ratio:.3f} "
                         f"recent_hip={decision.recent_hip_range_ratio:.3f} "
+                        f"dual_air={decision.dual_air_peak_ratio:.3f} "
+                        f"dual_air_frames={decision.dual_air_active_frames} "
+                        f"arm_motion={decision.arm_motion_ratio:.3f} "
+                        f"arm_opp={decision.arm_opposition_ratio:.3f} "
                         f"support={decision.support_ratio:.3f} "
                         f"hip_motion={decision.hip_motion_ratio:.3f} "
                         f"hip_velocity={decision.hip_velocity_ratio:.3f} "

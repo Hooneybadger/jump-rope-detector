@@ -5,6 +5,7 @@ import xml.etree.ElementTree as ET
 from collections import deque
 from dataclasses import asdict, dataclass
 from itertools import product
+from math import hypot
 from pathlib import Path
 from statistics import median
 
@@ -45,10 +46,11 @@ class EngineConfig:
     ema_alpha_hip: float = 0.45
     ema_alpha_foot: float = 0.55
     foot_visibility_threshold: float = 0.30
+    wrist_visibility_threshold: float = 0.25
     hip_visibility_threshold: float = 0.50
     baseline_alpha_hip: float = 0.03
     floor_decay_ratio: float = 0.004
-    contact_margin_ratio: float = 0.08
+    contact_margin_ratio: float = 0.078
     side_diff_ratio: float = 0.03
     side_release_ratio: float = 0.04
     knee_dominance_weight: float = 0.75
@@ -57,6 +59,7 @@ class EngineConfig:
     recent_window_frames: int = 6
     min_foot_diff_ratio: float = 0.04
     min_hip_motion_ratio: float = 0.0
+    min_abs_hip_motion_ratio: float = 0.0
     min_hip_range_ratio: float = 0.0
     min_recent_hip_range_ratio: float = 0.0
     descend_velocity_ratio: float = -1.0
@@ -71,7 +74,7 @@ class EngineConfig:
     rearm_fast_interval_min: int = 100
     rearm_fast_interval_max: int = 9
     rearm_interval_spread_max: int = 3
-    miss_recovery_enabled: bool = True
+    miss_recovery_enabled: bool = False
     miss_recovery_factor: float = 1.70
     miss_recovery_fast_interval_min: int = 6
     miss_recovery_fast_interval_max: int = 9
@@ -84,6 +87,34 @@ class EngineConfig:
     relaxed_contact_fast_interval_min: int = 4
     relaxed_contact_fast_interval_max: int = 6
     relaxed_contact_interval_spread_max: int = 2
+    strict_alternation_enabled: bool = True
+    alternation_reset_gap_frames: int = 24
+    alternation_recovery_enabled: bool = True
+    alternation_recovery_factor: float = 1.575
+    alternation_recovery_min_support_ratio: float = 0.12
+    alternation_recovery_extra_count_min_interval: int = 7
+    dual_air_required: bool = True
+    dual_air_window_frames: int = 10
+    dual_air_min_ratio: float = 0.04
+    arm_motion_required: bool = False
+    arm_motion_window_frames: int = 12
+    arm_motion_min_ratio: float = 0.02
+    arm_opposition_activation_ratio: float = 0.08
+    arm_opposition_min_ratio: float = 0.58
+    arm_opposition_strong_motion_ratio: float = 0.60
+    arm_missing_dual_air_min_active_frames: int = 2
+    expected_recovery_weak_support_ratio: float = 0.07
+    expected_recovery_min_hip_motion_ratio: float = 0.0
+    weak_support_recovery_enabled: bool = False
+    weak_support_seed_ratio: float = 0.08
+    weak_support_followup_ratio: float = 0.60
+    weak_support_followup_min_gap_frames: int = 2
+    weak_support_bonus_timeout_frames: int = 10
+    weak_support_arm_motion_ratio: float = 0.12
+    weak_support_dual_air_active_frames: int = 2
+    weak_support_bonus_max_opposition_ratio: float = 0.35
+    bootstrap_sequence_required: bool = False
+    bootstrap_max_gap_frames: int = 12
 
     def to_dict(self) -> dict[str, float | int | bool]:
         return asdict(self)
@@ -113,12 +144,18 @@ class SignalFrame:
     frame_idx: int
     time_sec: float
     detected: bool
+    left_hip_x: float | None = None
     left_hip_y: float | None = None
+    right_hip_x: float | None = None
     right_hip_y: float | None = None
     left_knee_y: float | None = None
     right_knee_y: float | None = None
     left_foot_y: float | None = None
     right_foot_y: float | None = None
+    left_wrist_x: float | None = None
+    left_wrist_y: float | None = None
+    right_wrist_x: float | None = None
+    right_wrist_y: float | None = None
     leg_length: float | None = None
 
 
@@ -139,6 +176,11 @@ class CounterDecision:
     side: str | None
     hip_range_ratio: float
     recent_hip_range_ratio: float
+    dual_air_peak_ratio: float
+    dual_air_active_frames: int
+    arm_motion_ratio: float
+    arm_motion_available: bool
+    arm_opposition_ratio: float
     support_ratio: float
     hip_motion_ratio: float
     hip_velocity_ratio: float
@@ -268,6 +310,13 @@ def _pick_foot_y(lms, side: str, visibility_threshold: float) -> float | None:
     return sum(item[1] for item in target) / len(target)
 
 
+def _pick_landmark_xy(lms, landmark_enum, visibility_threshold: float) -> tuple[float, float] | tuple[None, None]:
+    landmark = lms[landmark_enum.value]
+    if float(landmark.visibility) < visibility_threshold:
+        return None, None
+    return float(landmark.x), float(landmark.y)
+
+
 def pose_result_to_signal(
     result,
     frame_idx: int,
@@ -284,6 +333,16 @@ def pose_result_to_signal(
     right_knee = lms[mp_pose.PoseLandmark.RIGHT_KNEE.value]
     left_ankle = lms[mp_pose.PoseLandmark.LEFT_ANKLE.value]
     right_ankle = lms[mp_pose.PoseLandmark.RIGHT_ANKLE.value]
+    left_wrist_x, left_wrist_y = _pick_landmark_xy(
+        lms,
+        mp_pose.PoseLandmark.LEFT_WRIST,
+        config.wrist_visibility_threshold,
+    )
+    right_wrist_x, right_wrist_y = _pick_landmark_xy(
+        lms,
+        mp_pose.PoseLandmark.RIGHT_WRIST,
+        config.wrist_visibility_threshold,
+    )
     if (
         left_hip.visibility < config.hip_visibility_threshold
         or right_hip.visibility < config.hip_visibility_threshold
@@ -307,12 +366,18 @@ def pose_result_to_signal(
         frame_idx=frame_idx,
         time_sec=timestamp_sec,
         detected=True,
+        left_hip_x=float(left_hip.x),
         left_hip_y=float(left_hip.y),
+        right_hip_x=float(right_hip.x),
         right_hip_y=float(right_hip.y),
         left_knee_y=float(left_knee.y),
         right_knee_y=float(right_knee.y),
         left_foot_y=left_foot_y,
         right_foot_y=right_foot_y,
+        left_wrist_x=left_wrist_x,
+        left_wrist_y=left_wrist_y,
+        right_wrist_x=right_wrist_x,
+        right_wrist_y=right_wrist_y,
         leg_length=leg_length,
     )
 
@@ -323,6 +388,10 @@ def _mean_pose_values(signal: SignalFrame) -> tuple[float, float]:
     assert signal.leg_length is not None
     mean_hip_y = (signal.left_hip_y + signal.right_hip_y) / 2.0
     return mean_hip_y, signal.leg_length
+
+
+def _opposite_side(side: str) -> str:
+    return "right" if side == "left" else "left"
 
 
 def _landmark_visibility_ratio(result, landmarks, visibility_threshold: float = 0.30) -> float:
@@ -392,10 +461,18 @@ class RealtimeCounterEngine:
     def __init__(self, config: EngineConfig):
         self.config = config
         self.prev_mean_hip: float | None = None
+        self.prev_left_hip_x: float | None = None
+        self.prev_right_hip_x: float | None = None
         self.prev_left_foot: float | None = None
         self.prev_right_foot: float | None = None
         self.prev_left_knee: float | None = None
         self.prev_right_knee: float | None = None
+        self.prev_left_wrist_x: float | None = None
+        self.prev_left_wrist_y: float | None = None
+        self.prev_right_wrist_x: float | None = None
+        self.prev_right_wrist_y: float | None = None
+        self.last_arm_sample_frame: int | None = None
+        self.current_frame_idx: int = -1
         self.prev_hip_motion: float | None = None
         self.hip_baseline: float | None = None
         self.left_floor: float | None = None
@@ -403,6 +480,10 @@ class RealtimeCounterEngine:
         self.candidate_side: str | None = None
         self.candidate_streak = 0
         self.active_side: str | None = None
+        self.expected_side: str | None = None
+        self.cadence_validated = not config.bootstrap_sequence_required
+        self.bootstrap_side: str | None = None
+        self.bootstrap_frame: int | None = None
         self.last_count_frame: int | None = None
         self.accepted_running_count = 0
         self.interval_history: deque[int] = deque(maxlen=config.adaptive_gap_history)
@@ -410,6 +491,13 @@ class RealtimeCounterEngine:
         self.recent_hip_history: deque[float] = deque(maxlen=config.recent_window_frames)
         self.foot_diff_history: deque[float] = deque(maxlen=config.motion_window_frames)
         self.leg_history: deque[float] = deque(maxlen=config.motion_window_frames)
+        self.dual_air_history: deque[float] = deque(maxlen=config.dual_air_window_frames)
+        self.arm_rel_history: deque[tuple[float, float, float, float]] = deque(
+            maxlen=config.arm_motion_window_frames
+        )
+        self.weak_support_seed_side: str | None = None
+        self.weak_support_seed_frame: int | None = None
+        self.weak_support_pending_bonus = 0
         self.last_decision: CounterDecision | None = None
 
     @staticmethod
@@ -423,17 +511,23 @@ class RealtimeCounterEngine:
         signal: SignalFrame,
     ) -> tuple[float, float, float, float, float, float, float, float]:
         mean_hip_raw, leg_length = _mean_pose_values(signal)
+        assert signal.left_hip_x is not None
+        assert signal.right_hip_x is not None
         assert signal.left_knee_y is not None
         assert signal.right_knee_y is not None
         assert signal.left_foot_y is not None
         assert signal.right_foot_y is not None
         mean_hip = self._ema(self.config.ema_alpha_hip, mean_hip_raw, self.prev_mean_hip)
+        left_hip_x = self._ema(self.config.ema_alpha_foot, signal.left_hip_x, self.prev_left_hip_x)
+        right_hip_x = self._ema(self.config.ema_alpha_foot, signal.right_hip_x, self.prev_right_hip_x)
         left_knee = self._ema(self.config.ema_alpha_foot, signal.left_knee_y, self.prev_left_knee)
         right_knee = self._ema(self.config.ema_alpha_foot, signal.right_knee_y, self.prev_right_knee)
         left_foot = self._ema(self.config.ema_alpha_foot, signal.left_foot_y, self.prev_left_foot)
         right_foot = self._ema(self.config.ema_alpha_foot, signal.right_foot_y, self.prev_right_foot)
 
         self.prev_mean_hip = mean_hip
+        self.prev_left_hip_x = left_hip_x
+        self.prev_right_hip_x = right_hip_x
         self.prev_left_knee = left_knee
         self.prev_right_knee = right_knee
         self.prev_left_foot = left_foot
@@ -452,11 +546,49 @@ class RealtimeCounterEngine:
         hip_motion = mean_hip - self.hip_baseline
         hip_velocity = 0.0 if self.prev_hip_motion is None else hip_motion - self.prev_hip_motion
         self.prev_hip_motion = hip_motion
+        self.current_frame_idx = signal.frame_idx
 
         self.hip_history.append(mean_hip)
         self.recent_hip_history.append(mean_hip)
         self.foot_diff_history.append(abs(left_foot - right_foot))
         self.leg_history.append(leg_length)
+
+        left_clearance_ratio = 0.0
+        if self.left_floor is not None:
+            left_clearance_ratio = max(0.0, (self.left_floor - left_foot) / leg_length)
+        right_clearance_ratio = 0.0
+        if self.right_floor is not None:
+            right_clearance_ratio = max(0.0, (self.right_floor - right_foot) / leg_length)
+        self.dual_air_history.append(min(left_clearance_ratio, right_clearance_ratio))
+
+        if (
+            signal.left_wrist_x is not None
+            and signal.left_wrist_y is not None
+            and signal.right_wrist_x is not None
+            and signal.right_wrist_y is not None
+        ):
+            left_wrist_x = self._ema(self.config.ema_alpha_foot, signal.left_wrist_x, self.prev_left_wrist_x)
+            left_wrist_y = self._ema(self.config.ema_alpha_foot, signal.left_wrist_y, self.prev_left_wrist_y)
+            right_wrist_x = self._ema(self.config.ema_alpha_foot, signal.right_wrist_x, self.prev_right_wrist_x)
+            right_wrist_y = self._ema(self.config.ema_alpha_foot, signal.right_wrist_y, self.prev_right_wrist_y)
+            self.prev_left_wrist_x = left_wrist_x
+            self.prev_left_wrist_y = left_wrist_y
+            self.prev_right_wrist_x = right_wrist_x
+            self.prev_right_wrist_y = right_wrist_y
+            self.arm_rel_history.append(
+                (
+                    left_wrist_x - left_hip_x,
+                    left_wrist_y - signal.left_hip_y,
+                    right_wrist_x - right_hip_x,
+                    right_wrist_y - signal.right_hip_y,
+                )
+            )
+            self.last_arm_sample_frame = signal.frame_idx
+        else:
+            self.prev_left_wrist_x = None
+            self.prev_left_wrist_y = None
+            self.prev_right_wrist_x = None
+            self.prev_right_wrist_y = None
 
         return mean_hip, left_knee, right_knee, left_foot, right_foot, leg_length, hip_motion, hip_velocity
 
@@ -466,6 +598,11 @@ class RealtimeCounterEngine:
                 "hip_range_ratio": 0.0,
                 "recent_hip_range_ratio": 0.0,
                 "foot_diff_peak_ratio": 0.0,
+                "dual_air_peak_ratio": 0.0,
+                "dual_air_active_frames": 0.0,
+                "arm_motion_ratio": 0.0,
+                "arm_motion_available": 0.0,
+                "arm_opposition_ratio": 0.0,
             }
         leg_median = median(self.leg_history)
         hip_range_ratio = (max(self.hip_history) - min(self.hip_history)) / leg_median
@@ -475,10 +612,52 @@ class RealtimeCounterEngine:
                 max(self.recent_hip_history) - min(self.recent_hip_history)
             ) / leg_median
         foot_diff_peak_ratio = max(self.foot_diff_history) / leg_median if self.foot_diff_history else 0.0
+        dual_air_peak_ratio = max(self.dual_air_history) if self.dual_air_history else 0.0
+        dual_air_active_frames = sum(
+            1 for value in self.dual_air_history if value >= self.config.dual_air_min_ratio
+        )
+        arm_motion_ratio = 0.0
+        arm_opposition_ratio = 0.0
+        arm_motion_available = (
+            len(self.arm_rel_history) >= max(3, self.config.arm_motion_window_frames // 2)
+            and self.last_arm_sample_frame is not None
+            and (self.current_frame_idx - self.last_arm_sample_frame) <= 3
+        )
+        if arm_motion_available:
+            left_x_values = [item[0] for item in self.arm_rel_history]
+            left_y_values = [item[1] for item in self.arm_rel_history]
+            right_x_values = [item[2] for item in self.arm_rel_history]
+            right_y_values = [item[3] for item in self.arm_rel_history]
+            left_span = hypot(
+                max(left_x_values) - min(left_x_values),
+                max(left_y_values) - min(left_y_values),
+            )
+            right_span = hypot(
+                max(right_x_values) - min(right_x_values),
+                max(right_y_values) - min(right_y_values),
+            )
+            arm_motion_ratio = min(left_span, right_span) / leg_median
+            opposing_x_steps = 0
+            valid_x_steps = 0
+            for previous, current in zip(self.arm_rel_history, list(self.arm_rel_history)[1:]):
+                left_dx = current[0] - previous[0]
+                right_dx = current[2] - previous[2]
+                if abs(left_dx) <= 1e-6 or abs(right_dx) <= 1e-6:
+                    continue
+                valid_x_steps += 1
+                if left_dx * right_dx < 0.0:
+                    opposing_x_steps += 1
+            if valid_x_steps > 0:
+                arm_opposition_ratio = opposing_x_steps / valid_x_steps
         return {
             "hip_range_ratio": hip_range_ratio,
             "recent_hip_range_ratio": recent_hip_range_ratio,
             "foot_diff_peak_ratio": foot_diff_peak_ratio,
+            "dual_air_peak_ratio": dual_air_peak_ratio,
+            "dual_air_active_frames": float(dual_air_active_frames),
+            "arm_motion_ratio": arm_motion_ratio,
+            "arm_motion_available": float(arm_motion_available),
+            "arm_opposition_ratio": arm_opposition_ratio,
         }
 
     def _effective_gap(self) -> tuple[int, bool]:
@@ -514,6 +693,14 @@ class RealtimeCounterEngine:
             return None
         return float(interval_median)
 
+    def _recovery_interval_median(self) -> float | None:
+        if len(self.interval_history) < self.config.adaptive_gap_min_intervals:
+            return None
+        interval_median = median(self.interval_history)
+        if interval_median <= 0:
+            return None
+        return float(interval_median)
+
     def _rearm_gap_frames(self) -> int | None:
         interval_median = self._stable_fast_interval(
             self.config.rearm_fast_interval_min,
@@ -527,7 +714,14 @@ class RealtimeCounterEngine:
             int(round(interval_median * self.config.rearm_after_gap_factor)),
         )
 
-    def _miss_recovery_count(self, gap_frames: int) -> int:
+    def _miss_recovery_count(
+        self,
+        gap_frames: int,
+        side: str,
+        expected_side: str | None,
+        support_ratio: float,
+        hip_motion_ratio: float,
+    ) -> int:
         if not self.config.miss_recovery_enabled:
             return 0
         interval_median = self._stable_fast_interval(
@@ -541,7 +735,39 @@ class RealtimeCounterEngine:
             return 0
         estimated_total = int(round(gap_frames / interval_median))
         additional_counts = max(0, estimated_total - 1)
+        if (
+            expected_side is not None
+            and side == expected_side
+            and additional_counts == 1
+            and support_ratio < self.config.expected_recovery_weak_support_ratio
+            and hip_motion_ratio < self.config.expected_recovery_min_hip_motion_ratio
+        ):
+            return 0
         return min(self.config.miss_recovery_max_additional_counts, additional_counts)
+
+    def _alternation_recovery_count(
+        self,
+        gap_frames: int | None,
+        support_ratio: float,
+        metrics: dict[str, float],
+    ) -> int | None:
+        if not self.config.alternation_recovery_enabled or gap_frames is None:
+            return None
+        interval_median = self._recovery_interval_median()
+        if interval_median is None:
+            return None
+        if gap_frames < int(round(interval_median * self.config.alternation_recovery_factor)):
+            return None
+        if support_ratio < max(self.config.min_foot_diff_ratio, self.config.alternation_recovery_min_support_ratio):
+            return None
+        if metrics["dual_air_peak_ratio"] < self.config.dual_air_min_ratio:
+            return None
+        estimated_total = int(round(gap_frames / interval_median))
+        if estimated_total < 2:
+            return None
+        if interval_median < self.config.alternation_recovery_extra_count_min_interval:
+            return 0
+        return 1
 
     def _relaxed_contact_side(
         self,
@@ -636,6 +862,11 @@ class RealtimeCounterEngine:
             side=side,
             hip_range_ratio=metrics["hip_range_ratio"],
             recent_hip_range_ratio=metrics["recent_hip_range_ratio"],
+            dual_air_peak_ratio=metrics["dual_air_peak_ratio"],
+            dual_air_active_frames=int(round(metrics["dual_air_active_frames"])),
+            arm_motion_ratio=metrics["arm_motion_ratio"],
+            arm_motion_available=bool(metrics["arm_motion_available"]),
+            arm_opposition_ratio=metrics["arm_opposition_ratio"],
             support_ratio=support_ratio,
             hip_motion_ratio=hip_motion_ratio,
             hip_velocity_ratio=hip_velocity_ratio,
@@ -647,11 +878,69 @@ class RealtimeCounterEngine:
         self.last_decision = None
         self._step_internal(signal, allow_count=False)
 
+    def prime(self, signal: SignalFrame) -> None:
+        self.last_decision = None
+        self._step_internal(signal, allow_count=False, track_precount=True)
+
+    def begin_count_phase(self) -> None:
+        self.candidate_side = None
+        self.candidate_streak = 0
+        self.active_side = None
+        self.expected_side = None
+        self.bootstrap_side = None
+        self.bootstrap_frame = None
+        self.last_count_frame = None
+        self.accepted_running_count = 0
+        self.interval_history.clear()
+        self.weak_support_seed_side = None
+        self.weak_support_seed_frame = None
+        self.weak_support_pending_bonus = 0
+        self.last_decision = None
+
+    def _update_weak_support_recovery(
+        self,
+        frame_idx: int,
+        side: str | None,
+        support_ratio: float,
+        metrics: dict[str, float],
+    ) -> None:
+        if not self.config.weak_support_recovery_enabled:
+            return
+        if self.weak_support_seed_side is None or self.weak_support_seed_frame is None:
+            return
+        if (frame_idx - self.weak_support_seed_frame) > self.config.weak_support_bonus_timeout_frames:
+            self.weak_support_seed_side = None
+            self.weak_support_seed_frame = None
+            self.weak_support_pending_bonus = 0
+            return
+        if side is None:
+            return
+        gap_frames = frame_idx - self.weak_support_seed_frame
+        if gap_frames < self.config.weak_support_followup_min_gap_frames:
+            return
+        if side != self.weak_support_seed_side:
+            if self.weak_support_pending_bonus == 0:
+                self.weak_support_seed_side = None
+                self.weak_support_seed_frame = None
+            return
+        if (
+            bool(metrics["arm_motion_available"])
+            and metrics["arm_motion_ratio"] >= self.config.weak_support_arm_motion_ratio
+            and metrics["dual_air_active_frames"] >= self.config.weak_support_dual_air_active_frames
+            and support_ratio >= self.config.weak_support_followup_ratio
+        ):
+            self.weak_support_pending_bonus = 1
+
     def step(self, signal: SignalFrame) -> CounterEvent | None:
         self.last_decision = None
         return self._step_internal(signal, allow_count=True)
 
-    def _step_internal(self, signal: SignalFrame, allow_count: bool) -> CounterEvent | None:
+    def _step_internal(
+        self,
+        signal: SignalFrame,
+        allow_count: bool,
+        track_precount: bool = False,
+    ) -> CounterEvent | None:
         if not signal.detected:
             self.candidate_side = None
             self.candidate_streak = 0
@@ -660,6 +949,17 @@ class RealtimeCounterEngine:
 
         _, left_knee, right_knee, left_foot, right_foot, leg_length, hip_motion, hip_velocity = self._update_signal_state(signal)
         gap_frames = None if self.last_count_frame is None else signal.frame_idx - self.last_count_frame
+        if (
+            self.config.bootstrap_sequence_required
+            and gap_frames is not None
+            and self.config.alternation_reset_gap_frames > 0
+            and gap_frames >= self.config.alternation_reset_gap_frames
+        ):
+            self.cadence_validated = False
+            self.expected_side = None
+            self.bootstrap_side = None
+            self.bootstrap_frame = None
+            self.active_side = None
         side, support_ratio = self._contact_side(left_knee, right_knee, left_foot, right_foot, leg_length)
         if side is None:
             side, relaxed_support_ratio = self._relaxed_contact_side(
@@ -698,10 +998,7 @@ class RealtimeCounterEngine:
         ):
             self.active_side = None
 
-        if side == self.active_side:
-            return None
-
-        if not allow_count:
+        if not allow_count and not track_precount:
             self.active_side = side
             return None
 
@@ -709,6 +1006,23 @@ class RealtimeCounterEngine:
         min_gap_frames, cadence_locked = self._effective_gap()
         hip_motion_ratio = hip_motion / leg_length
         hip_velocity_ratio = hip_velocity / leg_length
+        expected_side_before_accept = self.expected_side
+        alternation_recovery_count: int | None = None
+        self._update_weak_support_recovery(signal.frame_idx, side, support_ratio, metrics)
+
+        if side == self.active_side:
+            if not allow_count:
+                return None
+            if self.config.strict_alternation_enabled and expected_side_before_accept is not None and side != expected_side_before_accept:
+                alternation_recovery_count = self._alternation_recovery_count(
+                    gap_frames,
+                    support_ratio,
+                    metrics,
+                )
+                if alternation_recovery_count is None:
+                    return None
+            else:
+                return None
 
         if (
             self.last_count_frame is not None
@@ -726,10 +1040,49 @@ class RealtimeCounterEngine:
                 cadence_locked,
             )
             return None
+        if self.config.strict_alternation_enabled and expected_side_before_accept is not None and side != expected_side_before_accept:
+            if (
+                self.config.alternation_reset_gap_frames > 0
+                and gap_frames is not None
+                and gap_frames >= self.config.alternation_reset_gap_frames
+            ):
+                self.expected_side = None
+            else:
+                alternation_recovery_count = self._alternation_recovery_count(
+                    gap_frames,
+                    support_ratio,
+                    metrics,
+                )
+                if alternation_recovery_count is None:
+                    self._set_reject(
+                        signal,
+                        "expected_side",
+                        side,
+                        metrics,
+                        support_ratio,
+                        hip_motion_ratio,
+                        hip_velocity_ratio,
+                        min_gap_frames,
+                        cadence_locked,
+                    )
+                    return None
         if support_ratio < self.config.min_foot_diff_ratio:
             self._set_reject(
                 signal,
                 "support_ratio",
+                side,
+                metrics,
+                support_ratio,
+                hip_motion_ratio,
+                hip_velocity_ratio,
+                min_gap_frames,
+                cadence_locked,
+            )
+            return None
+        if abs(hip_motion_ratio) < self.config.min_abs_hip_motion_ratio:
+            self._set_reject(
+                signal,
+                "abs_hip_motion",
                 side,
                 metrics,
                 support_ratio,
@@ -753,6 +1106,73 @@ class RealtimeCounterEngine:
                     cadence_locked,
                 )
                 return None
+        if self.config.dual_air_required and metrics["dual_air_peak_ratio"] < self.config.dual_air_min_ratio:
+            self._set_reject(
+                signal,
+                "dual_air",
+                side,
+                metrics,
+                support_ratio,
+                hip_motion_ratio,
+                hip_velocity_ratio,
+                min_gap_frames,
+                cadence_locked,
+            )
+            return None
+        if (
+            not bool(metrics["arm_motion_available"])
+            and self.config.arm_missing_dual_air_min_active_frames > 0
+            and metrics["dual_air_active_frames"] < self.config.arm_missing_dual_air_min_active_frames
+        ):
+            self._set_reject(
+                signal,
+                "dual_air_duration",
+                side,
+                metrics,
+                support_ratio,
+                hip_motion_ratio,
+                hip_velocity_ratio,
+                min_gap_frames,
+                cadence_locked,
+            )
+            return None
+        if (
+            self.config.arm_motion_required
+            and metrics["arm_motion_available"]
+            and metrics["arm_motion_ratio"] < self.config.arm_motion_min_ratio
+        ):
+            self._set_reject(
+                signal,
+                "arm_motion",
+                side,
+                metrics,
+                support_ratio,
+                hip_motion_ratio,
+                hip_velocity_ratio,
+                min_gap_frames,
+                cadence_locked,
+            )
+            return None
+        if (
+            bool(metrics["arm_motion_available"])
+            and metrics["arm_motion_ratio"] >= max(
+                self.config.arm_opposition_activation_ratio,
+                self.config.arm_opposition_strong_motion_ratio,
+            )
+            and metrics["arm_opposition_ratio"] < self.config.arm_opposition_min_ratio
+        ):
+            self._set_reject(
+                signal,
+                "arm_opposition",
+                side,
+                metrics,
+                support_ratio,
+                hip_motion_ratio,
+                hip_velocity_ratio,
+                min_gap_frames,
+                cadence_locked,
+            )
+            return None
         if (
             metrics["recent_hip_range_ratio"] < self.config.min_recent_hip_range_ratio
             and hip_motion_ratio < self.config.min_hip_motion_ratio
@@ -785,17 +1205,108 @@ class RealtimeCounterEngine:
                 cadence_locked,
             )
             return None
+        if self.config.bootstrap_sequence_required and not self.cadence_validated:
+            if self.bootstrap_side is None or self.bootstrap_frame is None:
+                self.bootstrap_side = side
+                self.bootstrap_frame = signal.frame_idx
+                self.expected_side = _opposite_side(side) if self.config.strict_alternation_enabled else None
+                self._set_reject(
+                    signal,
+                    "bootstrap_wait",
+                    side,
+                    metrics,
+                    support_ratio,
+                    hip_motion_ratio,
+                    hip_velocity_ratio,
+                    min_gap_frames,
+                    cadence_locked,
+                )
+                return None
+            bootstrap_gap = signal.frame_idx - self.bootstrap_frame
+            if side == self.bootstrap_side or bootstrap_gap > self.config.bootstrap_max_gap_frames:
+                self.bootstrap_side = side
+                self.bootstrap_frame = signal.frame_idx
+                self.expected_side = _opposite_side(side) if self.config.strict_alternation_enabled else None
+                self._set_reject(
+                    signal,
+                    "bootstrap_reset",
+                    side,
+                    metrics,
+                    support_ratio,
+                    hip_motion_ratio,
+                    hip_velocity_ratio,
+                    min_gap_frames,
+                    cadence_locked,
+                )
+                return None
+            self.cadence_validated = True
+            self.bootstrap_side = None
+            self.bootstrap_frame = None
 
         self.active_side = side
-        count_delta = 1
+        self.expected_side = _opposite_side(side)
+        if not allow_count:
+            if self.last_count_frame is not None:
+                gap_frames = signal.frame_idx - self.last_count_frame
+                count_delta = 1
+                if self.config.miss_recovery_enabled:
+                    count_delta += self._miss_recovery_count(
+                        gap_frames,
+                        side,
+                        expected_side_before_accept,
+                        support_ratio,
+                        hip_motion_ratio,
+                    )
+                normalized_gap = max(1, int(round(gap_frames / max(1, count_delta))))
+                for _ in range(count_delta):
+                    self.interval_history.append(normalized_gap)
+            self.last_count_frame = signal.frame_idx
+            return None
+
+        count_delta = 1 + (0 if alternation_recovery_count is None else alternation_recovery_count)
         if self.last_count_frame is not None:
             gap_frames = signal.frame_idx - self.last_count_frame
-            count_delta += self._miss_recovery_count(gap_frames)
+            if alternation_recovery_count is None:
+                count_delta += self._miss_recovery_count(
+                    gap_frames,
+                    side,
+                    expected_side_before_accept,
+                    support_ratio,
+                    hip_motion_ratio,
+                )
+        if (
+            count_delta == 1
+            and
+            self.weak_support_pending_bonus > 0
+            and self.weak_support_seed_side is not None
+            and side == _opposite_side(self.weak_support_seed_side)
+            and hip_motion_ratio > 0.0
+            and metrics["arm_motion_ratio"] >= self.config.weak_support_arm_motion_ratio
+            and metrics["arm_opposition_ratio"] <= self.config.weak_support_bonus_max_opposition_ratio
+        ):
+            count_delta += self.weak_support_pending_bonus
+            self.weak_support_pending_bonus = 0
+            self.weak_support_seed_side = None
+            self.weak_support_seed_frame = None
+        if self.last_count_frame is not None:
+            gap_frames = signal.frame_idx - self.last_count_frame
             normalized_gap = max(1, int(round(gap_frames / count_delta)))
             for _ in range(count_delta):
                 self.interval_history.append(normalized_gap)
         self.last_count_frame = signal.frame_idx
         self.accepted_running_count += count_delta
+        if (
+            self.config.weak_support_recovery_enabled
+            and support_ratio <= self.config.weak_support_seed_ratio
+            and bool(metrics["arm_motion_available"])
+        ):
+            self.weak_support_seed_side = side
+            self.weak_support_seed_frame = signal.frame_idx
+            self.weak_support_pending_bonus = 0
+        else:
+            self.weak_support_seed_side = None
+            self.weak_support_seed_frame = None
+            self.weak_support_pending_bonus = 0
         self.last_decision = CounterDecision(
             frame_idx=signal.frame_idx,
             time_sec=signal.time_sec,
@@ -804,6 +1315,11 @@ class RealtimeCounterEngine:
             side=side,
             hip_range_ratio=metrics["hip_range_ratio"],
             recent_hip_range_ratio=metrics["recent_hip_range_ratio"],
+            dual_air_peak_ratio=metrics["dual_air_peak_ratio"],
+            dual_air_active_frames=int(round(metrics["dual_air_active_frames"])),
+            arm_motion_ratio=metrics["arm_motion_ratio"],
+            arm_motion_available=bool(metrics["arm_motion_available"]),
+            arm_opposition_ratio=metrics["arm_opposition_ratio"],
             support_ratio=support_ratio,
             hip_motion_ratio=hip_motion_ratio,
             hip_velocity_ratio=hip_velocity_ratio,
@@ -920,12 +1436,10 @@ def run_counter_on_signals(
         if signal.frame_idx > effective_end_frame:
             break
         if signal.frame_idx < start_frame:
-            engine.warmup(signal)
+            engine.prime(signal)
             continue
         if not counting_armed:
-            engine.active_side = None
-            engine.candidate_side = None
-            engine.candidate_streak = 0
+            engine.begin_count_phase()
             counting_armed = True
         event = engine.step(signal)
         if event is not None:
