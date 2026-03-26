@@ -51,32 +51,35 @@ class EngineConfig:
     arm_visibility_threshold: float = 0.30
     foot_cutoff_hz: float = 4.0
     hip_cutoff_hz: float = 3.0
-    wrist_speed_cutoff_hz: float = 5.5
+    wrist_snap_cutoff_hz: float = 6.0
+    wrist_rotation_cutoff_hz: float = 6.5
     shoulder_blend_alpha: float = 0.30
     floor_decay_ratio: float = 0.003
     contact_margin_ratio: float = 0.08
     symmetry_y_ratio: float = 0.14
+    rotation_snap_weight: float = 0.65
     min_count_gap_frames: int = 8
     min_airborne_frames: int = 6
     max_airborne_frames: int = 32
-    min_jump_height_ratio: float = 0.11
-    min_hip_lift_ratio: float = 0.06
-    min_long_airborne_height_ratio: float = 0.08
+    min_jump_height_ratio: float = 0.10
+    min_hip_lift_ratio: float = 0.05
+    min_long_airborne_height_ratio: float = 0.075
     long_airborne_frames: int = 10
     min_wrist_peak_count: int = 2
-    min_wrist_peak_speed_ratio: float = 0.85
-    min_wrist_energy_ratio: float = 0.42
+    min_snap_peak_ratio: float = 0.75
+    min_snap_energy_ratio: float = 0.34
+    min_rotation_energy_ratio: float = 0.28
+    min_rotation_share_ratio: float = 0.45
     wrist_peak_refractory_frames: int = 2
     fft_window_frames: int = 48
-    min_fft_peak_hz: float = 3.2
-    min_fft_power_ratio: float = 0.34
-    min_fft_wrist_to_jump_ratio: float = 1.55
+    min_fft_peak_hz: float = 3.0
+    min_fft_power_ratio: float = 0.30
+    min_fft_wrist_to_jump_ratio: float = 1.45
     adaptive_gap_enabled: bool = True
     adaptive_gap_factor: float = 0.72
     adaptive_gap_history: int = 5
     adaptive_gap_min_intervals: int = 2
     adaptive_gap_floor_frames: int = 6
-    search_wrist_peak_count: int = 2
 
     def to_dict(self) -> dict[str, float | int | bool]:
         return asdict(self)
@@ -145,6 +148,8 @@ class CounterDecision:
     wrist_peak_count: int
     wrist_peak_speed_ratio: float
     wrist_energy_ratio: float
+    wrist_rotation_ratio: float
+    wrist_rotation_share: float
     wrist_fft_peak_hz: float
     wrist_fft_power_ratio: float
     wrist_to_jump_ratio: float
@@ -340,7 +345,8 @@ def pose_result_to_signal(
     right_elbow = _visible_xy(lms, mp_pose.PoseLandmark.RIGHT_ELBOW, config.arm_visibility_threshold)
     left_wrist = _visible_xy(lms, mp_pose.PoseLandmark.LEFT_WRIST, config.arm_visibility_threshold)
     right_wrist = _visible_xy(lms, mp_pose.PoseLandmark.RIGHT_WRIST, config.arm_visibility_threshold)
-    if None in {left_shoulder, right_shoulder, left_elbow, right_elbow, left_wrist, right_wrist}:
+    arm_points = (left_shoulder, right_shoulder, left_elbow, right_elbow, left_wrist, right_wrist)
+    if any(point is None for point in arm_points):
         return SignalFrame(frame_idx=frame_idx, time_sec=timestamp_sec, detected=False)
 
     leg_length = max(
@@ -351,6 +357,12 @@ def pose_result_to_signal(
         )
         / 2.0,
     )
+    assert left_shoulder is not None
+    assert right_shoulder is not None
+    assert left_elbow is not None
+    assert right_elbow is not None
+    assert left_wrist is not None
+    assert right_wrist is not None
     return SignalFrame(
         frame_idx=frame_idx,
         time_sec=timestamp_sec,
@@ -491,34 +503,47 @@ class _ButterworthLowPass:
         return out
 
 
+def _wrap_angle_delta(current: float, previous: float) -> float:
+    delta = current - previous
+    while delta > math.pi:
+        delta -= 2.0 * math.pi
+    while delta < -math.pi:
+        delta += 2.0 * math.pi
+    return delta
+
+
 class RealtimeCounterEngine:
     def __init__(self, config: EngineConfig):
         self.config = config
         self.hip_filter = _ButterworthLowPass(config.hip_cutoff_hz)
         self.foot_filter = _ButterworthLowPass(config.foot_cutoff_hz)
-        self.wrist_speed_filter = _ButterworthLowPass(config.wrist_speed_cutoff_hz)
+        self.wrist_snap_filter = _ButterworthLowPass(config.wrist_snap_cutoff_hz)
+        self.wrist_rotation_filter = _ButterworthLowPass(config.wrist_rotation_cutoff_hz)
         self.prev_time_sec: float | None = None
         self.prev_left_wrist: tuple[float, float] | None = None
         self.prev_right_wrist: tuple[float, float] | None = None
         self.prev_shoulder_center: tuple[float, float] | None = None
+        self.prev_left_forearm_angle: float | None = None
+        self.prev_right_forearm_angle: float | None = None
         self.floor_y: float | None = None
         self.hip_ground_baseline: float | None = None
         self.in_air = False
         self.air_start_frame: int | None = None
-        self.air_start_time: float | None = None
         self.air_peak_height_ratio = 0.0
         self.air_peak_hip_ratio = 0.0
         self.air_peak_frames: list[int] = []
         self.air_peak_speeds: list[float] = []
+        self.air_snap_values: list[float] = []
+        self.air_rotation_values: list[float] = []
         self.last_wrist_peak_frame: int | None = None
-        self.last_speed_1: float | None = None
-        self.last_speed_2: float | None = None
+        self.last_snap_1: float | None = None
+        self.last_snap_2: float | None = None
         self.last_accepted_frame: int | None = None
         self.accepted_running_count = 0
         self.jump_interval_history: deque[int] = deque(maxlen=config.adaptive_gap_history)
         self.foot_height_history: deque[float] = deque(maxlen=config.fft_window_frames)
-        self.hip_lift_history: deque[float] = deque(maxlen=config.fft_window_frames)
-        self.wrist_speed_history: deque[float] = deque(maxlen=config.fft_window_frames)
+        self.snap_history: deque[float] = deque(maxlen=config.fft_window_frames)
+        self.rotation_history: deque[float] = deque(maxlen=config.fft_window_frames)
         self.time_delta_history: deque[float] = deque(maxlen=config.fft_window_frames)
         self.last_decision: CounterDecision | None = None
 
@@ -533,10 +558,9 @@ class RealtimeCounterEngine:
             return 30.0, 1.0 / 30.0
         dt = max(1e-3, timestamp_sec - self.prev_time_sec)
         self.time_delta_history.append(dt)
-        fs = 1.0 / dt
-        return fs, dt
+        return 1.0 / dt, dt
 
-    def _wrist_speed_ratio(self, signal: SignalFrame, dt: float, leg_length: float) -> float:
+    def _wrist_snap_ratio(self, signal: SignalFrame, dt: float, leg_length: float) -> float:
         assert signal.left_wrist_x is not None
         assert signal.left_wrist_y is not None
         assert signal.right_wrist_x is not None
@@ -575,6 +599,47 @@ class RealtimeCounterEngine:
         self.prev_shoulder_center = shoulder_center
         return ((left_speed + right_speed) / 2.0) / max(leg_length, 1e-6)
 
+    def _wrist_rotation_ratio(self, signal: SignalFrame, dt: float, leg_length: float) -> float:
+        assert signal.left_elbow_x is not None
+        assert signal.left_elbow_y is not None
+        assert signal.right_elbow_x is not None
+        assert signal.right_elbow_y is not None
+        assert signal.left_wrist_x is not None
+        assert signal.left_wrist_y is not None
+        assert signal.right_wrist_x is not None
+        assert signal.right_wrist_y is not None
+
+        def single_side(
+            elbow: tuple[float, float],
+            wrist: tuple[float, float],
+            previous_angle: float | None,
+        ) -> tuple[float, float | None]:
+            vec_x = wrist[0] - elbow[0]
+            vec_y = wrist[1] - elbow[1]
+            forearm_len = math.hypot(vec_x, vec_y)
+            if forearm_len < 1e-3:
+                return 0.0, previous_angle
+            angle = math.atan2(vec_y, vec_x)
+            if previous_angle is None:
+                return 0.0, angle
+            angular_speed = abs(_wrap_angle_delta(angle, previous_angle)) / dt
+            tangential_speed = (angular_speed * forearm_len) / max(leg_length, 1e-6)
+            return tangential_speed, angle
+
+        left_ratio, left_angle = single_side(
+            (signal.left_elbow_x, signal.left_elbow_y),
+            (signal.left_wrist_x, signal.left_wrist_y),
+            self.prev_left_forearm_angle,
+        )
+        right_ratio, right_angle = single_side(
+            (signal.right_elbow_x, signal.right_elbow_y),
+            (signal.right_wrist_x, signal.right_wrist_y),
+            self.prev_right_forearm_angle,
+        )
+        self.prev_left_forearm_angle = left_angle
+        self.prev_right_forearm_angle = right_angle
+        return (left_ratio + right_ratio) / 2.0
+
     def _dominant_frequency(self, values: deque[float], min_hz: float, max_hz: float) -> tuple[float, float]:
         if len(values) < max(8, self.config.fft_window_frames // 2):
             return 0.0, 0.0
@@ -593,13 +658,13 @@ class RealtimeCounterEngine:
         if not np.any(band_mask):
             return 0.0, 0.0
         band_power = power[band_mask]
-        if float(np.sum(band_power)) <= 0.0:
+        band_sum = float(np.sum(band_power))
+        if band_sum <= 0.0:
             return 0.0, 0.0
         peak_index = int(np.argmax(band_power))
         peak_power = float(band_power[peak_index])
         peak_freq = float(freqs[band_mask][peak_index])
-        power_ratio = peak_power / float(np.sum(band_power))
-        return peak_freq, power_ratio
+        return peak_freq, peak_power / band_sum
 
     def _effective_gap(self) -> tuple[int, bool]:
         min_gap_frames = self.config.min_count_gap_frames
@@ -629,6 +694,8 @@ class RealtimeCounterEngine:
         wrist_peak_count: int,
         wrist_peak_speed_ratio: float,
         wrist_energy_ratio: float,
+        wrist_rotation_ratio: float,
+        wrist_rotation_share: float,
         wrist_fft_peak_hz: float,
         wrist_fft_power_ratio: float,
         wrist_to_jump_ratio: float,
@@ -646,6 +713,8 @@ class RealtimeCounterEngine:
             wrist_peak_count=wrist_peak_count,
             wrist_peak_speed_ratio=wrist_peak_speed_ratio,
             wrist_energy_ratio=wrist_energy_ratio,
+            wrist_rotation_ratio=wrist_rotation_ratio,
+            wrist_rotation_share=wrist_rotation_share,
             wrist_fft_peak_hz=wrist_fft_peak_hz,
             wrist_fft_power_ratio=wrist_fft_power_ratio,
             wrist_to_jump_ratio=wrist_to_jump_ratio,
@@ -656,19 +725,30 @@ class RealtimeCounterEngine:
     def _reset_air_phase(self) -> None:
         self.in_air = False
         self.air_start_frame = None
-        self.air_start_time = None
         self.air_peak_height_ratio = 0.0
         self.air_peak_hip_ratio = 0.0
         self.air_peak_frames.clear()
         self.air_peak_speeds.clear()
+        self.air_snap_values.clear()
+        self.air_rotation_values.clear()
+
+    def _reset_motion_trackers(self) -> None:
+        self.prev_left_wrist = None
+        self.prev_right_wrist = None
+        self.prev_shoulder_center = None
+        self.prev_left_forearm_angle = None
+        self.prev_right_forearm_angle = None
+        self.last_wrist_peak_frame = None
+        self.last_snap_1 = None
+        self.last_snap_2 = None
 
     def _observe_peak(self, frame_idx: int) -> None:
-        if self.last_speed_2 is None or self.last_speed_1 is None:
+        if self.last_snap_2 is None or self.last_snap_1 is None or not self.snap_history:
             return
-        current = self.wrist_speed_history[-1]
-        if self.last_speed_1 < self.config.min_wrist_peak_speed_ratio:
+        current = self.snap_history[-1]
+        if self.last_snap_1 < self.config.min_snap_peak_ratio:
             return
-        if self.last_speed_2 > self.last_speed_1 or current > self.last_speed_1:
+        if self.last_snap_2 > self.last_snap_1 or current > self.last_snap_1:
             return
         if (
             self.last_wrist_peak_frame is not None
@@ -677,7 +757,7 @@ class RealtimeCounterEngine:
             return
         peak_frame = frame_idx - 1
         self.air_peak_frames.append(peak_frame)
-        self.air_peak_speeds.append(self.last_speed_1)
+        self.air_peak_speeds.append(self.last_snap_1)
         self.last_wrist_peak_frame = peak_frame
 
     def warmup(self, signal: SignalFrame) -> None:
@@ -691,6 +771,7 @@ class RealtimeCounterEngine:
     def _step_internal(self, signal: SignalFrame, allow_count: bool) -> CounterEvent | None:
         if not signal.detected:
             self._reset_air_phase()
+            self._reset_motion_trackers()
             self.prev_time_sec = signal.time_sec
             return None
 
@@ -698,8 +779,11 @@ class RealtimeCounterEngine:
         fs, dt = self._sample_rate(signal.time_sec)
         filtered_hip_y = self.hip_filter.filter(mean_hip_y_raw, fs)
         filtered_foot_y = self.foot_filter.filter(mean_foot_y_raw, fs)
-        wrist_speed_ratio_raw = self._wrist_speed_ratio(signal, dt, leg_length)
-        wrist_speed_ratio = self.wrist_speed_filter.filter(wrist_speed_ratio_raw, fs)
+        snap_raw = self._wrist_snap_ratio(signal, dt, leg_length)
+        rotation_raw = self._wrist_rotation_ratio(signal, dt, leg_length)
+        filtered_snap = self.wrist_snap_filter.filter(snap_raw, fs)
+        filtered_rotation = self.wrist_rotation_filter.filter(rotation_raw, fs)
+        combined_snap = max(filtered_snap, filtered_rotation * self.config.rotation_snap_weight)
 
         symmetry_y_ratio = abs(signal.left_foot_y - signal.right_foot_y) / max(leg_length, 1e-6)
         if self.floor_y is None:
@@ -724,27 +808,30 @@ class RealtimeCounterEngine:
         hip_lift_ratio = max(0.0, (self.hip_ground_baseline - filtered_hip_y) / max(leg_length, 1e-6))
 
         self.foot_height_history.append(jump_height_ratio)
-        self.hip_lift_history.append(hip_lift_ratio)
-        self.wrist_speed_history.append(wrist_speed_ratio)
+        self.snap_history.append(combined_snap)
+        self.rotation_history.append(filtered_rotation)
         self._observe_peak(signal.frame_idx)
-        self.last_speed_2 = self.last_speed_1
-        self.last_speed_1 = wrist_speed_ratio
+        self.last_snap_2 = self.last_snap_1
+        self.last_snap_1 = combined_snap
 
         if not self.in_air:
-            if not contact_gate and jump_height_ratio >= (self.config.min_long_airborne_height_ratio * 0.7):
+            if not contact_gate and jump_height_ratio >= (self.config.min_long_airborne_height_ratio * 0.70):
                 self.in_air = True
                 self.air_start_frame = signal.frame_idx
-                self.air_start_time = signal.time_sec
                 self.air_peak_height_ratio = jump_height_ratio
                 self.air_peak_hip_ratio = hip_lift_ratio
                 self.air_peak_frames.clear()
                 self.air_peak_speeds.clear()
+                self.air_snap_values.clear()
+                self.air_rotation_values.clear()
                 self.last_wrist_peak_frame = None
             self.prev_time_sec = signal.time_sec
             return None
 
         self.air_peak_height_ratio = max(self.air_peak_height_ratio, jump_height_ratio)
         self.air_peak_hip_ratio = max(self.air_peak_hip_ratio, hip_lift_ratio)
+        self.air_snap_values.append(combined_snap)
+        self.air_rotation_values.append(filtered_rotation)
 
         if not contact_gate:
             if self.air_start_frame is not None:
@@ -763,7 +850,7 @@ class RealtimeCounterEngine:
         wrist_peak_count = len(self.air_peak_frames)
         wrist_peak_speed_ratio = max(self.air_peak_speeds, default=0.0)
         wrist_fft_peak_hz, wrist_fft_power_ratio = self._dominant_frequency(
-            self.wrist_speed_history,
+            self.snap_history,
             min_hz=2.0,
             max_hz=12.0,
         )
@@ -773,7 +860,9 @@ class RealtimeCounterEngine:
             max_hz=4.0,
         )
         wrist_to_jump_ratio = wrist_fft_peak_hz / max(jump_fft_hz, 1e-6) if jump_fft_hz > 0 else 0.0
-        wrist_energy_ratio = float(np.mean(self.air_peak_speeds)) if self.air_peak_speeds else 0.0
+        wrist_energy_ratio = float(np.mean(self.air_snap_values)) if self.air_snap_values else 0.0
+        wrist_rotation_ratio = float(np.mean(self.air_rotation_values)) if self.air_rotation_values else 0.0
+        wrist_rotation_share = wrist_rotation_ratio / max(wrist_energy_ratio, 1e-6)
         min_gap_frames, cadence_locked = self._effective_gap()
 
         if not allow_count:
@@ -793,6 +882,8 @@ class RealtimeCounterEngine:
                 wrist_peak_count,
                 wrist_peak_speed_ratio,
                 wrist_energy_ratio,
+                wrist_rotation_ratio,
+                wrist_rotation_share,
                 wrist_fft_peak_hz,
                 wrist_fft_power_ratio,
                 wrist_to_jump_ratio,
@@ -812,6 +903,8 @@ class RealtimeCounterEngine:
                 wrist_peak_count,
                 wrist_peak_speed_ratio,
                 wrist_energy_ratio,
+                wrist_rotation_ratio,
+                wrist_rotation_share,
                 wrist_fft_peak_hz,
                 wrist_fft_power_ratio,
                 wrist_to_jump_ratio,
@@ -837,6 +930,8 @@ class RealtimeCounterEngine:
                 wrist_peak_count,
                 wrist_peak_speed_ratio,
                 wrist_energy_ratio,
+                wrist_rotation_ratio,
+                wrist_rotation_share,
                 wrist_fft_peak_hz,
                 wrist_fft_power_ratio,
                 wrist_to_jump_ratio,
@@ -856,6 +951,8 @@ class RealtimeCounterEngine:
                 wrist_peak_count,
                 wrist_peak_speed_ratio,
                 wrist_energy_ratio,
+                wrist_rotation_ratio,
+                wrist_rotation_share,
                 wrist_fft_peak_hz,
                 wrist_fft_power_ratio,
                 wrist_to_jump_ratio,
@@ -865,25 +962,18 @@ class RealtimeCounterEngine:
             self._reset_air_phase()
             self.prev_time_sec = signal.time_sec
             return None
-        wrist_peak_ok = (
-            wrist_peak_count >= self.config.min_wrist_peak_count
-            and wrist_peak_speed_ratio >= self.config.min_wrist_peak_speed_ratio
-        )
-        wrist_fft_ok = (
-            wrist_fft_peak_hz >= self.config.min_fft_peak_hz
-            and wrist_fft_power_ratio >= self.config.min_fft_power_ratio
-            and wrist_to_jump_ratio >= self.config.min_fft_wrist_to_jump_ratio
-        )
-        if not wrist_peak_ok and not wrist_fft_ok:
+        if wrist_peak_count < self.config.min_wrist_peak_count:
             self._set_reject(
                 signal,
-                "wrist_rotation",
+                "wrist_peaks",
                 airtime_frames,
                 self.air_peak_height_ratio,
                 self.air_peak_hip_ratio,
                 wrist_peak_count,
                 wrist_peak_speed_ratio,
                 wrist_energy_ratio,
+                wrist_rotation_ratio,
+                wrist_rotation_share,
                 wrist_fft_peak_hz,
                 wrist_fft_power_ratio,
                 wrist_to_jump_ratio,
@@ -893,7 +983,28 @@ class RealtimeCounterEngine:
             self._reset_air_phase()
             self.prev_time_sec = signal.time_sec
             return None
-        if wrist_energy_ratio < self.config.min_wrist_energy_ratio:
+        if wrist_peak_speed_ratio < self.config.min_snap_peak_ratio:
+            self._set_reject(
+                signal,
+                "wrist_peak_speed",
+                airtime_frames,
+                self.air_peak_height_ratio,
+                self.air_peak_hip_ratio,
+                wrist_peak_count,
+                wrist_peak_speed_ratio,
+                wrist_energy_ratio,
+                wrist_rotation_ratio,
+                wrist_rotation_share,
+                wrist_fft_peak_hz,
+                wrist_fft_power_ratio,
+                wrist_to_jump_ratio,
+                min_gap_frames,
+                cadence_locked,
+            )
+            self._reset_air_phase()
+            self.prev_time_sec = signal.time_sec
+            return None
+        if wrist_energy_ratio < self.config.min_snap_energy_ratio:
             self._set_reject(
                 signal,
                 "wrist_energy",
@@ -903,6 +1014,76 @@ class RealtimeCounterEngine:
                 wrist_peak_count,
                 wrist_peak_speed_ratio,
                 wrist_energy_ratio,
+                wrist_rotation_ratio,
+                wrist_rotation_share,
+                wrist_fft_peak_hz,
+                wrist_fft_power_ratio,
+                wrist_to_jump_ratio,
+                min_gap_frames,
+                cadence_locked,
+            )
+            self._reset_air_phase()
+            self.prev_time_sec = signal.time_sec
+            return None
+        if wrist_rotation_ratio < self.config.min_rotation_energy_ratio:
+            self._set_reject(
+                signal,
+                "wrist_rotation_energy",
+                airtime_frames,
+                self.air_peak_height_ratio,
+                self.air_peak_hip_ratio,
+                wrist_peak_count,
+                wrist_peak_speed_ratio,
+                wrist_energy_ratio,
+                wrist_rotation_ratio,
+                wrist_rotation_share,
+                wrist_fft_peak_hz,
+                wrist_fft_power_ratio,
+                wrist_to_jump_ratio,
+                min_gap_frames,
+                cadence_locked,
+            )
+            self._reset_air_phase()
+            self.prev_time_sec = signal.time_sec
+            return None
+        wrist_fft_ok = (
+            wrist_fft_peak_hz >= self.config.min_fft_peak_hz
+            and wrist_fft_power_ratio >= self.config.min_fft_power_ratio
+            and wrist_to_jump_ratio >= self.config.min_fft_wrist_to_jump_ratio
+        )
+        if wrist_rotation_share < self.config.min_rotation_share_ratio and not wrist_fft_ok:
+            self._set_reject(
+                signal,
+                "wrist_rotation_pattern",
+                airtime_frames,
+                self.air_peak_height_ratio,
+                self.air_peak_hip_ratio,
+                wrist_peak_count,
+                wrist_peak_speed_ratio,
+                wrist_energy_ratio,
+                wrist_rotation_ratio,
+                wrist_rotation_share,
+                wrist_fft_peak_hz,
+                wrist_fft_power_ratio,
+                wrist_to_jump_ratio,
+                min_gap_frames,
+                cadence_locked,
+            )
+            self._reset_air_phase()
+            self.prev_time_sec = signal.time_sec
+            return None
+        if not wrist_fft_ok and wrist_peak_count < (self.config.min_wrist_peak_count + 1):
+            self._set_reject(
+                signal,
+                "wrist_fft",
+                airtime_frames,
+                self.air_peak_height_ratio,
+                self.air_peak_hip_ratio,
+                wrist_peak_count,
+                wrist_peak_speed_ratio,
+                wrist_energy_ratio,
+                wrist_rotation_ratio,
+                wrist_rotation_share,
                 wrist_fft_peak_hz,
                 wrist_fft_power_ratio,
                 wrist_to_jump_ratio,
@@ -928,6 +1109,8 @@ class RealtimeCounterEngine:
             wrist_peak_count=wrist_peak_count,
             wrist_peak_speed_ratio=wrist_peak_speed_ratio,
             wrist_energy_ratio=wrist_energy_ratio,
+            wrist_rotation_ratio=wrist_rotation_ratio,
+            wrist_rotation_share=wrist_rotation_share,
             wrist_fft_peak_hz=wrist_fft_peak_hz,
             wrist_fft_power_ratio=wrist_fft_power_ratio,
             wrist_to_jump_ratio=wrist_to_jump_ratio,
@@ -1111,17 +1294,17 @@ def default_search_configs(limit: int | None = None) -> list[EngineConfig]:
             min_airborne_frames=values[0],
             min_jump_height_ratio=values[1],
             min_hip_lift_ratio=values[2],
-            min_wrist_peak_speed_ratio=values[3],
-            min_fft_power_ratio=values[4],
+            min_snap_peak_ratio=values[3],
+            min_rotation_energy_ratio=values[4],
             min_count_gap_frames=values[5],
         )
         for values in product(
             [6, 7, 8],
-            [0.10, 0.11, 0.12],
-            [0.05, 0.06, 0.07],
-            [0.75, 0.85, 0.95],
-            [0.28, 0.34, 0.40],
-            [8, 9, 10],
+            [0.09, 0.10, 0.11],
+            [0.04, 0.05, 0.06],
+            [0.65, 0.75, 0.85],
+            [0.22, 0.28, 0.34],
+            [7, 8, 9],
         )
     ]
     if limit is not None:
