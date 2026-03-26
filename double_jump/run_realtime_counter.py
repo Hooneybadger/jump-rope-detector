@@ -37,10 +37,11 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--ready-visible-ratio", type=float, default=0.80)
     parser.add_argument("--ready-dropout-seconds", type=float, default=0.35)
     parser.add_argument("--min-airborne-frames", type=int, default=EngineConfig.min_airborne_frames)
-    parser.add_argument("--min-jump-height-ratio", type=float, default=EngineConfig.min_jump_height_ratio)
-    parser.add_argument("--min-hip-lift-ratio", type=float, default=EngineConfig.min_hip_lift_ratio)
-    parser.add_argument("--min-wrist-peak-count", type=int, default=EngineConfig.min_wrist_peak_count)
-    parser.add_argument("--min-wrist-peak-speed-ratio", type=float, default=EngineConfig.min_wrist_peak_speed_ratio)
+    parser.add_argument("--min-wrist-rotation-count", type=float, default=EngineConfig.min_wrist_rotation_count)
+    parser.add_argument("--max-wrist-rotation-count", type=float, default=EngineConfig.max_wrist_rotation_count)
+    parser.add_argument("--min-wrist-rotation-balance", type=float, default=EngineConfig.min_wrist_rotation_balance)
+    parser.add_argument("--min-phase-sync-ratio", type=float, default=EngineConfig.min_phase_sync_ratio)
+    parser.add_argument("--min-rotation-cadence-hz", type=float, default=EngineConfig.min_rotation_cadence_hz)
     parser.add_argument("--min-fft-power-ratio", type=float, default=EngineConfig.min_fft_power_ratio)
     parser.add_argument("--min-count-gap-frames", type=int, default=EngineConfig.min_count_gap_frames)
     parser.add_argument("--disable-adaptive-filter", action="store_true", help="Disable cadence-adaptive realtime thresholds.")
@@ -199,10 +200,11 @@ def main() -> None:
     fps = float(capture.get(cv2.CAP_PROP_FPS) or 30.0)
     config = EngineConfig(
         min_airborne_frames=args.min_airborne_frames,
-        min_jump_height_ratio=args.min_jump_height_ratio,
-        min_hip_lift_ratio=args.min_hip_lift_ratio,
-        min_wrist_peak_count=args.min_wrist_peak_count,
-        min_wrist_peak_speed_ratio=args.min_wrist_peak_speed_ratio,
+        min_wrist_rotation_count=args.min_wrist_rotation_count,
+        max_wrist_rotation_count=args.max_wrist_rotation_count,
+        min_wrist_rotation_balance=args.min_wrist_rotation_balance,
+        min_phase_sync_ratio=args.min_phase_sync_ratio,
+        min_rotation_cadence_hz=args.min_rotation_cadence_hz,
         min_fft_power_ratio=args.min_fft_power_ratio,
         min_count_gap_frames=args.min_count_gap_frames,
         adaptive_gap_enabled=not args.disable_adaptive_filter,
@@ -260,14 +262,14 @@ def main() -> None:
                     print(
                         f"[reject] frame={decision.frame_idx} reason={decision.reason} "
                         f"air={decision.airtime_frames} "
-                        f"jump={decision.jump_height_ratio:.3f} "
-                        f"hip={decision.hip_lift_ratio:.3f} "
-                        f"wrist_peaks={decision.wrist_peak_count} "
-                        f"wrist_peak={decision.wrist_peak_speed_ratio:.3f} "
-                        f"wrist_energy={decision.wrist_energy_ratio:.3f} "
+                        f"rot_l={decision.left_rotation_count:.2f} "
+                        f"rot_r={decision.right_rotation_count:.2f} "
+                        f"rot_avg={decision.wrist_rotation_count:.2f} "
+                        f"balance={decision.wrist_rotation_balance:.2f} "
+                        f"sync={decision.phase_sync_ratio:.2f} "
+                        f"cadence={decision.wrist_rotation_cadence_hz:.2f}Hz "
                         f"fft={decision.wrist_fft_peak_hz:.2f}Hz "
                         f"fft_power={decision.wrist_fft_power_ratio:.2f} "
-                        f"wrist_jump={decision.wrist_to_jump_ratio:.2f} "
                         f"min_gap={decision.min_gap_frames} "
                         f"adaptive={int(decision.cadence_locked)}"
                     )
