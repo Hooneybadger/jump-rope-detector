@@ -3,6 +3,7 @@ from __future__ import annotations
 import argparse
 import sys
 import time
+from dataclasses import replace
 from pathlib import Path
 
 import cv2
@@ -26,6 +27,7 @@ mp_pose = mp.solutions.pose
 
 
 def parse_args() -> argparse.Namespace:
+    base_config = EngineConfig()
     parser = argparse.ArgumentParser(description="Run the double-jump counter on a realtime stream.")
     parser.add_argument("--source", default="0", help="Camera index like `0` or a video file path.")
     parser.add_argument("--save-output", default=None, help="Optional output video path for saving the realtime demo.")
@@ -36,13 +38,15 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--ready-visibility-threshold", type=float, default=0.30)
     parser.add_argument("--ready-visible-ratio", type=float, default=0.80)
     parser.add_argument("--ready-dropout-seconds", type=float, default=0.35)
-    parser.add_argument("--min-airborne-frames", type=int, default=EngineConfig.min_airborne_frames)
-    parser.add_argument("--min-jump-height-ratio", type=float, default=EngineConfig.min_jump_height_ratio)
-    parser.add_argument("--min-hip-lift-ratio", type=float, default=EngineConfig.min_hip_lift_ratio)
-    parser.add_argument("--min-wrist-peak-count", type=int, default=EngineConfig.min_wrist_peak_count)
-    parser.add_argument("--min-wrist-peak-speed-ratio", type=float, default=EngineConfig.min_wrist_peak_speed_ratio)
-    parser.add_argument("--min-fft-power-ratio", type=float, default=EngineConfig.min_fft_power_ratio)
-    parser.add_argument("--min-count-gap-frames", type=int, default=EngineConfig.min_count_gap_frames)
+    parser.add_argument("--min-airborne-frames", type=int, default=base_config.min_airborne_frames)
+    parser.add_argument("--min-jump-height-ratio", type=float, default=base_config.min_jump_height_ratio)
+    parser.add_argument("--min-hip-lift-ratio", type=float, default=base_config.min_hip_lift_ratio)
+    parser.add_argument("--min-wrist-peak-count", type=int, default=base_config.min_wrist_peak_count)
+    parser.add_argument("--min-wrist-peak-speed-ratio", type=float, default=base_config.min_wrist_peak_speed_ratio)
+    parser.add_argument("--min-fft-power-ratio", type=float, default=base_config.min_fft_power_ratio)
+    parser.add_argument("--min-rotation-count", type=float, default=base_config.min_wrist_rotation_count)
+    parser.add_argument("--max-rotation-count", type=float, default=base_config.max_wrist_rotation_count)
+    parser.add_argument("--min-count-gap-frames", type=int, default=base_config.min_count_gap_frames)
     parser.add_argument("--disable-adaptive-filter", action="store_true", help="Disable cadence-adaptive realtime thresholds.")
     parser.add_argument("--debug-filter", action="store_true", help="Print rejected count candidates and reasons.")
     return parser.parse_args()
@@ -109,13 +113,21 @@ def _ease_out(progress: float) -> float:
     return 1.0 - ((1.0 - progress) * (1.0 - progress))
 
 
-def _draw_overlay(frame, stream_state, running_count: int, count_ready: bool, countdown_total_sec: float, count_pulse_progress: float) -> None:
+def _draw_overlay(
+    frame,
+    stream_state,
+    running_count: int,
+    count_ready: bool,
+    countdown_total_sec: float,
+    count_pulse_progress: float,
+    monitor,
+) -> None:
     height, width = frame.shape[:2]
     accent = _phase_color(stream_state.phase)
     pulse = _ease_out(count_pulse_progress)
 
     panel_x, panel_y = 18, 18
-    panel_w, panel_h = min(280, width - 36), 108
+    panel_w, panel_h = min(340, width - 36), 164
     _draw_panel(frame, (panel_x, panel_y), (panel_x + panel_w, panel_y + panel_h), (18, 22, 28), 0.58)
     cv2.line(frame, (panel_x + 14, panel_y + 16), (panel_x + 14, panel_y + panel_h - 16), accent, 4)
 
@@ -137,6 +149,30 @@ def _draw_overlay(frame, stream_state, running_count: int, count_ready: bool, co
         progress_value = 1.0
     _draw_progress_bar(frame, (panel_x + 32, panel_y + 84), (panel_w - 52, 8), progress_value, accent)
 
+    if monitor is not None and monitor.detected:
+        if monitor.wrist_period_sec > 0.0:
+            wrist_line = (
+                f"Wrist {monitor.wrist_period_sec * 1000.0:4.0f}ms"
+                f"  {monitor.wrist_cadence_hz:3.1f}Hz"
+                f"  conf {int(round(monitor.wrist_period_confidence * 100.0)):02d}%"
+            )
+        else:
+            wrist_line = "Wrist learning..."
+        phase_line = (
+            f"Rot {monitor.wrist_rotation_count:3.2f}x"
+            f"  bal {monitor.wrist_rotation_balance:3.2f}"
+            f"  prof {monitor.cadence_profile_ratio:3.2f}"
+        )
+        jump_line = (
+            f"Air {int(monitor.in_air)}"
+            f"  jump {monitor.jump_height_ratio:3.2f}"
+            f"  hip {monitor.hip_lift_ratio:3.2f}"
+            f"  wrist {monitor.wrist_speed_ratio:3.2f}"
+        )
+        _draw_text(frame, wrist_line, (panel_x + 32, panel_y + 116), 0.47, (230, 230, 230), 1)
+        _draw_text(frame, phase_line, (panel_x + 32, panel_y + 136), 0.47, (230, 230, 230), 1)
+        _draw_text(frame, jump_line, (panel_x + 32, panel_y + 156), 0.47, (230, 230, 230), 1)
+
 
 def _create_video_writer(path: str | Path, fps: float, frame_shape) -> cv2.VideoWriter:
     path = Path(path)
@@ -155,13 +191,16 @@ def main() -> None:
         raise RuntimeError(f"Unable to open stream source: {args.source}")
 
     fps = float(capture.get(cv2.CAP_PROP_FPS) or 30.0)
-    config = EngineConfig(
+    config = replace(
+        EngineConfig(),
         min_airborne_frames=args.min_airborne_frames,
         min_jump_height_ratio=args.min_jump_height_ratio,
         min_hip_lift_ratio=args.min_hip_lift_ratio,
         min_wrist_peak_count=args.min_wrist_peak_count,
         min_wrist_peak_speed_ratio=args.min_wrist_peak_speed_ratio,
         min_fft_power_ratio=args.min_fft_power_ratio,
+        min_wrist_rotation_count=args.min_rotation_count,
+        max_wrist_rotation_count=args.max_rotation_count,
         min_count_gap_frames=args.min_count_gap_frames,
         adaptive_gap_enabled=not args.disable_adaptive_filter,
     )
@@ -222,6 +261,10 @@ def main() -> None:
                         f"fft={decision.wrist_fft_peak_hz:.2f}Hz "
                         f"fft_power={decision.wrist_fft_power_ratio:.2f} "
                         f"wrist_jump={decision.wrist_to_jump_ratio:.2f} "
+                        f"rot={decision.wrist_rotation_count:.2f} "
+                        f"bal={decision.wrist_rotation_balance:.2f} "
+                        f"cad={decision.wrist_rotation_cadence_hz:.2f}Hz "
+                        f"period={decision.wrist_period_frames:.1f}f "
                         f"min_gap={decision.min_gap_frames} "
                         f"adaptive={int(decision.cadence_locked)}"
                     )
@@ -236,7 +279,15 @@ def main() -> None:
                         landmark_drawing_spec=mp_drawing_styles.get_default_pose_landmarks_style(),
                     )
                 count_pulse_progress = count_pulse_remaining_frames / count_pulse_total_frames if count_pulse_total_frames > 0 else 0.0
-                _draw_overlay(display_frame, stream_state, accepted_count, count_ready, args.countdown_seconds, count_pulse_progress)
+                _draw_overlay(
+                    display_frame,
+                    stream_state,
+                    accepted_count,
+                    count_ready,
+                    args.countdown_seconds,
+                    count_pulse_progress,
+                    None if engine is None else engine.monitor,
+                )
 
                 if args.save_output:
                     if writer is None:
