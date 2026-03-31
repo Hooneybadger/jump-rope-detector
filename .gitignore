@@ -209,7 +209,6 @@ __marimo__/
 # Big files
 */label/
 */video/
-*.mp4
 
 # Codex
 AGENTS.md
