@@ -28,7 +28,7 @@ mp_pose = mp.solutions.pose
 
 def parse_args() -> argparse.Namespace:
     base_config = EngineConfig()
-    parser = argparse.ArgumentParser(description="Run the double-jump counter on a realtime stream.")
+    parser = argparse.ArgumentParser(description="Run the redesigned double-jump counter on a realtime stream.")
     parser.add_argument("--source", default="0", help="Camera index like `0` or a video file path.")
     parser.add_argument("--save-output", default=None, help="Optional output video path for saving the realtime demo.")
     parser.add_argument("--no-display", action="store_true", help="Disable OpenCV window rendering.")
@@ -38,14 +38,14 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--ready-visibility-threshold", type=float, default=0.30)
     parser.add_argument("--ready-visible-ratio", type=float, default=0.80)
     parser.add_argument("--ready-dropout-seconds", type=float, default=0.35)
-    parser.add_argument("--min-airborne-frames", type=int, default=base_config.min_airborne_frames)
-    parser.add_argument("--min-jump-height-ratio", type=float, default=base_config.min_jump_height_ratio)
-    parser.add_argument("--min-hip-lift-ratio", type=float, default=base_config.min_hip_lift_ratio)
+    parser.add_argument("--contact-margin-ratio", type=float, default=base_config.contact_margin_ratio)
+    parser.add_argument("--min-hip-range-ratio", type=float, default=base_config.min_hip_range_ratio)
+    parser.add_argument("--min-foot-range-ratio", type=float, default=base_config.min_foot_range_ratio)
+    parser.add_argument("--min-recent-hip-range-ratio", type=float, default=base_config.min_recent_hip_range_ratio)
+    parser.add_argument("--max-foot-to-hip-ratio", type=float, default=base_config.max_foot_to_hip_ratio)
     parser.add_argument("--min-wrist-peak-count", type=int, default=base_config.min_wrist_peak_count)
     parser.add_argument("--min-wrist-peak-speed-ratio", type=float, default=base_config.min_wrist_peak_speed_ratio)
     parser.add_argument("--min-fft-power-ratio", type=float, default=base_config.min_fft_power_ratio)
-    parser.add_argument("--min-rotation-count", type=float, default=base_config.min_wrist_rotation_count)
-    parser.add_argument("--max-rotation-count", type=float, default=base_config.max_wrist_rotation_count)
     parser.add_argument("--min-count-gap-frames", type=int, default=base_config.min_count_gap_frames)
     parser.add_argument("--disable-adaptive-filter", action="store_true", help="Disable cadence-adaptive realtime thresholds.")
     parser.add_argument("--debug-filter", action="store_true", help="Print rejected count candidates and reasons.")
@@ -138,7 +138,7 @@ def _draw_overlay(
     _draw_text(frame, "Count", (panel_x + 32, panel_y + 30), 0.58, (210, 220, 230), 1)
     _draw_text(frame, str(running_count), (panel_x + 32, panel_y + 72), 1.35 + (0.20 * pulse), (255, 255, 255), 2 + int(round(pulse)))
     _draw_text(frame, stream_state.phase.lower(), (panel_x + 128, panel_y + 34), 0.58, accent, 1)
-    status_line = "Ready to count" if count_ready else "Show wrists and feet"
+    status_line = "Ready to count" if count_ready else "Show hips and feet"
     _draw_text(frame, status_line, (panel_x + 128, panel_y + 60), 0.54, (220, 220, 220), 1)
 
     if stream_state.phase == "SEARCHING":
@@ -159,15 +159,14 @@ def _draw_overlay(
         else:
             wrist_line = "Wrist learning..."
         phase_line = (
-            f"Rot {monitor.wrist_rotation_count:3.2f}x"
-            f"  bal {monitor.wrist_rotation_balance:3.2f}"
-            f"  prof {monitor.cadence_profile_ratio:3.2f}"
+            f"Foot {monitor.jump_height_ratio:3.2f}"
+            f"  Hip {monitor.hip_lift_ratio:3.2f}"
+            f"  contact {int(monitor.contact_gate)}"
         )
         jump_line = (
-            f"Air {int(monitor.in_air)}"
-            f"  jump {monitor.jump_height_ratio:3.2f}"
-            f"  hip {monitor.hip_lift_ratio:3.2f}"
-            f"  wrist {monitor.wrist_speed_ratio:3.2f}"
+            f"Wrist {monitor.wrist_speed_ratio:3.2f}"
+            f"  rot {monitor.wrist_rotation_count:3.2f}"
+            f"  prof {monitor.cadence_profile_ratio:3.2f}"
         )
         _draw_text(frame, wrist_line, (panel_x + 32, panel_y + 116), 0.47, (230, 230, 230), 1)
         _draw_text(frame, phase_line, (panel_x + 32, panel_y + 136), 0.47, (230, 230, 230), 1)
@@ -193,14 +192,14 @@ def main() -> None:
     fps = float(capture.get(cv2.CAP_PROP_FPS) or 30.0)
     config = replace(
         EngineConfig(),
-        min_airborne_frames=args.min_airborne_frames,
-        min_jump_height_ratio=args.min_jump_height_ratio,
-        min_hip_lift_ratio=args.min_hip_lift_ratio,
+        contact_margin_ratio=args.contact_margin_ratio,
+        min_hip_range_ratio=args.min_hip_range_ratio,
+        min_foot_range_ratio=args.min_foot_range_ratio,
+        min_recent_hip_range_ratio=args.min_recent_hip_range_ratio,
+        max_foot_to_hip_ratio=args.max_foot_to_hip_ratio,
         min_wrist_peak_count=args.min_wrist_peak_count,
         min_wrist_peak_speed_ratio=args.min_wrist_peak_speed_ratio,
         min_fft_power_ratio=args.min_fft_power_ratio,
-        min_wrist_rotation_count=args.min_rotation_count,
-        max_wrist_rotation_count=args.max_rotation_count,
         min_count_gap_frames=args.min_count_gap_frames,
         adaptive_gap_enabled=not args.disable_adaptive_filter,
     )
@@ -229,7 +228,11 @@ def main() -> None:
 
             timestamp_sec = _frame_timestamp(frame_idx, fps, is_camera, stream_start_sec)
             signal, result = extractor.process_bgr_frame(frame, frame_idx, timestamp_sec)
-            count_ready = core_landmarks_visible(result, args.ready_visibility_threshold, args.ready_visible_ratio)
+            count_ready = signal.detected or core_landmarks_visible(
+                result,
+                args.ready_visibility_threshold,
+                args.ready_visible_ratio,
+            )
             stream_state = gate.update(count_ready, timestamp_sec)
             phase_changed = stream_state.phase != last_phase
             engine = _ensure_engine(engine, stream_state.phase, count_ready, config)
@@ -252,8 +255,7 @@ def main() -> None:
                     decision = engine.last_decision
                     print(
                         f"[reject] frame={decision.frame_idx} reason={decision.reason} "
-                        f"air={decision.airtime_frames} "
-                        f"jump={decision.jump_height_ratio:.3f} "
+                        f"foot={decision.jump_height_ratio:.3f} "
                         f"hip={decision.hip_lift_ratio:.3f} "
                         f"wrist_peaks={decision.wrist_peak_count} "
                         f"wrist_peak={decision.wrist_peak_speed_ratio:.3f} "

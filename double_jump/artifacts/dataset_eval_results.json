@@ -1,0 +1,99 @@
+{
+  "config": {
+    "hip_visibility_threshold": 0.5,
+    "foot_visibility_threshold": 0.35,
+    "arm_visibility_threshold": 0.18,
+    "wrist_visibility_threshold": 0.1,
+    "foot_cutoff_hz": 4.0,
+    "hip_cutoff_hz": 3.2,
+    "wrist_speed_cutoff_hz": 6.5,
+    "ground_baseline_alpha": 0.18,
+    "floor_decay_ratio": 0.003,
+    "contact_margin_ratio": 0.08,
+    "symmetry_y_ratio": 0.14,
+    "takeoff_height_ratio": 0.035,
+    "takeoff_hip_ratio": 0.02,
+    "min_count_gap_frames": 8,
+    "min_airborne_frames": 4,
+    "max_airborne_frames": 34,
+    "min_jump_height_ratio": 0.045,
+    "min_hip_lift_ratio": 0.022,
+    "min_wrist_peak_count": 1,
+    "min_wrist_peak_speed_ratio": 0.2,
+    "min_wrist_energy_ratio": 0.1,
+    "wrist_peak_refractory_frames": 2,
+    "fft_window_frames": 48,
+    "min_fft_peak_hz": 1.6,
+    "min_fft_power_ratio": 0.12,
+    "min_fft_wrist_to_jump_ratio": 0.85,
+    "adaptive_gap_enabled": true,
+    "adaptive_gap_factor": 0.72,
+    "adaptive_gap_history": 5,
+    "adaptive_gap_min_intervals": 2,
+    "adaptive_gap_floor_frames": 5,
+    "search_wrist_peak_count": 1,
+    "min_wrist_rotation_count": 0.85,
+    "max_wrist_rotation_count": 3.6,
+    "target_wrist_rotation_count": 1.7,
+    "rotation_count_tolerance": 0.95,
+    "min_wrist_rotation_balance": 0.3,
+    "wrist_period_history_size": 12,
+    "accepted_profile_history_size": 6,
+    "cadence_similarity_min_ratio": 0.3
+  },
+  "label_window": {
+    "start_offset_frames": -15,
+    "end_offset_frames": 3,
+    "warmup_frames": 10
+  },
+  "summary": {
+    "overall_count_accuracy": 0.0,
+    "exact_video_count_accuracy": 0.0,
+    "videos": [
+      {
+        "stem": "1",
+        "gt_count": 103,
+        "predicted_count": 0,
+        "count_error": -103,
+        "exact_match": false,
+        "eval_start_frame": 292,
+        "eval_end_frame": 2071,
+        "predicted_frames": []
+      },
+      {
+        "stem": "2",
+        "gt_count": 68,
+        "predicted_count": 0,
+        "count_error": -68,
+        "exact_match": false,
+        "eval_start_frame": 0,
+        "eval_end_frame": 928,
+        "predicted_frames": []
+      },
+      {
+        "stem": "3",
+        "gt_count": 67,
+        "predicted_count": 0,
+        "count_error": -67,
+        "exact_match": false,
+        "eval_start_frame": 998,
+        "eval_end_frame": 2771,
+        "predicted_frames": []
+      },
+      {
+        "stem": "4",
+        "gt_count": 105,
+        "predicted_count": 0,
+        "count_error": -105,
+        "exact_match": false,
+        "eval_start_frame": 296,
+        "eval_end_frame": 2066,
+        "predicted_frames": []
+      }
+    ],
+    "total_gt_count": 343,
+    "total_predicted_count": 0,
+    "signed_total_error": -343,
+    "total_abs_error": 343
+  }
+}

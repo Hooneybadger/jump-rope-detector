@@ -48,43 +48,93 @@ CORE_READY_LANDMARKS = (
 class EngineConfig:
     hip_visibility_threshold: float = 0.50
     foot_visibility_threshold: float = 0.35
-    arm_visibility_threshold: float = 0.30
-    foot_cutoff_hz: float = 4.0
-    hip_cutoff_hz: float = 3.2
-    wrist_speed_cutoff_hz: float = 6.5
-    ground_baseline_alpha: float = 0.18
-    floor_decay_ratio: float = 0.003
-    contact_margin_ratio: float = 0.08
-    symmetry_y_ratio: float = 0.14
-    takeoff_height_ratio: float = 0.035
-    takeoff_hip_ratio: float = 0.020
-    min_count_gap_frames: int = 8
-    min_airborne_frames: int = 4
-    max_airborne_frames: int = 34
-    min_jump_height_ratio: float = 0.045
-    min_hip_lift_ratio: float = 0.022
-    min_wrist_peak_count: int = 2
-    min_wrist_peak_speed_ratio: float = 0.34
-    min_wrist_energy_ratio: float = 0.24
+    arm_visibility_threshold: float = 0.18
+    wrist_visibility_threshold: float = 0.10
+    foot_cutoff_hz: float = 5.0
+    hip_cutoff_hz: float = 4.0
+    wrist_speed_cutoff_hz: float = 7.0
+    ground_baseline_alpha: float = 0.12
+    floor_decay_ratio: float = 0.004
+    contact_margin_ratio: float = 0.10
+    symmetry_y_ratio: float = 0.18
+    takeoff_height_ratio: float = 0.016
+    takeoff_hip_ratio: float = 0.010
+    min_count_gap_frames: int = 6
+    min_airborne_frames: int = 2
+    max_airborne_frames: int = 28
+    min_jump_height_ratio: float = 0.018
+    min_hip_lift_ratio: float = 0.010
+    min_wrist_peak_count: int = 1
+    min_wrist_peak_speed_ratio: float = 0.06
+    min_wrist_energy_ratio: float = 0.035
     wrist_peak_refractory_frames: int = 2
-    fft_window_frames: int = 48
-    min_fft_peak_hz: float = 2.2
-    min_fft_power_ratio: float = 0.24
-    min_fft_wrist_to_jump_ratio: float = 1.20
+    fft_window_frames: int = 36
+    min_fft_peak_hz: float = 2.0
+    min_fft_power_ratio: float = 0.08
+    min_fft_wrist_to_jump_ratio: float = 0.60
     adaptive_gap_enabled: bool = True
-    adaptive_gap_factor: float = 0.72
-    adaptive_gap_history: int = 5
+    adaptive_gap_factor: float = 0.68
+    adaptive_gap_history: int = 6
     adaptive_gap_min_intervals: int = 2
-    adaptive_gap_floor_frames: int = 5
-    search_wrist_peak_count: int = 2
-    min_wrist_rotation_count: float = 1.55
-    max_wrist_rotation_count: float = 2.80
-    target_wrist_rotation_count: float = 2.0
-    rotation_count_tolerance: float = 0.42
-    min_wrist_rotation_balance: float = 0.58
+    adaptive_gap_floor_frames: int = 4
+    search_wrist_peak_count: int = 1
+    min_wrist_rotation_count: float = 0.35
+    max_wrist_rotation_count: float = 5.00
+    target_wrist_rotation_count: float = 1.50
+    rotation_count_tolerance: float = 1.20
+    min_wrist_rotation_balance: float = 0.18
     wrist_period_history_size: int = 12
     accepted_profile_history_size: int = 6
-    cadence_similarity_min_ratio: float = 0.55
+    cadence_similarity_min_ratio: float = 0.25
+    ema_alpha_hip: float = 0.45
+    ema_alpha_foot: float = 0.55
+    fast_ema_alpha_hip: float = 0.25
+    fast_ema_alpha_foot: float = 0.35
+    baseline_alpha_hip: float = 0.02
+    baseline_alpha_foot: float = 0.04
+    descend_velocity_ratio: float = 0.006
+    ascend_velocity_ratio: float = 0.004
+    fast_descend_velocity_ratio: float = 0.002
+    fast_ascend_velocity_ratio: float = 0.001
+    min_refractory_frames: int = 4
+    fast_min_refractory_frames: int = 2
+    fast_mode_cadence_threshold: int = 7
+    motion_window_frames: int = 18
+    recent_window_frames: int = 5
+    min_hip_range_ratio: float = 0.040
+    min_foot_range_ratio: float = 0.030
+    min_recent_hip_range_ratio: float = 0.024
+    max_foot_to_hip_ratio: float = 2.8
+    guard_low_hip_range_ratio: float = 0.07
+    guard_high_foot_range_ratio: float = 0.12
+    guard_recent_hip_range_ratio: float = 0.03
+    balanced_override_hip_range_ratio: float = 0.060
+    balanced_override_foot_range_ratio: float = 0.055
+    balanced_override_recent_hip_ratio: float = 0.020
+    balanced_override_min_ratio: float = 0.55
+    balanced_override_max_ratio: float = 1.60
+    extended_override_hip_range_ratio: float = 0.050
+    extended_override_foot_range_ratio: float = 0.090
+    extended_override_recent_hip_ratio: float = 0.024
+    extended_override_min_ratio: float = 1.50
+    extended_override_max_ratio: float = 2.10
+    extended_override_recent_to_hip_ratio: float = 0.42
+    foot_floor_override_hip_range_ratio: float = 0.085
+    foot_floor_override_foot_range_ratio: float = 0.025
+    foot_floor_override_recent_hip_ratio: float = 0.050
+    foot_floor_override_max_ratio: float = 0.34
+    stale_tail_guard_hip_range_ratio: float = 0.18
+    stale_tail_guard_recent_to_hip_ratio: float = 0.17
+    adaptive_motion_hip_ratio: float = 0.05
+    adaptive_motion_foot_ratio: float = 0.04
+    adaptive_recent_hip_enabled: bool = True
+    adaptive_recent_hip_floor: float = 0.022
+    contact_release_frames: int = 2
+    landing_contact_frames: int = 2
+    min_accept_score: int = 2
+    strong_jump_score: int = 2
+    wrist_cadence_min_hz: float = 2.2
+    wrist_confidence_floor: float = 0.15
 
     def to_dict(self) -> dict[str, float | int | bool]:
         return asdict(self)
@@ -250,23 +300,23 @@ def _parse_label_points(keyframe: ET.Element) -> tuple[int, list[str]]:
     return point_count, anomaly_tags
 
 
-def _timestamp_mode(root: ET.Element) -> str:
+def _timestamp_mode(root: ET.Element) -> tuple[str, float]:
     avg_ts_per_frame = float(root.findtext("AverageTimeStampsPerFrame", "0"))
-    return "ms" if avg_ts_per_frame < 100 else "ticks"
+    return ("ms", avg_ts_per_frame) if avg_ts_per_frame < 100 else ("ticks", max(avg_ts_per_frame, 1.0))
 
 
-def _timestamp_to_frame(timestamp_raw: int, mode: str, fps: float) -> tuple[int, float]:
+def _timestamp_to_frame(timestamp_raw: int, mode: str, fps: float, ticks_per_frame: float) -> tuple[int, float]:
     if mode == "ms":
         time_sec = timestamp_raw / 1000.0
         return int(round(time_sec * fps)), time_sec
-    frame_idx = int(round(timestamp_raw / 512.0))
+    frame_idx = int(round(timestamp_raw / ticks_per_frame))
     return frame_idx, frame_idx / fps
 
 
 def parse_label_file(path: str | Path, fps: float = 30.0) -> list[LabelEvent]:
     path = Path(path)
     root = ET.parse(path).getroot()
-    mode = _timestamp_mode(root)
+    mode, ticks_per_frame = _timestamp_mode(root)
     keyframes = root.find("Keyframes")
     if keyframes is None:
         return []
@@ -274,7 +324,12 @@ def parse_label_file(path: str | Path, fps: float = 30.0) -> list[LabelEvent]:
     raw_events: list[LabelEvent] = []
     for index, keyframe in enumerate(keyframes.findall("Keyframe")):
         point_count, anomaly_tags = _parse_label_points(keyframe)
-        frame_idx, time_sec = _timestamp_to_frame(int(keyframe.findtext("Timestamp", "0")), mode, fps)
+        frame_idx, time_sec = _timestamp_to_frame(
+            int(keyframe.findtext("Timestamp", "0")),
+            mode,
+            fps,
+            ticks_per_frame,
+        )
         raw_events.append(
             LabelEvent(
                 frame_idx=frame_idx,
@@ -371,12 +426,16 @@ def pose_result_to_signal(
     right_shoulder = _visible_xy(lms, mp_pose.PoseLandmark.RIGHT_SHOULDER, config.arm_visibility_threshold)
     left_elbow = _visible_xy(lms, mp_pose.PoseLandmark.LEFT_ELBOW, config.arm_visibility_threshold)
     right_elbow = _visible_xy(lms, mp_pose.PoseLandmark.RIGHT_ELBOW, config.arm_visibility_threshold)
-    left_wrist = _visible_xy(lms, mp_pose.PoseLandmark.LEFT_WRIST, config.arm_visibility_threshold)
-    right_wrist = _visible_xy(lms, mp_pose.PoseLandmark.RIGHT_WRIST, config.arm_visibility_threshold)
-    arm_points = (left_shoulder, right_shoulder, left_elbow, right_elbow, left_wrist, right_wrist)
-    if any(point is None for point in arm_points):
-        return SignalFrame(frame_idx=frame_idx, time_sec=timestamp_sec, detected=False)
-
+    left_wrist = _visible_xy(lms, mp_pose.PoseLandmark.LEFT_WRIST, config.wrist_visibility_threshold)
+    right_wrist = _visible_xy(lms, mp_pose.PoseLandmark.RIGHT_WRIST, config.wrist_visibility_threshold)
+    if left_wrist is None:
+        landmark = lms[mp_pose.PoseLandmark.LEFT_WRIST.value]
+        if float(landmark.visibility) > 0.0:
+            left_wrist = (float(landmark.x), float(landmark.y))
+    if right_wrist is None:
+        landmark = lms[mp_pose.PoseLandmark.RIGHT_WRIST.value]
+        if float(landmark.visibility) > 0.0:
+            right_wrist = (float(landmark.x), float(landmark.y))
     leg_length = max(
         0.05,
         (
@@ -385,28 +444,22 @@ def pose_result_to_signal(
         )
         / 2.0,
     )
-    assert left_shoulder is not None
-    assert right_shoulder is not None
-    assert left_elbow is not None
-    assert right_elbow is not None
-    assert left_wrist is not None
-    assert right_wrist is not None
     return SignalFrame(
         frame_idx=frame_idx,
         time_sec=timestamp_sec,
         detected=True,
-        left_shoulder_x=left_shoulder[0],
-        left_shoulder_y=left_shoulder[1],
-        right_shoulder_x=right_shoulder[0],
-        right_shoulder_y=right_shoulder[1],
-        left_elbow_x=left_elbow[0],
-        left_elbow_y=left_elbow[1],
-        right_elbow_x=right_elbow[0],
-        right_elbow_y=right_elbow[1],
-        left_wrist_x=left_wrist[0],
-        left_wrist_y=left_wrist[1],
-        right_wrist_x=right_wrist[0],
-        right_wrist_y=right_wrist[1],
+        left_shoulder_x=None if left_shoulder is None else left_shoulder[0],
+        left_shoulder_y=None if left_shoulder is None else left_shoulder[1],
+        right_shoulder_x=None if right_shoulder is None else right_shoulder[0],
+        right_shoulder_y=None if right_shoulder is None else right_shoulder[1],
+        left_elbow_x=None if left_elbow is None else left_elbow[0],
+        left_elbow_y=None if left_elbow is None else left_elbow[1],
+        right_elbow_x=None if right_elbow is None else right_elbow[0],
+        right_elbow_y=None if right_elbow is None else right_elbow[1],
+        left_wrist_x=None if left_wrist is None else left_wrist[0],
+        left_wrist_y=None if left_wrist is None else left_wrist[1],
+        right_wrist_x=None if right_wrist is None else right_wrist[0],
+        right_wrist_y=None if right_wrist is None else right_wrist[1],
         left_hip_y=float(left_hip.y),
         right_hip_y=float(right_hip.y),
         left_foot_y=left_foot_y,
@@ -540,48 +593,150 @@ def _wrap_angle_delta(current: float, previous: float) -> float:
     return delta
 
 
+class _StateMachineCounter:
+    def __init__(self, config: EngineConfig):
+        self.config = config
+        self.state = "READY"
+        self.floor_y: float | None = None
+        self.prev_hip: float | None = None
+        self.prev_foot: float | None = None
+        self.prev_hip_fast: float | None = None
+        self.prev_foot_fast: float | None = None
+        self.prev_hip_motion: float | None = None
+        self.hip_baseline: float | None = None
+        self.foot_baseline: float | None = None
+        self.saw_descent = False
+        self.rebound_recovered = False
+        self.last_count_frame: int | None = None
+        self.running_count = 0
+        self.interval_history: deque[int] = deque(maxlen=5)
+
+    @staticmethod
+    def _ema(alpha: float, value: float, previous: float | None) -> float:
+        if previous is None:
+            return value
+        return alpha * value + (1.0 - alpha) * previous
+
+    def _update_filtered_signal(self, signal: SignalFrame) -> tuple[float, float, float, bool]:
+        mean_hip_y_raw, mean_foot_y_raw, leg_length = _mean_pose_values(signal)
+        mean_hip_y_std = self._ema(self.config.ema_alpha_hip, mean_hip_y_raw, self.prev_hip)
+        mean_foot_y_std = self._ema(self.config.ema_alpha_foot, mean_foot_y_raw, self.prev_foot)
+        mean_hip_y_fast = self._ema(self.config.fast_ema_alpha_hip, mean_hip_y_raw, self.prev_hip_fast)
+        mean_foot_y_fast = self._ema(self.config.fast_ema_alpha_foot, mean_foot_y_raw, self.prev_foot_fast)
+        fast_mode = len(self.interval_history) >= 3 and median(self.interval_history) <= self.config.fast_mode_cadence_threshold
+        mean_hip_y = mean_hip_y_fast if fast_mode else mean_hip_y_std
+        mean_foot_y = mean_foot_y_fast if fast_mode else mean_foot_y_std
+
+        self.prev_hip = mean_hip_y_std
+        self.prev_foot = mean_foot_y_std
+        self.prev_hip_fast = mean_hip_y_fast
+        self.prev_foot_fast = mean_foot_y_fast
+
+        self.hip_baseline = self._ema(self.config.baseline_alpha_hip, mean_hip_y, self.hip_baseline)
+        self.foot_baseline = self._ema(self.config.baseline_alpha_foot, mean_foot_y, self.foot_baseline)
+        hip_motion = mean_hip_y - self.hip_baseline
+        foot_motion = mean_foot_y - self.foot_baseline
+        hip_vel = 0.0 if self.prev_hip_motion is None else hip_motion - self.prev_hip_motion
+        self.prev_hip_motion = hip_motion
+
+        if self.floor_y is None:
+            self.floor_y = foot_motion
+        else:
+            self.floor_y = max(foot_motion, self.floor_y - self.config.floor_decay_ratio * leg_length)
+        return foot_motion, hip_vel, leg_length, fast_mode
+
+    def _advance(self, signal: SignalFrame, allow_count: bool) -> CounterEvent | None:
+        if not signal.detected:
+            return None
+        assert signal.left_foot_y is not None
+        assert signal.right_foot_y is not None
+        foot_motion, hip_vel, leg_length, fast_mode = self._update_filtered_signal(signal)
+
+        contact_threshold = self.floor_y - (self.config.contact_margin_ratio * leg_length)
+        symmetry_y = abs(signal.left_foot_y - signal.right_foot_y)
+        contact_gate = foot_motion >= contact_threshold and symmetry_y <= (self.config.symmetry_y_ratio * leg_length)
+        descend_ratio = self.config.fast_descend_velocity_ratio if fast_mode else self.config.descend_velocity_ratio
+        ascend_ratio = self.config.fast_ascend_velocity_ratio if fast_mode else self.config.ascend_velocity_ratio
+        min_refractory = self.config.fast_min_refractory_frames if fast_mode else self.config.min_refractory_frames
+        descending = hip_vel >= (descend_ratio * leg_length)
+        ascending = hip_vel <= -(ascend_ratio * leg_length)
+        enough_refractory = self.last_count_frame is None or (signal.frame_idx - self.last_count_frame) >= min_refractory
+
+        if self.state == "REBOUND_LOCK":
+            if ascending:
+                self.rebound_recovered = True
+            if self.rebound_recovered and descending and enough_refractory:
+                self.state = "CONTACT" if contact_gate else "READY"
+                self.rebound_recovered = False
+                self.saw_descent = descending and contact_gate
+            return None
+
+        if contact_gate:
+            self.state = "CONTACT"
+        elif self.state == "CONTACT":
+            self.state = "READY"
+            self.saw_descent = False
+
+        if self.state == "CONTACT" and descending:
+            self.saw_descent = True
+
+        if self.state == "CONTACT" and self.saw_descent and ascending and enough_refractory:
+            self.state = "REBOUND_LOCK"
+            self.saw_descent = False
+            self.rebound_recovered = ascending
+            if not allow_count:
+                return None
+            if self.last_count_frame is not None:
+                self.interval_history.append(signal.frame_idx - self.last_count_frame)
+            self.running_count += 1
+            self.last_count_frame = signal.frame_idx
+            return CounterEvent(
+                frame_idx=signal.frame_idx,
+                time_sec=signal.time_sec,
+                running_count=self.running_count,
+            )
+        return None
+
+    def warmup(self, signal: SignalFrame) -> None:
+        self._advance(signal, allow_count=False)
+
+    def step(self, signal: SignalFrame) -> CounterEvent | None:
+        return self._advance(signal, allow_count=True)
+
+
 class RealtimeCounterEngine:
     def __init__(self, config: EngineConfig):
         self.config = config
-        self.foot_filter = _ButterworthLowPass(config.foot_cutoff_hz)
-        self.hip_filter = _ButterworthLowPass(config.hip_cutoff_hz)
+        self.state_engine = _StateMachineCounter(config)
         self.wrist_speed_filter = _ButterworthLowPass(config.wrist_speed_cutoff_hz)
+        self.hip_history: deque[float] = deque(maxlen=config.motion_window_frames)
+        self.foot_history: deque[float] = deque(maxlen=config.motion_window_frames)
+        self.leg_history: deque[float] = deque(maxlen=config.motion_window_frames)
+        self.recent_hip_history: deque[float] = deque(maxlen=config.recent_window_frames)
+        self.candidate_interval_history: deque[int] = deque(maxlen=config.adaptive_gap_history)
+        self.candidate_hip_history: deque[float] = deque(maxlen=config.adaptive_gap_history)
+        self.candidate_foot_history: deque[float] = deque(maxlen=config.adaptive_gap_history)
+        self.last_candidate_frame: int | None = None
         self.prev_time_sec: float | None = None
-        self.floor_y: float | None = None
-        self.hip_ground_baseline: float | None = None
         self.prev_left_forearm_angle: float | None = None
         self.prev_right_forearm_angle: float | None = None
-        self.in_air = False
-        self.air_start_frame: int | None = None
-        self.air_start_time: float | None = None
-        self.air_peak_height_ratio = 0.0
-        self.air_peak_hip_ratio = 0.0
-        self.air_peak_frames: list[int] = []
-        self.air_peak_speeds: list[float] = []
-        self.air_left_rotation = 0.0
-        self.air_right_rotation = 0.0
-        self.last_wrist_peak_frame: int | None = None
-        self.last_global_peak_frame: int | None = None
         self.last_speed_1: float | None = None
         self.last_speed_2: float | None = None
+        self.last_global_peak_frame: int | None = None
+        self.last_wrist_peak_frame: int | None = None
         self.last_accepted_frame: int | None = None
         self.accepted_running_count = 0
         self.jump_interval_history: deque[int] = deque(maxlen=config.adaptive_gap_history)
-        self.foot_height_history: deque[float] = deque(maxlen=config.fft_window_frames)
-        self.hip_lift_history: deque[float] = deque(maxlen=config.fft_window_frames)
         self.wrist_speed_history: deque[float] = deque(maxlen=config.fft_window_frames)
         self.time_delta_history: deque[float] = deque(maxlen=config.fft_window_frames)
         self.wrist_peak_interval_history: deque[int] = deque(maxlen=config.wrist_period_history_size)
         self.accepted_cadence_history: deque[float] = deque(maxlen=config.accepted_profile_history_size)
         self.accepted_peak_speed_history: deque[float] = deque(maxlen=config.accepted_profile_history_size)
+        self.current_wrist_speed_ratio = 0.0
+        self.current_wrist_rotation_count = 0.0
+        self.current_wrist_rotation_balance = 0.0
         self.last_decision: CounterDecision | None = None
         self.monitor = MonitorState()
-
-    @staticmethod
-    def _ema(alpha: float, value: float, current: float | None) -> float:
-        if current is None:
-            return value
-        return ((1.0 - alpha) * current) + (alpha * value)
 
     def _sample_rate(self, timestamp_sec: float) -> tuple[float, float]:
         if self.prev_time_sec is None:
@@ -589,6 +744,25 @@ class RealtimeCounterEngine:
         dt = max(1e-3, timestamp_sec - self.prev_time_sec)
         self.time_delta_history.append(dt)
         return 1.0 / dt, dt
+
+    def _arm_landmarks_available(self, signal: SignalFrame) -> bool:
+        return all(
+            value is not None
+            for value in (
+                signal.left_shoulder_x,
+                signal.left_shoulder_y,
+                signal.right_shoulder_x,
+                signal.right_shoulder_y,
+                signal.left_elbow_x,
+                signal.left_elbow_y,
+                signal.right_elbow_x,
+                signal.right_elbow_y,
+                signal.left_wrist_x,
+                signal.left_wrist_y,
+                signal.right_wrist_x,
+                signal.right_wrist_y,
+            )
+        )
 
     def _transform_arm_points(
         self,
@@ -631,6 +805,10 @@ class RealtimeCounterEngine:
         )
 
     def _wrist_observation(self, signal: SignalFrame, dt: float) -> tuple[float, float, float]:
+        if not self._arm_landmarks_available(signal):
+            self.prev_left_forearm_angle = None
+            self.prev_right_forearm_angle = None
+            return 0.0, 0.0, 0.0
         left_elbow, right_elbow, left_wrist, right_wrist = self._transform_arm_points(signal)
 
         def single_side(
@@ -683,24 +861,6 @@ class RealtimeCounterEngine:
         peak_freq = float(freqs[band_mask][peak_index])
         return peak_freq, peak_power / band_sum
 
-    def _effective_gap(self) -> tuple[int, bool]:
-        min_gap_frames = self.config.min_count_gap_frames
-        cadence_locked = False
-        if (
-            self.config.adaptive_gap_enabled
-            and len(self.jump_interval_history) >= self.config.adaptive_gap_min_intervals
-        ):
-            cadence_locked = True
-            interval_median = median(self.jump_interval_history)
-            min_gap_frames = max(
-                self.config.adaptive_gap_floor_frames,
-                min(
-                    self.config.min_count_gap_frames,
-                    int(round(interval_median * self.config.adaptive_gap_factor)),
-                ),
-            )
-        return min_gap_frames, cadence_locked
-
     def _wrist_period_stats(self, fs: float) -> tuple[float, float, float]:
         if not self.wrist_peak_interval_history:
             return 0.0, 0.0, 0.0
@@ -726,11 +886,127 @@ class RealtimeCounterEngine:
         if not self.accepted_peak_speed_history:
             return self.config.min_wrist_peak_speed_ratio
         reference = float(median(self.accepted_peak_speed_history))
-        return min(self.config.min_wrist_peak_speed_ratio, reference * 0.72)
+        return min(self.config.min_wrist_peak_speed_ratio, reference * 0.75)
 
-    def _set_reject(
+    def _update_motion_history(self, signal: SignalFrame) -> None:
+        if not signal.detected:
+            return
+        mean_hip, mean_foot, leg_length = _mean_pose_values(signal)
+        self.hip_history.append(mean_hip)
+        self.foot_history.append(mean_foot)
+        self.leg_history.append(leg_length)
+        self.recent_hip_history.append(mean_hip)
+
+    def motion_metrics(self) -> dict[str, float]:
+        if not self.hip_history or not self.foot_history or not self.leg_history:
+            return {
+                "hip_range_ratio": 0.0,
+                "foot_range_ratio": 0.0,
+                "recent_hip_range_ratio": 0.0,
+                "foot_to_hip_ratio": 0.0,
+            }
+        leg_median = median(self.leg_history)
+        hip_range_ratio = (max(self.hip_history) - min(self.hip_history)) / leg_median
+        foot_range_ratio = (max(self.foot_history) - min(self.foot_history)) / leg_median
+        foot_to_hip_ratio = foot_range_ratio / max(hip_range_ratio, 1e-6)
+        recent_hip_range_ratio = 0.0
+        if len(self.recent_hip_history) >= self.config.recent_window_frames:
+            recent_hip_range_ratio = (max(self.recent_hip_history) - min(self.recent_hip_history)) / leg_median
+        return {
+            "hip_range_ratio": hip_range_ratio,
+            "foot_range_ratio": foot_range_ratio,
+            "recent_hip_range_ratio": recent_hip_range_ratio,
+            "foot_to_hip_ratio": foot_to_hip_ratio,
+        }
+
+    def _observe_candidate(self, frame_idx: int, metrics: dict[str, float]) -> None:
+        motion_valid = (
+            metrics["hip_range_ratio"] >= self.config.min_hip_range_ratio
+            and metrics["foot_range_ratio"] >= self.config.min_foot_range_ratio
+        )
+        if not motion_valid:
+            return
+        if self.last_candidate_frame is not None and frame_idx > self.last_candidate_frame:
+            self.candidate_interval_history.append(frame_idx - self.last_candidate_frame)
+        self.last_candidate_frame = frame_idx
+        self.candidate_hip_history.append(metrics["hip_range_ratio"])
+        self.candidate_foot_history.append(metrics["foot_range_ratio"])
+
+    def _cadence_locked(self) -> bool:
+        if not self.config.adaptive_gap_enabled:
+            return False
+        if len(self.candidate_interval_history) < self.config.adaptive_gap_min_intervals:
+            return False
+        if not self.candidate_hip_history or not self.candidate_foot_history:
+            return False
+        return (
+            median(self.candidate_hip_history) >= self.config.adaptive_motion_hip_ratio
+            and median(self.candidate_foot_history) >= self.config.adaptive_motion_foot_ratio
+        )
+
+    def _effective_limits(self) -> tuple[int, float, bool]:
+        min_gap_frames = self.config.min_count_gap_frames
+        min_recent_hip_ratio = self.config.min_recent_hip_range_ratio
+        cadence_locked = self._cadence_locked()
+
+        if cadence_locked:
+            raw_interval_median = median(self.candidate_interval_history)
+            min_gap_frames = max(
+                self.config.adaptive_gap_floor_frames,
+                min(
+                    self.config.min_count_gap_frames,
+                    int(round(raw_interval_median * self.config.adaptive_gap_factor)),
+                ),
+            )
+            if self.config.adaptive_recent_hip_enabled:
+                min_recent_hip_ratio = max(
+                    self.config.adaptive_recent_hip_floor,
+                    self.config.min_recent_hip_range_ratio * 0.8,
+                )
+        return min_gap_frames, min_recent_hip_ratio, cadence_locked
+
+    def _balanced_motion_override(self, metrics: dict[str, float], cadence_locked: bool) -> bool:
+        if not cadence_locked:
+            return False
+        return (
+            metrics["hip_range_ratio"] >= self.config.balanced_override_hip_range_ratio
+            and metrics["foot_range_ratio"] >= self.config.balanced_override_foot_range_ratio
+            and metrics["recent_hip_range_ratio"] >= self.config.balanced_override_recent_hip_ratio
+            and self.config.balanced_override_min_ratio <= metrics["foot_to_hip_ratio"] <= self.config.balanced_override_max_ratio
+        )
+
+    def _extended_motion_override(self, metrics: dict[str, float], cadence_locked: bool) -> bool:
+        if not cadence_locked:
+            return False
+        recent_to_hip_ratio = metrics["recent_hip_range_ratio"] / max(metrics["hip_range_ratio"], 1e-6)
+        return (
+            metrics["hip_range_ratio"] >= self.config.extended_override_hip_range_ratio
+            and metrics["foot_range_ratio"] >= self.config.extended_override_foot_range_ratio
+            and metrics["recent_hip_range_ratio"] >= self.config.extended_override_recent_hip_ratio
+            and self.config.extended_override_min_ratio <= metrics["foot_to_hip_ratio"] <= self.config.extended_override_max_ratio
+            and recent_to_hip_ratio >= self.config.extended_override_recent_to_hip_ratio
+        )
+
+    def _foot_floor_override(self, metrics: dict[str, float]) -> bool:
+        return (
+            metrics["hip_range_ratio"] >= self.config.foot_floor_override_hip_range_ratio
+            and metrics["foot_range_ratio"] >= self.config.foot_floor_override_foot_range_ratio
+            and metrics["recent_hip_range_ratio"] >= self.config.foot_floor_override_recent_hip_ratio
+            and metrics["foot_to_hip_ratio"] <= self.config.foot_floor_override_max_ratio
+        )
+
+    def _stale_tail_reject(self, metrics: dict[str, float], cadence_locked: bool) -> bool:
+        if not cadence_locked:
+            return False
+        if metrics["hip_range_ratio"] < self.config.stale_tail_guard_hip_range_ratio:
+            return False
+        recent_to_hip_ratio = metrics["recent_hip_range_ratio"] / max(metrics["hip_range_ratio"], 1e-6)
+        return recent_to_hip_ratio < self.config.stale_tail_guard_recent_to_hip_ratio
+
+    def _set_decision(
         self,
         signal: SignalFrame,
+        accepted: bool,
         reason: str,
         airtime_frames: int,
         jump_height_ratio: float,
@@ -752,7 +1028,7 @@ class RealtimeCounterEngine:
         self.last_decision = CounterDecision(
             frame_idx=signal.frame_idx,
             time_sec=signal.time_sec,
-            accepted=False,
+            accepted=accepted,
             reason=reason,
             airtime_frames=airtime_frames,
             jump_height_ratio=jump_height_ratio,
@@ -772,18 +1048,6 @@ class RealtimeCounterEngine:
             cadence_locked=cadence_locked,
         )
 
-    def _reset_air_phase(self) -> None:
-        self.in_air = False
-        self.air_start_frame = None
-        self.air_start_time = None
-        self.air_peak_height_ratio = 0.0
-        self.air_peak_hip_ratio = 0.0
-        self.air_peak_frames.clear()
-        self.air_peak_speeds.clear()
-        self.air_left_rotation = 0.0
-        self.air_right_rotation = 0.0
-        self.last_wrist_peak_frame = None
-
     def _observe_peak(self, frame_idx: int) -> int | None:
         if self.last_speed_2 is None or self.last_speed_1 is None or len(self.wrist_speed_history) < 1:
             return None
@@ -793,10 +1057,7 @@ class RealtimeCounterEngine:
         if self.last_speed_2 > self.last_speed_1 or current > self.last_speed_1:
             return None
         peak_frame = frame_idx - 1
-        if (
-            self.last_global_peak_frame is not None
-            and (peak_frame - self.last_global_peak_frame) > 0
-        ):
+        if self.last_global_peak_frame is not None and (peak_frame - self.last_global_peak_frame) > 0:
             self.wrist_peak_interval_history.append(peak_frame - self.last_global_peak_frame)
         self.last_global_peak_frame = peak_frame
         if (
@@ -810,10 +1071,7 @@ class RealtimeCounterEngine:
     def _update_monitor(
         self,
         signal: SignalFrame,
-        contact_gate: bool,
-        jump_height_ratio: float,
-        hip_lift_ratio: float,
-        wrist_speed_ratio: float,
+        metrics: dict[str, float],
         fs: float,
     ) -> tuple[float, float, float]:
         period_frames, cadence_hz, confidence = self._wrist_period_stats(fs)
@@ -822,18 +1080,14 @@ class RealtimeCounterEngine:
             frame_idx=signal.frame_idx,
             time_sec=signal.time_sec,
             detected=signal.detected,
-            contact_gate=contact_gate,
-            in_air=self.in_air,
-            jump_height_ratio=jump_height_ratio,
-            hip_lift_ratio=hip_lift_ratio,
-            wrist_speed_ratio=wrist_speed_ratio,
-            wrist_peak_count=len(self.air_peak_frames) if self.in_air else 0,
-            wrist_rotation_count=(self.air_left_rotation + self.air_right_rotation) / 2.0 if self.in_air else 0.0,
-            wrist_rotation_balance=(
-                min(self.air_left_rotation, self.air_right_rotation) / max(self.air_left_rotation, self.air_right_rotation)
-                if self.in_air and max(self.air_left_rotation, self.air_right_rotation) > 1e-6
-                else 0.0
-            ),
+            contact_gate=(self.state_engine.state == "CONTACT"),
+            in_air=False,
+            jump_height_ratio=metrics["foot_range_ratio"],
+            hip_lift_ratio=metrics["hip_range_ratio"],
+            wrist_speed_ratio=self.current_wrist_speed_ratio,
+            wrist_peak_count=0,
+            wrist_rotation_count=self.current_wrist_rotation_count,
+            wrist_rotation_balance=self.current_wrist_rotation_balance,
             wrist_period_frames=period_frames,
             wrist_period_sec=(period_frames / fs) if fs > 0 and period_frames > 0 else 0.0,
             wrist_period_confidence=confidence,
@@ -852,142 +1106,82 @@ class RealtimeCounterEngine:
 
     def _step_internal(self, signal: SignalFrame, allow_count: bool) -> CounterEvent | None:
         if not signal.detected:
-            self._reset_air_phase()
             self.monitor = MonitorState(frame_idx=signal.frame_idx, time_sec=signal.time_sec, detected=False)
             self.prev_time_sec = signal.time_sec
             return None
 
-        mean_hip_y_raw, mean_foot_y_raw, leg_length = _mean_pose_values(signal)
         fs, dt = self._sample_rate(signal.time_sec)
-        filtered_foot_y = self.foot_filter.filter(mean_foot_y_raw, fs)
-        filtered_hip_y = self.hip_filter.filter(mean_hip_y_raw, fs)
         wrist_speed_raw, left_turns, right_turns = self._wrist_observation(signal, dt)
         wrist_speed_ratio = self.wrist_speed_filter.filter(wrist_speed_raw, fs)
-
-        symmetry_y_ratio = abs(signal.left_foot_y - signal.right_foot_y) / max(leg_length, 1e-6)
-        if self.floor_y is None:
-            self.floor_y = filtered_foot_y
-        else:
-            self.floor_y = max(filtered_foot_y, self.floor_y - (self.config.floor_decay_ratio * leg_length))
-
-        contact_gate = (
-            filtered_foot_y >= (self.floor_y - (self.config.contact_margin_ratio * leg_length))
-            and symmetry_y_ratio <= self.config.symmetry_y_ratio
-        )
-        if contact_gate:
-            self.hip_ground_baseline = self._ema(
-                self.config.ground_baseline_alpha,
-                filtered_hip_y,
-                self.hip_ground_baseline,
-            )
-        if self.hip_ground_baseline is None:
-            self.hip_ground_baseline = filtered_hip_y
-
-        jump_height_ratio = max(0.0, (self.floor_y - filtered_foot_y) / max(leg_length, 1e-6))
-        hip_lift_ratio = max(0.0, (self.hip_ground_baseline - filtered_hip_y) / max(leg_length, 1e-6))
-
-        self.foot_height_history.append(jump_height_ratio)
-        self.hip_lift_history.append(hip_lift_ratio)
         self.wrist_speed_history.append(wrist_speed_ratio)
         peak_frame = self._observe_peak(signal.frame_idx)
         self.last_speed_2 = self.last_speed_1
         self.last_speed_1 = wrist_speed_ratio
-
-        if self.in_air:
-            self.air_left_rotation += left_turns
-            self.air_right_rotation += right_turns
-            self.air_peak_height_ratio = max(self.air_peak_height_ratio, jump_height_ratio)
-            self.air_peak_hip_ratio = max(self.air_peak_hip_ratio, hip_lift_ratio)
-            if peak_frame is not None and self.air_start_frame is not None and peak_frame >= self.air_start_frame:
-                self.air_peak_frames.append(peak_frame)
-                self.air_peak_speeds.append(self.last_speed_1 or 0.0)
-
-        wrist_period_frames, wrist_cadence_hz, wrist_period_confidence = self._update_monitor(
-            signal,
-            contact_gate,
-            jump_height_ratio,
-            hip_lift_ratio,
-            wrist_speed_ratio,
-            fs,
-        )
-
-        if not self.in_air:
-            if (
-                not contact_gate
-                and (
-                    jump_height_ratio >= self.config.takeoff_height_ratio
-                    or hip_lift_ratio >= self.config.takeoff_hip_ratio
-                )
-            ):
-                self.in_air = True
-                self.air_start_frame = signal.frame_idx
-                self.air_start_time = signal.time_sec
-                self.air_peak_height_ratio = jump_height_ratio
-                self.air_peak_hip_ratio = hip_lift_ratio
-                self.air_peak_frames.clear()
-                self.air_peak_speeds.clear()
-                self.air_left_rotation = 0.0
-                self.air_right_rotation = 0.0
-                self.last_wrist_peak_frame = None
-                self.monitor.in_air = True
-            self.prev_time_sec = signal.time_sec
-            return None
-
-        if not contact_gate:
-            if self.air_start_frame is not None:
-                airtime_frames = signal.frame_idx - self.air_start_frame + 1
-                if airtime_frames > self.config.max_airborne_frames:
-                    self._reset_air_phase()
-            self.prev_time_sec = signal.time_sec
-            return None
-
-        if self.air_start_frame is None:
-            self._reset_air_phase()
-            self.prev_time_sec = signal.time_sec
-            return None
-
-        airtime_frames = signal.frame_idx - self.air_start_frame
-        wrist_peak_count = len(self.air_peak_frames)
-        wrist_peak_speed_ratio = max(self.air_peak_speeds) if self.air_peak_speeds else 0.0
-        wrist_energy_ratio = float(np.mean(self.air_peak_speeds)) if self.air_peak_speeds else 0.0
-        left_rotation_count = self.air_left_rotation
-        right_rotation_count = self.air_right_rotation
-        wrist_rotation_count = (left_rotation_count + right_rotation_count) / 2.0
-        wrist_rotation_balance = (
-            min(left_rotation_count, right_rotation_count) / max(left_rotation_count, right_rotation_count)
-            if max(left_rotation_count, right_rotation_count) > 1e-6
+        self.current_wrist_speed_ratio = wrist_speed_ratio
+        self.current_wrist_rotation_count = (left_turns + right_turns) / 2.0
+        self.current_wrist_rotation_balance = (
+            min(left_turns, right_turns) / max(left_turns, right_turns)
+            if max(left_turns, right_turns) > 1e-6
             else 0.0
         )
-        airborne_seconds = max(dt, airtime_frames / max(fs, 1e-6))
-        wrist_rotation_cadence_hz = wrist_rotation_count / airborne_seconds
-        wrist_fft_peak_hz, wrist_fft_power_ratio = self._dominant_frequency(
-            self.wrist_speed_history,
-            min_hz=2.0,
-            max_hz=12.0,
-        )
-        jump_fft_hz, _ = self._dominant_frequency(
-            self.foot_height_history,
-            min_hz=0.7,
-            max_hz=4.0,
-        )
-        wrist_to_jump_ratio = wrist_fft_peak_hz / max(jump_fft_hz, 1e-6) if jump_fft_hz > 0 else 0.0
-        min_gap_frames, cadence_locked = self._effective_gap()
-        cadence_profile_ratio = self._cadence_profile_ratio(wrist_rotation_cadence_hz)
 
-        if not allow_count:
-            self._reset_air_phase()
-            self.prev_time_sec = signal.time_sec
+        if peak_frame is not None and self.last_speed_1 is not None:
+            self.accepted_peak_speed_history.append(self.last_speed_1)
+
+        self._update_motion_history(signal)
+        metrics = self.motion_metrics()
+        wrist_period_frames, wrist_cadence_hz, wrist_period_confidence = self._update_monitor(signal, metrics, fs)
+        candidate = self.state_engine._advance(signal, allow_count)
+        self.prev_time_sec = signal.time_sec
+
+        if not allow_count or candidate is None:
             return None
-        if (
-            self.last_accepted_frame is not None
-            and (signal.frame_idx - self.last_accepted_frame) < min_gap_frames
+
+        self._observe_candidate(candidate.frame_idx, metrics)
+        min_gap_frames, min_recent_hip_ratio, cadence_locked = self._effective_limits()
+        required_history = max(3, self.config.motion_window_frames // 2)
+        wrist_peak_count = 1 if peak_frame is not None else 0
+        wrist_peak_speed_ratio = self.current_wrist_speed_ratio
+        wrist_energy_ratio = float(np.mean(self.wrist_speed_history)) if self.wrist_speed_history else 0.0
+        wrist_fft_peak_hz, wrist_fft_power_ratio = self._dominant_frequency(self.wrist_speed_history, 1.8, 12.0)
+        wrist_to_jump_ratio = wrist_fft_peak_hz / max(1.0, 2.0) if wrist_fft_peak_hz > 0 else 0.0
+        wrist_rotation_count = self.current_wrist_rotation_count
+        wrist_rotation_balance = self.current_wrist_rotation_balance
+
+        reject_reason: str | None = None
+        if len(self.hip_history) < required_history:
+            reject_reason = "insufficient_window"
+        elif self.last_accepted_frame is not None and (candidate.frame_idx - self.last_accepted_frame) < min_gap_frames:
+            reject_reason = "min_gap"
+        elif metrics["hip_range_ratio"] < self.config.min_hip_range_ratio:
+            reject_reason = "hip_range"
+        elif metrics["foot_range_ratio"] < self.config.min_foot_range_ratio and not self._foot_floor_override(metrics):
+            reject_reason = "foot_range"
+        elif (
+            metrics["recent_hip_range_ratio"] < min_recent_hip_ratio
+            and not self._balanced_motion_override(metrics, cadence_locked)
+            and not self._extended_motion_override(metrics, cadence_locked)
         ):
-            self._set_reject(
+            reject_reason = "recent_hip_range"
+        elif metrics["foot_to_hip_ratio"] > self.config.max_foot_to_hip_ratio:
+            reject_reason = "foot_to_hip_ratio"
+        elif (
+            metrics["hip_range_ratio"] < self.config.guard_low_hip_range_ratio
+            and metrics["foot_range_ratio"] >= self.config.guard_high_foot_range_ratio
+            and metrics["recent_hip_range_ratio"] < self.config.guard_recent_hip_range_ratio
+        ):
+            reject_reason = "foot_dominant_low_hip"
+        elif self._stale_tail_reject(metrics, cadence_locked):
+            reject_reason = "stale_tail"
+
+        if reject_reason is not None:
+            self._set_decision(
                 signal,
-                "min_gap",
-                airtime_frames,
-                self.air_peak_height_ratio,
-                self.air_peak_hip_ratio,
+                False,
+                reject_reason,
+                0,
+                metrics["foot_range_ratio"],
+                metrics["hip_range_ratio"],
                 wrist_peak_count,
                 wrist_peak_speed_ratio,
                 wrist_energy_ratio,
@@ -996,243 +1190,45 @@ class RealtimeCounterEngine:
                 wrist_to_jump_ratio,
                 wrist_rotation_count,
                 wrist_rotation_balance,
-                wrist_rotation_cadence_hz,
+                wrist_cadence_hz,
                 wrist_period_frames,
                 wrist_period_confidence,
                 min_gap_frames,
                 cadence_locked,
             )
-            self._reset_air_phase()
-            self.prev_time_sec = signal.time_sec
-            return None
-        if airtime_frames < self.config.min_airborne_frames:
-            self._set_reject(
-                signal,
-                "airtime_short",
-                airtime_frames,
-                self.air_peak_height_ratio,
-                self.air_peak_hip_ratio,
-                wrist_peak_count,
-                wrist_peak_speed_ratio,
-                wrist_energy_ratio,
-                wrist_fft_peak_hz,
-                wrist_fft_power_ratio,
-                wrist_to_jump_ratio,
-                wrist_rotation_count,
-                wrist_rotation_balance,
-                wrist_rotation_cadence_hz,
-                wrist_period_frames,
-                wrist_period_confidence,
-                min_gap_frames,
-                cadence_locked,
-            )
-            self._reset_air_phase()
-            self.prev_time_sec = signal.time_sec
             return None
 
-        jump_guard_ok = (
-            self.air_peak_height_ratio >= self.config.min_jump_height_ratio
-            or self.air_peak_hip_ratio >= self.config.min_hip_lift_ratio
-            or airtime_frames >= (self.config.min_airborne_frames + 2)
-        )
-        if not jump_guard_ok:
-            self._set_reject(
-                signal,
-                "jump_guard",
-                airtime_frames,
-                self.air_peak_height_ratio,
-                self.air_peak_hip_ratio,
-                wrist_peak_count,
-                wrist_peak_speed_ratio,
-                wrist_energy_ratio,
-                wrist_fft_peak_hz,
-                wrist_fft_power_ratio,
-                wrist_to_jump_ratio,
-                wrist_rotation_count,
-                wrist_rotation_balance,
-                wrist_rotation_cadence_hz,
-                wrist_period_frames,
-                wrist_period_confidence,
-                min_gap_frames,
-                cadence_locked,
-            )
-            self._reset_air_phase()
-            self.prev_time_sec = signal.time_sec
-            return None
-
-        rotation_window_ok = (
-            self.config.min_wrist_rotation_count <= wrist_rotation_count <= self.config.max_wrist_rotation_count
-            or abs(wrist_rotation_count - self.config.target_wrist_rotation_count) <= self.config.rotation_count_tolerance
-        )
-        if not rotation_window_ok:
-            self._set_reject(
-                signal,
-                "rotation_count",
-                airtime_frames,
-                self.air_peak_height_ratio,
-                self.air_peak_hip_ratio,
-                wrist_peak_count,
-                wrist_peak_speed_ratio,
-                wrist_energy_ratio,
-                wrist_fft_peak_hz,
-                wrist_fft_power_ratio,
-                wrist_to_jump_ratio,
-                wrist_rotation_count,
-                wrist_rotation_balance,
-                wrist_rotation_cadence_hz,
-                wrist_period_frames,
-                wrist_period_confidence,
-                min_gap_frames,
-                cadence_locked,
-            )
-            self._reset_air_phase()
-            self.prev_time_sec = signal.time_sec
-            return None
-        if wrist_rotation_balance < self.config.min_wrist_rotation_balance:
-            self._set_reject(
-                signal,
-                "rotation_balance",
-                airtime_frames,
-                self.air_peak_height_ratio,
-                self.air_peak_hip_ratio,
-                wrist_peak_count,
-                wrist_peak_speed_ratio,
-                wrist_energy_ratio,
-                wrist_fft_peak_hz,
-                wrist_fft_power_ratio,
-                wrist_to_jump_ratio,
-                wrist_rotation_count,
-                wrist_rotation_balance,
-                wrist_rotation_cadence_hz,
-                wrist_period_frames,
-                wrist_period_confidence,
-                min_gap_frames,
-                cadence_locked,
-            )
-            self._reset_air_phase()
-            self.prev_time_sec = signal.time_sec
-            return None
-
-        wrist_peak_ok = (
-            wrist_peak_count >= self.config.min_wrist_peak_count
-            and wrist_peak_speed_ratio >= self._adaptive_peak_floor()
-        )
-        wrist_fft_ok = (
-            wrist_fft_peak_hz >= self.config.min_fft_peak_hz
-            and wrist_fft_power_ratio >= self.config.min_fft_power_ratio
-            and wrist_to_jump_ratio >= self.config.min_fft_wrist_to_jump_ratio
-        )
-        if not wrist_peak_ok and not wrist_fft_ok:
-            self._set_reject(
-                signal,
-                "wrist_rotation",
-                airtime_frames,
-                self.air_peak_height_ratio,
-                self.air_peak_hip_ratio,
-                wrist_peak_count,
-                wrist_peak_speed_ratio,
-                wrist_energy_ratio,
-                wrist_fft_peak_hz,
-                wrist_fft_power_ratio,
-                wrist_to_jump_ratio,
-                wrist_rotation_count,
-                wrist_rotation_balance,
-                wrist_rotation_cadence_hz,
-                wrist_period_frames,
-                wrist_period_confidence,
-                min_gap_frames,
-                cadence_locked,
-            )
-            self._reset_air_phase()
-            self.prev_time_sec = signal.time_sec
-            return None
-        if wrist_energy_ratio < self.config.min_wrist_energy_ratio:
-            self._set_reject(
-                signal,
-                "wrist_energy",
-                airtime_frames,
-                self.air_peak_height_ratio,
-                self.air_peak_hip_ratio,
-                wrist_peak_count,
-                wrist_peak_speed_ratio,
-                wrist_energy_ratio,
-                wrist_fft_peak_hz,
-                wrist_fft_power_ratio,
-                wrist_to_jump_ratio,
-                wrist_rotation_count,
-                wrist_rotation_balance,
-                wrist_rotation_cadence_hz,
-                wrist_period_frames,
-                wrist_period_confidence,
-                min_gap_frames,
-                cadence_locked,
-            )
-            self._reset_air_phase()
-            self.prev_time_sec = signal.time_sec
-            return None
-        if cadence_profile_ratio < self.config.cadence_similarity_min_ratio:
-            self._set_reject(
-                signal,
-                "cadence_profile",
-                airtime_frames,
-                self.air_peak_height_ratio,
-                self.air_peak_hip_ratio,
-                wrist_peak_count,
-                wrist_peak_speed_ratio,
-                wrist_energy_ratio,
-                wrist_fft_peak_hz,
-                wrist_fft_power_ratio,
-                wrist_to_jump_ratio,
-                wrist_rotation_count,
-                wrist_rotation_balance,
-                wrist_rotation_cadence_hz,
-                wrist_period_frames,
-                wrist_period_confidence,
-                min_gap_frames,
-                cadence_locked,
-            )
-            self._reset_air_phase()
-            self.prev_time_sec = signal.time_sec
-            return None
-
+        self.last_accepted_frame = candidate.frame_idx
         self.accepted_running_count += 1
-        if self.last_accepted_frame is not None:
-            self.jump_interval_history.append(signal.frame_idx - self.last_accepted_frame)
-        self.last_accepted_frame = signal.frame_idx
-        self.accepted_cadence_history.append(wrist_rotation_cadence_hz)
-        if wrist_peak_speed_ratio > 0.0:
-            self.accepted_peak_speed_history.append(wrist_peak_speed_ratio)
-        self.last_decision = CounterDecision(
-            frame_idx=signal.frame_idx,
-            time_sec=signal.time_sec,
-            accepted=True,
-            reason="accepted",
-            airtime_frames=airtime_frames,
-            jump_height_ratio=self.air_peak_height_ratio,
-            hip_lift_ratio=self.air_peak_hip_ratio,
-            wrist_peak_count=wrist_peak_count,
-            wrist_peak_speed_ratio=wrist_peak_speed_ratio,
-            wrist_energy_ratio=wrist_energy_ratio,
-            wrist_fft_peak_hz=wrist_fft_peak_hz,
-            wrist_fft_power_ratio=wrist_fft_power_ratio,
-            wrist_to_jump_ratio=wrist_to_jump_ratio,
-            wrist_rotation_count=wrist_rotation_count,
-            wrist_rotation_balance=wrist_rotation_balance,
-            wrist_rotation_cadence_hz=wrist_rotation_cadence_hz,
-            wrist_period_frames=wrist_period_frames,
-            wrist_period_confidence=wrist_period_confidence,
-            min_gap_frames=min_gap_frames,
-            cadence_locked=cadence_locked,
+        if wrist_cadence_hz > 0.0:
+            self.accepted_cadence_history.append(wrist_cadence_hz)
+        self._set_decision(
+            signal,
+            True,
+            "accepted",
+            0,
+            metrics["foot_range_ratio"],
+            metrics["hip_range_ratio"],
+            wrist_peak_count,
+            wrist_peak_speed_ratio,
+            wrist_energy_ratio,
+            wrist_fft_peak_hz,
+            wrist_fft_power_ratio,
+            wrist_to_jump_ratio,
+            wrist_rotation_count,
+            wrist_rotation_balance,
+            wrist_cadence_hz,
+            wrist_period_frames,
+            wrist_period_confidence,
+            min_gap_frames,
+            cadence_locked,
         )
-        event = CounterEvent(
-            frame_idx=signal.frame_idx,
-            time_sec=signal.time_sec,
+        return CounterEvent(
+            frame_idx=candidate.frame_idx,
+            time_sec=candidate.time_sec,
             running_count=self.accepted_running_count,
             count_delta=1,
         )
-        self._reset_air_phase()
-        self.prev_time_sec = signal.time_sec
-        return event
 
 
 class RealtimeStartGate:
@@ -1398,20 +1394,22 @@ def summarize_results(results: list[VideoResult]) -> dict[str, object]:
 def default_search_configs(limit: int | None = None) -> list[EngineConfig]:
     configs = [
         EngineConfig(
-            min_airborne_frames=values[0],
-            min_jump_height_ratio=values[1],
-            min_hip_lift_ratio=values[2],
-            min_wrist_peak_speed_ratio=values[3],
-            min_fft_power_ratio=values[4],
-            min_count_gap_frames=values[5],
+            takeoff_height_ratio=values[0],
+            takeoff_hip_ratio=values[1],
+            min_jump_height_ratio=values[2],
+            min_hip_lift_ratio=values[3],
+            min_count_gap_frames=values[4],
+            min_accept_score=values[5],
+            contact_margin_ratio=values[6],
         )
         for values in product(
-            [4, 5, 6],
-            [0.035, 0.045, 0.055],
-            [0.018, 0.022, 0.028],
-            [0.28, 0.34, 0.40],
-            [0.20, 0.24, 0.30],
-            [6, 8, 10],
+            [0.014, 0.016, 0.020],
+            [0.008, 0.010, 0.012],
+            [0.016, 0.018, 0.022],
+            [0.008, 0.010, 0.012],
+            [5, 6, 7],
+            [2, 3],
+            [0.08, 0.10, 0.12],
         )
     ]
     if limit is not None:
