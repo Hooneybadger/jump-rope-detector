@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import argparse
 import sys
+from dataclasses import replace
 from pathlib import Path
 
 import cv2
@@ -26,6 +27,7 @@ from double_jump.counter_engine import (
 
 
 def parse_args() -> argparse.Namespace:
+    base_config = EngineConfig()
     parser = argparse.ArgumentParser(description="Run the double-jump dataset evaluator.")
     parser.add_argument("--video-dir", default="videos/double_jump_video")
     parser.add_argument("--label-dir", default="videos/double_jump_video")
@@ -51,12 +53,18 @@ def parse_args() -> argparse.Namespace:
         default=20,
         help="Extra frames rendered before and after the evaluation window.",
     )
+    parser.add_argument("--classifier-model-path", default=base_config.classifier_model_path)
+    parser.add_argument("--classifier-confidence-threshold", type=float, default=base_config.classifier_confidence_threshold)
     return parser.parse_args()
 
 
-def build_signal_cache(video_dir: Path, stems: list[str]) -> dict[str, tuple[VideoMeta, list[SignalFrame]]]:
+def build_signal_cache(
+    video_dir: Path,
+    stems: list[str],
+    config: EngineConfig,
+) -> dict[str, tuple[VideoMeta, list[SignalFrame]]]:
     return {
-        stem: extract_signal_stream(video_dir / f"{stem}.mp4", EngineConfig())
+        stem: extract_signal_stream(video_dir / f"{stem}.mp4", config)
         for stem in stems
     }
 
@@ -258,8 +266,8 @@ def render_validation_video(
                 (220, 220, 220),
                 1,
             )
-            _draw_text(frame, f"Pred {pred_count}/{result.predicted_count}", (48, 118), 0.64, (255, 255, 255), 2)
-            _draw_text(frame, f"GT {gt_count}/{result.gt_count}", (220, 118), 0.64, (232, 232, 232), 2)
+            _draw_text(frame, f"{pred_count:02d}/{result.predicted_count}", (48, 118), 0.64, (255, 255, 255), 2)
+            _draw_text(frame, f"{gt_count:02d}/{result.gt_count}", (220, 118), 0.64, (232, 232, 232), 2)
             _draw_text(frame, "MATCH" if counts_match else "CHECK", (350, 118), 0.64, accent, 2)
 
             event_text = "Pred event"
@@ -311,18 +319,26 @@ def main() -> None:
     label_dir = Path(args.label_dir)
     output_path = Path(args.output)
     output_dir = Path(args.output_dir)
+    config = EngineConfig(
+        classifier_model_path=args.classifier_model_path,
+        classifier_confidence_threshold=args.classifier_confidence_threshold,
+    )
 
     ground_truth = load_ground_truth(label_dir, video_dir)
-    signal_cache = build_signal_cache(video_dir, sorted(ground_truth))
+    signal_cache = build_signal_cache(video_dir, sorted(ground_truth), config)
 
     window_config = LabelWindowConfig(
         start_offset_frames=args.label_start_offset,
         end_offset_frames=args.label_end_offset,
         warmup_frames=args.warmup_frames,
     )
-    config = EngineConfig()
     if args.grid_search:
         config, _ = search_best_config(signal_cache, ground_truth, window_config, args.search_limit)
+        config = replace(
+            config,
+            classifier_model_path=args.classifier_model_path,
+            classifier_confidence_threshold=args.classifier_confidence_threshold,
+        )
 
     results = run_dataset(signal_cache, ground_truth, config, window_config)
     summary = summarize_results(results)

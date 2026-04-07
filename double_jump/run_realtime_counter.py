@@ -43,9 +43,17 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--min-foot-range-ratio", type=float, default=base_config.min_foot_range_ratio)
     parser.add_argument("--min-recent-hip-range-ratio", type=float, default=base_config.min_recent_hip_range_ratio)
     parser.add_argument("--max-foot-to-hip-ratio", type=float, default=base_config.max_foot_to_hip_ratio)
-    parser.add_argument("--min-wrist-peak-count", type=int, default=base_config.min_wrist_peak_count)
-    parser.add_argument("--min-wrist-peak-speed-ratio", type=float, default=base_config.min_wrist_peak_speed_ratio)
-    parser.add_argument("--min-fft-power-ratio", type=float, default=base_config.min_fft_power_ratio)
+    parser.add_argument("--wrist-flow-peak-ratio", type=float, default=base_config.wrist_flow_peak_ratio)
+    parser.add_argument("--wrist-flow-mean-ratio", type=float, default=base_config.wrist_flow_mean_ratio)
+    parser.add_argument("--wrist-flow-active-ratio", type=float, default=base_config.wrist_flow_active_ratio)
+    parser.add_argument("--min-wrist-flow-active-frames", type=int, default=base_config.min_wrist_flow_active_frames)
+    parser.add_argument("--wrist-rotation-peak-ratio", type=float, default=base_config.wrist_rotation_peak_ratio)
+    parser.add_argument("--wrist-rotation-mean-ratio", type=float, default=base_config.wrist_rotation_mean_ratio)
+    parser.add_argument("--wrist-sync-min-ratio", type=float, default=base_config.wrist_sync_min_ratio)
+    parser.add_argument("--ankle-flow-active-ratio", type=float, default=base_config.ankle_flow_active_ratio)
+    parser.add_argument("--min-rope-pass-hints", type=int, default=base_config.min_rope_pass_hints)
+    parser.add_argument("--classifier-confidence-threshold", type=float, default=base_config.classifier_confidence_threshold)
+    parser.add_argument("--classifier-model-path", default=base_config.classifier_model_path)
     parser.add_argument("--min-count-gap-frames", type=int, default=base_config.min_count_gap_frames)
     parser.add_argument("--disable-adaptive-filter", action="store_true", help="Disable cadence-adaptive realtime thresholds.")
     parser.add_argument("--debug-filter", action="store_true", help="Print rejected count candidates and reasons.")
@@ -127,7 +135,7 @@ def _draw_overlay(
     pulse = _ease_out(count_pulse_progress)
 
     panel_x, panel_y = 18, 18
-    panel_w, panel_h = min(340, width - 36), 164
+    panel_w, panel_h = min(340, width - 36), 210
     _draw_panel(frame, (panel_x, panel_y), (panel_x + panel_w, panel_y + panel_h), (18, 22, 28), 0.58)
     cv2.line(frame, (panel_x + 14, panel_y + 16), (panel_x + 14, panel_y + panel_h - 16), accent, 4)
 
@@ -150,27 +158,37 @@ def _draw_overlay(
     _draw_progress_bar(frame, (panel_x + 32, panel_y + 84), (panel_w - 52, 8), progress_value, accent)
 
     if monitor is not None and monitor.detected:
-        if monitor.wrist_period_sec > 0.0:
-            wrist_line = (
-                f"Wrist {monitor.wrist_period_sec * 1000.0:4.0f}ms"
-                f"  {monitor.wrist_cadence_hz:3.1f}Hz"
-                f"  conf {int(round(monitor.wrist_period_confidence * 100.0)):02d}%"
-            )
-        else:
-            wrist_line = "Wrist learning..."
+        wrist_line = (
+            f"Flow {monitor.wrist_flow_ratio:3.3f}"
+            f"  base {monitor.wrist_flow_baseline_ratio:3.3f}"
+            f"  peak {monitor.wrist_flow_peak_ratio:3.3f}"
+        )
         phase_line = (
             f"Foot {monitor.jump_height_ratio:3.2f}"
             f"  Hip {monitor.hip_lift_ratio:3.2f}"
             f"  contact {int(monitor.contact_gate)}"
         )
         jump_line = (
-            f"Wrist {monitor.wrist_speed_ratio:3.2f}"
-            f"  rot {monitor.wrist_rotation_count:3.2f}"
-            f"  prof {monitor.cadence_profile_ratio:3.2f}"
+            f"Rot {monitor.wrist_rotation_ratio:3.3f}"
+            f"  sync {monitor.wrist_sync_ratio:3.2f}"
+            f"  rope {monitor.rope_pass_hints}"
+        )
+        detail_line = (
+            f"Air active {monitor.wrist_flow_active_frames:02d}"
+            f"  airborne {int(monitor.in_air)}"
+            f"  ankle {monitor.ankle_flow_ratio:3.3f}"
+            f"  adaptive {int(monitor.cadence_locked)}"
+        )
+        classifier_line = (
+            f"Cycle {monitor.cycle_label}"
+            f"  conf {monitor.cycle_confidence:3.2f}"
+            f"  src {monitor.cycle_source}"
         )
         _draw_text(frame, wrist_line, (panel_x + 32, panel_y + 116), 0.47, (230, 230, 230), 1)
         _draw_text(frame, phase_line, (panel_x + 32, panel_y + 136), 0.47, (230, 230, 230), 1)
         _draw_text(frame, jump_line, (panel_x + 32, panel_y + 156), 0.47, (230, 230, 230), 1)
+        _draw_text(frame, detail_line, (panel_x + 32, panel_y + 176), 0.47, (230, 230, 230), 1)
+        _draw_text(frame, classifier_line, (panel_x + 32, panel_y + 196), 0.47, (230, 230, 230), 1)
 
 
 def _create_video_writer(path: str | Path, fps: float, frame_shape) -> cv2.VideoWriter:
@@ -197,9 +215,17 @@ def main() -> None:
         min_foot_range_ratio=args.min_foot_range_ratio,
         min_recent_hip_range_ratio=args.min_recent_hip_range_ratio,
         max_foot_to_hip_ratio=args.max_foot_to_hip_ratio,
-        min_wrist_peak_count=args.min_wrist_peak_count,
-        min_wrist_peak_speed_ratio=args.min_wrist_peak_speed_ratio,
-        min_fft_power_ratio=args.min_fft_power_ratio,
+        wrist_flow_peak_ratio=args.wrist_flow_peak_ratio,
+        wrist_flow_mean_ratio=args.wrist_flow_mean_ratio,
+        wrist_flow_active_ratio=args.wrist_flow_active_ratio,
+        min_wrist_flow_active_frames=args.min_wrist_flow_active_frames,
+        wrist_rotation_peak_ratio=args.wrist_rotation_peak_ratio,
+        wrist_rotation_mean_ratio=args.wrist_rotation_mean_ratio,
+        wrist_sync_min_ratio=args.wrist_sync_min_ratio,
+        ankle_flow_active_ratio=args.ankle_flow_active_ratio,
+        min_rope_pass_hints=args.min_rope_pass_hints,
+        classifier_confidence_threshold=args.classifier_confidence_threshold,
+        classifier_model_path=args.classifier_model_path,
         min_count_gap_frames=args.min_count_gap_frames,
         adaptive_gap_enabled=not args.disable_adaptive_filter,
     )
@@ -240,6 +266,8 @@ def main() -> None:
             if phase_changed:
                 print(f"[phase] {last_phase} -> {stream_state.phase} @ {timestamp_sec:.2f}s")
                 if stream_state.phase == "COUNTING":
+                    if engine is not None:
+                        engine.arm_for_counting()
                     accepted_count = 0
                     print("[count] counter armed")
                 last_phase = stream_state.phase
@@ -257,16 +285,18 @@ def main() -> None:
                         f"[reject] frame={decision.frame_idx} reason={decision.reason} "
                         f"foot={decision.jump_height_ratio:.3f} "
                         f"hip={decision.hip_lift_ratio:.3f} "
-                        f"wrist_peaks={decision.wrist_peak_count} "
-                        f"wrist_peak={decision.wrist_peak_speed_ratio:.3f} "
-                        f"wrist_energy={decision.wrist_energy_ratio:.3f} "
-                        f"fft={decision.wrist_fft_peak_hz:.2f}Hz "
-                        f"fft_power={decision.wrist_fft_power_ratio:.2f} "
-                        f"wrist_jump={decision.wrist_to_jump_ratio:.2f} "
-                        f"rot={decision.wrist_rotation_count:.2f} "
-                        f"bal={decision.wrist_rotation_balance:.2f} "
-                        f"cad={decision.wrist_rotation_cadence_hz:.2f}Hz "
-                        f"period={decision.wrist_period_frames:.1f}f "
+                        f"flow={decision.current_wrist_flow_ratio:.3f} "
+                        f"flow_peak={decision.wrist_flow_peak_ratio:.3f} "
+                        f"flow_mean={decision.wrist_flow_mean_ratio:.3f} "
+                        f"flow_active={decision.wrist_flow_active_frames} "
+                        f"flow_base={decision.wrist_flow_baseline_ratio:.3f} "
+                        f"rot_peak={decision.wrist_rotation_peak_ratio:.3f} "
+                        f"rot_mean={decision.wrist_rotation_mean_ratio:.3f} "
+                        f"sync={decision.wrist_sync_peak_ratio:.2f} "
+                        f"rope={decision.rope_pass_hints} "
+                        f"class={decision.classifier_label} "
+                        f"class_conf={decision.classifier_confidence:.2f} "
+                        f"class_src={decision.classifier_source} "
                         f"min_gap={decision.min_gap_frames} "
                         f"adaptive={int(decision.cadence_locked)}"
                     )
