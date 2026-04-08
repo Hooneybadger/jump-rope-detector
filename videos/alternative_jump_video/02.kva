@@ -1,0 +1,600 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<KinoveaVideoAnalysis>
+  <FormatVersion>2.0</FormatVersion>
+  <Producer>Kinovea.2025.1.1</Producer>
+  <OriginalFilename>02</OriginalFilename>
+  <FullPath>C:\Users\IDBLAB\Desktop\AlternativeJump\02.mp4</FullPath>
+  <ImageSize>360;360</ImageSize>
+  <Aspect>Auto</Aspect>
+  <Rotation>Rotate0</Rotation>
+  <Mirror>false</Mirror>
+  <Demosaicing>None</Demosaicing>
+  <Deinterlacing>false</Deinterlacing>
+  <StabilizationTrack>00000000-0000-0000-0000-000000000000</StabilizationTrack>
+  <BackgroundColor>0;255;255;255</BackgroundColor>
+  <AverageTimeStampsPerFrame>512</AverageTimeStampsPerFrame>
+  <CaptureFramerate>30</CaptureFramerate>
+  <UserFramerate>30</UserFramerate>
+  <FirstTimeStamp>0</FirstTimeStamp>
+  <SelectionStart>0</SelectionStart>
+  <SelectionEnd>153210</SelectionEnd>
+  <TimeOrigin>0</TimeOrigin>
+  <Calibration>
+    <CalibrationLine>
+      <Length>100</Length>
+      <Segment>
+        <A>180;180</A>
+        <B>280;180</B>
+      </Segment>
+      <Origin>0;100</Origin>
+      <Offset>0;0</Offset>
+      <Axis>LineHorizontal</Axis>
+    </CalibrationLine>
+    <CalibrationDrawingId>00000000-0000-0000-0000-000000000000</CalibrationDrawingId>
+    <Unit Abbreviation="px">Pixels</Unit>
+  </Calibration>
+  <Keyframes>
+    <Keyframe id="626d6447-4b49-48d0-a133-064a3475473d">
+      <Timestamp>13824</Timestamp>
+      <Name>0.90</Name>
+      <Color>51;152;255</Color>
+      <Drawings>
+        <Pencil id="8f81b87e-568d-4ef2-8d79-8dd706079f57" name="연필 1">
+          <PointList Count="4">
+            <Point>168.0197;330.7149</Point>
+            <Point>169.0197;330.7149</Point>
+            <Point>168.0197;330.7149</Point>
+            <Point>168.0197;330.7149</Point>
+          </PointList>
+          <DrawingStyle>
+            <Color Key="color">
+              <Value>255;100;149;237</Value>
+            </Color>
+            <PenSize Key="pen size">
+              <Value>6</Value>
+            </PenSize>
+            <PenShape Key="pen shape">
+              <Value>Solid</Value>
+            </PenShape>
+          </DrawingStyle>
+          <InfosFading>
+            <Enabled>true</Enabled>
+            <UseDefault>true</UseDefault>
+            <AlwaysVisible>false</AlwaysVisible>
+            <MasterFactor>1</MasterFactor>
+            <OpaqueFrames>1</OpaqueFrames>
+            <Frames>20</Frames>
+          </InfosFading>
+        </Pencil>
+      </Drawings>
+    </Keyframe>
+    <Keyframe id="4db6b2fa-7748-4eba-9768-d7526862383b">
+      <Timestamp>20480</Timestamp>
+      <Name>1.33</Name>
+      <Color>51;152;255</Color>
+      <Drawings>
+        <Pencil id="623534cc-ba5b-41b8-99dd-fc8d3d8b45a2" name="연필 2">
+          <PointList Count="3">
+            <Point>182.8102;333.0813</Point>
+            <Point>183.8102;333.0813</Point>
+            <Point>182.8102;333.0813</Point>
+          </PointList>
+          <DrawingStyle>
+            <Color Key="color">
+              <Value>255;100;149;237</Value>
+            </Color>
+            <PenSize Key="pen size">
+              <Value>6</Value>
+            </PenSize>
+            <PenShape Key="pen shape">
+              <Value>Solid</Value>
+            </PenShape>
+          </DrawingStyle>
+          <InfosFading>
+            <Enabled>true</Enabled>
+            <UseDefault>true</UseDefault>
+            <AlwaysVisible>false</AlwaysVisible>
+            <MasterFactor>1</MasterFactor>
+            <OpaqueFrames>1</OpaqueFrames>
+            <Frames>20</Frames>
+          </InfosFading>
+        </Pencil>
+      </Drawings>
+    </Keyframe>
+    <Keyframe id="dd520ae0-22b6-4d9f-b671-f333cf1793e1">
+      <Timestamp>27136</Timestamp>
+      <Name>1.77</Name>
+      <Color>51;152;255</Color>
+      <Drawings>
+        <Pencil id="c1d751d8-bf2f-4c74-9ea4-843677c665ec" name="연필 3">
+          <PointList Count="3">
+            <Point>170.3862;330.7149</Point>
+            <Point>171.3862;330.7149</Point>
+            <Point>170.3862;330.7149</Point>
+          </PointList>
+          <DrawingStyle>
+            <Color Key="color">
+              <Value>255;100;149;237</Value>
+            </Color>
+            <PenSize Key="pen size">
+              <Value>6</Value>
+            </PenSize>
+            <PenShape Key="pen shape">
+              <Value>Solid</Value>
+            </PenShape>
+          </DrawingStyle>
+          <InfosFading>
+            <Enabled>true</Enabled>
+            <UseDefault>true</UseDefault>
+            <AlwaysVisible>false</AlwaysVisible>
+            <MasterFactor>1</MasterFactor>
+            <OpaqueFrames>1</OpaqueFrames>
+            <Frames>20</Frames>
+          </InfosFading>
+        </Pencil>
+      </Drawings>
+    </Keyframe>
+    <Keyframe id="e94b49ca-09d6-4aed-b49d-cb73805481a4">
+      <Timestamp>32768</Timestamp>
+      <Name>2.13</Name>
+      <Color>51;152;255</Color>
+      <Drawings>
+        <Pencil id="2fb3e218-ee8a-4cc3-8efd-48e2e13668f9" name="연필 4">
+          <PointList Count="3">
+            <Point>183.9934;330.7149</Point>
+            <Point>184.9934;330.7149</Point>
+            <Point>183.9934;330.7149</Point>
+          </PointList>
+          <DrawingStyle>
+            <Color Key="color">
+              <Value>255;100;149;237</Value>
+            </Color>
+            <PenSize Key="pen size">
+              <Value>6</Value>
+            </PenSize>
+            <PenShape Key="pen shape">
+              <Value>Solid</Value>
+            </PenShape>
+          </DrawingStyle>
+          <InfosFading>
+            <Enabled>true</Enabled>
+            <UseDefault>true</UseDefault>
+            <AlwaysVisible>false</AlwaysVisible>
+            <MasterFactor>1</MasterFactor>
+            <OpaqueFrames>1</OpaqueFrames>
+            <Frames>20</Frames>
+          </InfosFading>
+        </Pencil>
+      </Drawings>
+    </Keyframe>
+    <Keyframe id="761b09b8-a1ca-4d48-abb7-1942f3766ff2">
+      <Timestamp>39936</Timestamp>
+      <Name>2.60</Name>
+      <Color>51;152;255</Color>
+      <Drawings>
+        <Pencil id="efc37eab-7978-45e2-9c57-7f0cc6776f52" name="연필 5">
+          <PointList Count="3">
+            <Point>170.9778;330.1233</Point>
+            <Point>171.9778;330.1233</Point>
+            <Point>170.9778;330.1233</Point>
+          </PointList>
+          <DrawingStyle>
+            <Color Key="color">
+              <Value>255;100;149;237</Value>
+            </Color>
+            <PenSize Key="pen size">
+              <Value>6</Value>
+            </PenSize>
+            <PenShape Key="pen shape">
+              <Value>Solid</Value>
+            </PenShape>
+          </DrawingStyle>
+          <InfosFading>
+            <Enabled>true</Enabled>
+            <UseDefault>true</UseDefault>
+            <AlwaysVisible>false</AlwaysVisible>
+            <MasterFactor>1</MasterFactor>
+            <OpaqueFrames>1</OpaqueFrames>
+            <Frames>20</Frames>
+          </InfosFading>
+        </Pencil>
+        <Pencil id="a5bb9e0d-6bb2-4281-b2f5-e5f35eac8b66" name="연필 6">
+          <PointList Count="3">
+            <Point>170.9778;330.1233</Point>
+            <Point>171.9778;330.1233</Point>
+            <Point>170.9778;330.1233</Point>
+          </PointList>
+          <DrawingStyle>
+            <Color Key="color">
+              <Value>255;100;149;237</Value>
+            </Color>
+            <PenSize Key="pen size">
+              <Value>6</Value>
+            </PenSize>
+            <PenShape Key="pen shape">
+              <Value>Solid</Value>
+            </PenShape>
+          </DrawingStyle>
+          <InfosFading>
+            <Enabled>true</Enabled>
+            <UseDefault>true</UseDefault>
+            <AlwaysVisible>false</AlwaysVisible>
+            <MasterFactor>1</MasterFactor>
+            <OpaqueFrames>1</OpaqueFrames>
+            <Frames>20</Frames>
+          </InfosFading>
+        </Pencil>
+      </Drawings>
+    </Keyframe>
+    <Keyframe id="35b30839-70a3-4981-9468-79dcf82a3977">
+      <Timestamp>45568</Timestamp>
+      <Name>2.97</Name>
+      <Color>51;152;255</Color>
+      <Drawings>
+        <Pencil id="e1f24e18-6014-45a6-a382-7f2009497e88" name="연필 7">
+          <PointList Count="3">
+            <Point>182.2186;329.5316</Point>
+            <Point>183.2186;329.5316</Point>
+            <Point>182.2186;329.5316</Point>
+          </PointList>
+          <DrawingStyle>
+            <Color Key="color">
+              <Value>255;100;149;237</Value>
+            </Color>
+            <PenSize Key="pen size">
+              <Value>6</Value>
+            </PenSize>
+            <PenShape Key="pen shape">
+              <Value>Solid</Value>
+            </PenShape>
+          </DrawingStyle>
+          <InfosFading>
+            <Enabled>true</Enabled>
+            <UseDefault>true</UseDefault>
+            <AlwaysVisible>false</AlwaysVisible>
+            <MasterFactor>1</MasterFactor>
+            <OpaqueFrames>1</OpaqueFrames>
+            <Frames>20</Frames>
+          </InfosFading>
+        </Pencil>
+      </Drawings>
+    </Keyframe>
+    <Keyframe id="0c6ecde8-1bc5-4665-9211-1f0ddd4eae97">
+      <Timestamp>52224</Timestamp>
+      <Name>3.40</Name>
+      <Color>51;152;255</Color>
+      <Drawings>
+        <Pencil id="5264f3cc-5121-44e6-9cf8-2b835d62d371" name="연필 8">
+          <PointList Count="4">
+            <Point>169.7946;329.5316</Point>
+            <Point>170.7946;329.5316</Point>
+            <Point>169.7946;329.5316</Point>
+            <Point>169.7946;329.5316</Point>
+          </PointList>
+          <DrawingStyle>
+            <Color Key="color">
+              <Value>255;100;149;237</Value>
+            </Color>
+            <PenSize Key="pen size">
+              <Value>6</Value>
+            </PenSize>
+            <PenShape Key="pen shape">
+              <Value>Solid</Value>
+            </PenShape>
+          </DrawingStyle>
+          <InfosFading>
+            <Enabled>true</Enabled>
+            <UseDefault>true</UseDefault>
+            <AlwaysVisible>false</AlwaysVisible>
+            <MasterFactor>1</MasterFactor>
+            <OpaqueFrames>1</OpaqueFrames>
+            <Frames>20</Frames>
+          </InfosFading>
+        </Pencil>
+      </Drawings>
+    </Keyframe>
+    <Keyframe id="115b37c9-8df3-4ead-8a39-ca55fda52677">
+      <Timestamp>58368</Timestamp>
+      <Name>3.80</Name>
+      <Color>51;152;255</Color>
+      <Drawings>
+        <Pencil id="afbbc79f-3ac3-4814-9d0c-df3e88f3b01e" name="연필 9">
+          <PointList Count="4">
+            <Point>181.627;330.1233</Point>
+            <Point>182.627;330.1233</Point>
+            <Point>181.627;330.1233</Point>
+            <Point>181.627;330.1233</Point>
+          </PointList>
+          <DrawingStyle>
+            <Color Key="color">
+              <Value>255;100;149;237</Value>
+            </Color>
+            <PenSize Key="pen size">
+              <Value>6</Value>
+            </PenSize>
+            <PenShape Key="pen shape">
+              <Value>Solid</Value>
+            </PenShape>
+          </DrawingStyle>
+          <InfosFading>
+            <Enabled>true</Enabled>
+            <UseDefault>true</UseDefault>
+            <AlwaysVisible>false</AlwaysVisible>
+            <MasterFactor>1</MasterFactor>
+            <OpaqueFrames>1</OpaqueFrames>
+            <Frames>20</Frames>
+          </InfosFading>
+        </Pencil>
+      </Drawings>
+    </Keyframe>
+    <Keyframe id="07fb2b58-d866-4386-b4f2-7b3ac7adc33c">
+      <Timestamp>65024</Timestamp>
+      <Name>4.23</Name>
+      <Color>51;152;255</Color>
+      <Drawings>
+        <Pencil id="787f8ba6-14b9-4ae3-80a0-087f75d236e1" name="연필 10">
+          <PointList Count="4">
+            <Point>171.5694;328.94</Point>
+            <Point>172.5694;328.94</Point>
+            <Point>171.5694;328.94</Point>
+            <Point>171.5694;328.94</Point>
+          </PointList>
+          <DrawingStyle>
+            <Color Key="color">
+              <Value>255;100;149;237</Value>
+            </Color>
+            <PenSize Key="pen size">
+              <Value>6</Value>
+            </PenSize>
+            <PenShape Key="pen shape">
+              <Value>Solid</Value>
+            </PenShape>
+          </DrawingStyle>
+          <InfosFading>
+            <Enabled>true</Enabled>
+            <UseDefault>true</UseDefault>
+            <AlwaysVisible>false</AlwaysVisible>
+            <MasterFactor>1</MasterFactor>
+            <OpaqueFrames>1</OpaqueFrames>
+            <Frames>20</Frames>
+          </InfosFading>
+        </Pencil>
+      </Drawings>
+    </Keyframe>
+    <Keyframe id="821142df-8eed-4f86-ba7f-52c03126be06">
+      <Timestamp>71168</Timestamp>
+      <Name>4.63</Name>
+      <Color>51;152;255</Color>
+      <Drawings>
+        <Pencil id="9b5b3f73-6bf2-45d9-898e-c3aa3c52d6e7" name="연필 11">
+          <PointList Count="3">
+            <Point>183.4018;328.3484</Point>
+            <Point>184.4018;328.3484</Point>
+            <Point>183.4018;328.3484</Point>
+          </PointList>
+          <DrawingStyle>
+            <Color Key="color">
+              <Value>255;100;149;237</Value>
+            </Color>
+            <PenSize Key="pen size">
+              <Value>6</Value>
+            </PenSize>
+            <PenShape Key="pen shape">
+              <Value>Solid</Value>
+            </PenShape>
+          </DrawingStyle>
+          <InfosFading>
+            <Enabled>true</Enabled>
+            <UseDefault>true</UseDefault>
+            <AlwaysVisible>false</AlwaysVisible>
+            <MasterFactor>1</MasterFactor>
+            <OpaqueFrames>1</OpaqueFrames>
+            <Frames>20</Frames>
+          </InfosFading>
+        </Pencil>
+      </Drawings>
+    </Keyframe>
+    <Keyframe id="353e1a31-399d-4c5a-b96a-1060384bc8ca">
+      <Timestamp>77312</Timestamp>
+      <Name>5.03</Name>
+      <Color>51;152;255</Color>
+      <Drawings>
+        <Pencil id="9724f662-bf49-46ba-9db5-63844694e71c" name="연필 12">
+          <PointList Count="4">
+            <Point>170.9778;327.1652</Point>
+            <Point>171.9778;327.1652</Point>
+            <Point>170.9778;327.1652</Point>
+            <Point>170.9778;327.1652</Point>
+          </PointList>
+          <DrawingStyle>
+            <Color Key="color">
+              <Value>255;100;149;237</Value>
+            </Color>
+            <PenSize Key="pen size">
+              <Value>6</Value>
+            </PenSize>
+            <PenShape Key="pen shape">
+              <Value>Solid</Value>
+            </PenShape>
+          </DrawingStyle>
+          <InfosFading>
+            <Enabled>true</Enabled>
+            <UseDefault>true</UseDefault>
+            <AlwaysVisible>false</AlwaysVisible>
+            <MasterFactor>1</MasterFactor>
+            <OpaqueFrames>1</OpaqueFrames>
+            <Frames>20</Frames>
+          </InfosFading>
+        </Pencil>
+      </Drawings>
+    </Keyframe>
+    <Keyframe id="edf5611e-f8b7-4fa0-b413-4e1dc13cc641">
+      <Timestamp>83456</Timestamp>
+      <Name>5.43</Name>
+      <Color>51;152;255</Color>
+      <Drawings>
+        <Pencil id="d447cb50-01b8-4598-a855-2b4c6f7f2fd5" name="연필 13">
+          <PointList Count="4">
+            <Point>183.9934;326.5735</Point>
+            <Point>184.9934;326.5735</Point>
+            <Point>183.9934;326.5735</Point>
+            <Point>183.9934;326.5735</Point>
+          </PointList>
+          <DrawingStyle>
+            <Color Key="color">
+              <Value>255;100;149;237</Value>
+            </Color>
+            <PenSize Key="pen size">
+              <Value>6</Value>
+            </PenSize>
+            <PenShape Key="pen shape">
+              <Value>Solid</Value>
+            </PenShape>
+          </DrawingStyle>
+          <InfosFading>
+            <Enabled>true</Enabled>
+            <UseDefault>true</UseDefault>
+            <AlwaysVisible>false</AlwaysVisible>
+            <MasterFactor>1</MasterFactor>
+            <OpaqueFrames>1</OpaqueFrames>
+            <Frames>20</Frames>
+          </InfosFading>
+        </Pencil>
+      </Drawings>
+    </Keyframe>
+    <Keyframe id="0a9760e5-66f9-476b-9885-9d9c91f74ecf">
+      <Timestamp>89600</Timestamp>
+      <Name>5.83</Name>
+      <Color>51;152;255</Color>
+      <Drawings>
+        <Pencil id="1ec49cb3-d3b0-4b86-919c-62926b60bacc" name="연필 14">
+          <PointList Count="4">
+            <Point>171.5694;327.1652</Point>
+            <Point>172.5694;327.1652</Point>
+            <Point>171.5694;327.1652</Point>
+            <Point>171.5694;327.1652</Point>
+          </PointList>
+          <DrawingStyle>
+            <Color Key="color">
+              <Value>255;100;149;237</Value>
+            </Color>
+            <PenSize Key="pen size">
+              <Value>6</Value>
+            </PenSize>
+            <PenShape Key="pen shape">
+              <Value>Solid</Value>
+            </PenShape>
+          </DrawingStyle>
+          <InfosFading>
+            <Enabled>true</Enabled>
+            <UseDefault>true</UseDefault>
+            <AlwaysVisible>false</AlwaysVisible>
+            <MasterFactor>1</MasterFactor>
+            <OpaqueFrames>1</OpaqueFrames>
+            <Frames>20</Frames>
+          </InfosFading>
+        </Pencil>
+      </Drawings>
+    </Keyframe>
+    <Keyframe id="4e2359f3-da38-4d32-ae9c-51b4822a6306">
+      <Timestamp>95744</Timestamp>
+      <Name>6.23</Name>
+      <Color>51;152;255</Color>
+      <Drawings>
+        <Pencil id="5e0e44b0-73ec-4c40-aa71-cf143fb8eda8" name="연필 15">
+          <PointList Count="3">
+            <Point>182.8102;327.1652</Point>
+            <Point>183.8102;327.1652</Point>
+            <Point>182.8102;327.1652</Point>
+          </PointList>
+          <DrawingStyle>
+            <Color Key="color">
+              <Value>255;100;149;237</Value>
+            </Color>
+            <PenSize Key="pen size">
+              <Value>6</Value>
+            </PenSize>
+            <PenShape Key="pen shape">
+              <Value>Solid</Value>
+            </PenShape>
+          </DrawingStyle>
+          <InfosFading>
+            <Enabled>true</Enabled>
+            <UseDefault>true</UseDefault>
+            <AlwaysVisible>false</AlwaysVisible>
+            <MasterFactor>1</MasterFactor>
+            <OpaqueFrames>1</OpaqueFrames>
+            <Frames>20</Frames>
+          </InfosFading>
+        </Pencil>
+      </Drawings>
+    </Keyframe>
+    <Keyframe id="7da1170e-0d0f-4548-aff1-7a88ece69644">
+      <Timestamp>102400</Timestamp>
+      <Name>6.67</Name>
+      <Color>51;152;255</Color>
+      <Drawings>
+        <Pencil id="206986c6-1a1e-4d7a-8c31-216a920050b7" name="연필 16">
+          <PointList Count="4">
+            <Point>168.6113;329.5316</Point>
+            <Point>169.6113;329.5316</Point>
+            <Point>168.6113;329.5316</Point>
+            <Point>168.6113;329.5316</Point>
+          </PointList>
+          <DrawingStyle>
+            <Color Key="color">
+              <Value>255;100;149;237</Value>
+            </Color>
+            <PenSize Key="pen size">
+              <Value>6</Value>
+            </PenSize>
+            <PenShape Key="pen shape">
+              <Value>Solid</Value>
+            </PenShape>
+          </DrawingStyle>
+          <InfosFading>
+            <Enabled>true</Enabled>
+            <UseDefault>true</UseDefault>
+            <AlwaysVisible>false</AlwaysVisible>
+            <MasterFactor>1</MasterFactor>
+            <OpaqueFrames>1</OpaqueFrames>
+            <Frames>20</Frames>
+          </InfosFading>
+        </Pencil>
+      </Drawings>
+    </Keyframe>
+  </Keyframes>
+  <CoordinateSystem id="18a568fe-257a-4937-954a-4c2843c43552" name="좌표계 1">
+    <Position>180;180</Position>
+    <ReferenceTimestamp>0</ReferenceTimestamp>
+    <Visible>false</Visible>
+    <ShowGrid>true</ShowGrid>
+    <ShowGraduations>true</ShowGraduations>
+    <DrawingStyle>
+      <Color Key="line color">
+        <Value>255;255;0;0</Value>
+      </Color>
+    </DrawingStyle>
+  </CoordinateSystem>
+  <TestGrid id="c9e3e2af-f198-4fe3-99f8-e26a408e5d0b" name="카메라 테스트 격자 1">
+    <Visible>false</Visible>
+    <ShowHorizontalAxis>true</ShowHorizontalAxis>
+    <ShowVerticalAxis>true</ShowVerticalAxis>
+    <ShowFraming>true</ShowFraming>
+    <ShowThirds>false</ShowThirds>
+    <DrawingStyle>
+      <Color Key="color">
+        <Value>255;255;0;0</Value>
+      </Color>
+    </DrawingStyle>
+  </TestGrid>
+  <Trackability>
+    <TrackableDrawing id="18a568fe-257a-4937-954a-4c2843c43552" name="좌표계 1">
+      <TrackablePoint key="0">
+        <ReferenceTimestamp>0</ReferenceTimestamp>
+        <ReferenceValue>180;180</ReferenceValue>
+      </TrackablePoint>
+    </TrackableDrawing>
+  </Trackability>
+  <VideoFilters />
+</KinoveaVideoAnalysis>
