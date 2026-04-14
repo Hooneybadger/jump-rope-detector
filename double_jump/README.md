@@ -23,7 +23,10 @@ flowchart LR
     F --> G[Cycle Classifier]
     G --> H{double_under?}
     H -->|Yes| I[Count +1 at landing]
-    H -->|No| J[Ignore / Keep Tracking]
+    I --> I1{줄걸림 후행 검증}
+    I1 -->|다음 이륙 정상| J[Count 유지]
+    I1 -->|접지 정체 + 시도 흔적| K[Count -1 보정]
+    H -->|No| L[Ignore / Keep Tracking]
 ```
 
 ## 무엇을 1카운트로 보는가
@@ -193,6 +196,28 @@ cycle classifier가 있어도 보호 로직은 필요하다.
 연속 2단 뛰기 구간에서는 accepted interval이 짧아진다.  
 그래서 최근 accepted cadence를 보고 `min gap`을 자동으로 줄이는 adaptive guard를 유지한다.
 
+### 5. 실시간에서 착지 직후 줄이 걸렸는데 이미 +1이 올라간 문제
+
+`double_jump`는 landing 시점에 cycle 분류 결과가 `double_under`이면 곧바로 `+1`을 올린다.  
+이 방식은 반응성은 좋지만, 실시간 스트리밍에서는 착지 직후 줄이 걸려 다음 점프로 이어지지 못하는 경우에도 방금 끝난 cycle만 보면 일단 정상 count처럼 보일 수 있다.
+
+그래서 현재 realtime 엔진은 count 직후 짧은 후행 검증 구간을 추가로 둔다.
+
+- 착지 뒤 접지 상태가 계속 유지되는가
+- 손목/발목에는 다음 rope turn을 시도하는 흐름이 남아 있는가
+- 그런데 실제 airborne 회복은 이어지지 않는가
+
+이 조합이 성립하면 엔진은 줄걸림으로 보고 방금 확정한 count를 `-1` 해서 상쇄한다.
+
+즉 realtime에서는 아래 순서로 동작한다.
+
+1. jump cycle이 `double_under`로 분류되면 landing 시점에 우선 `+1` 한다.
+2. 직후 몇 프레임 동안 접지 정체와 다음 시도 흐름을 함께 본다.
+3. 시도는 있었지만 다시 뜨지 못하면 줄걸림으로 판단하고 `-1` 보정한다.
+
+이 보정 역시 오버레이 숫자에 즉시 반영된다.  
+실시간 화면은 엔진의 `running_count`를 그대로 표시하므로, 보정 이벤트가 나오면 표시 count도 함께 내려간다.
+
 ## realtime에서 왜 별도 시작 절차가 필요한가
 
 realtime에서는 카메라에 사람이 들어오는 순간부터 곧바로 count를 올리면 첫 몇 개가 흔들리기 쉽다.  
@@ -211,12 +236,16 @@ sequenceDiagram
     G->>E: counting 시작
     U->>E: 첫 실제 점프
     E-->>U: landing 시점 cycle 분류 후 count +1
+    E-->>U: 줄걸림이면 후행 검증 뒤 count -1 보정
 ```
 
 핵심은 두 가지다.
 
 - 시작 전에는 count를 올리지 않는다.
 - 대신 그 시간 동안 엔진은 바닥 밴드와 motion history를 미리 적응시킨다.
+
+또한 counting 이후에는 줄걸림 보정 윈도우가 짧게 열린다.  
+덕분에 cycle 분류 결과는 바로 화면에 반영하면서도, 줄이 걸린 잘못된 count는 몇 프레임 안에 취소할 수 있다.
 
 이렇게 해야 첫 점프부터 cycle 분류가 더 안정적으로 들어간다.
 

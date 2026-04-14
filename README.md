@@ -14,9 +14,3 @@ source activate
 The grouped-jump counter documentation lives here:
 
 - [basic_jump/README.md](basic_jump/README.md)
-
-## drawing_process
-
-The drawing-process model training workflow lives here:
-
-- [drawing_process/README.md](drawing_process/README.md)

@@ -115,6 +115,11 @@ class EngineConfig:
     weak_support_bonus_max_opposition_ratio: float = 0.35
     bootstrap_sequence_required: bool = False
     bootstrap_max_gap_frames: int = 12
+    rope_stuck_window_frames: int = 10
+    rope_stuck_min_hold_frames: int = 3
+    rope_stuck_same_side_ratio: float = 0.70
+    rope_stuck_min_support_ratio: float = 0.10
+    rope_stuck_dual_air_recovery_ratio: float = 0.018
 
     def to_dict(self) -> dict[str, float | int | bool]:
         return asdict(self)
@@ -216,6 +221,18 @@ class StreamState:
     ready_progress: float
     countdown_remaining_sec: float
     count_started_at_sec: float | None
+
+
+@dataclass
+class _PendingCountCompensation:
+    frame_idx: int
+    time_sec: float
+    counted_side: str | None
+    observed_frames: int = 0
+    same_side_frames: int = 0
+    max_support_ratio: float = 0.0
+    max_dual_air_ratio: float = 0.0
+    opposite_side_seen: bool = False
 
 
 def probe_video(path: str | Path) -> VideoMeta:
@@ -458,7 +475,7 @@ def extract_signal_stream(video_path: str | Path, config: EngineConfig) -> tuple
 
 
 class RealtimeCounterEngine:
-    def __init__(self, config: EngineConfig):
+    def __init__(self, config: EngineConfig, enable_realtime_compensation: bool = False):
         self.config = config
         self.prev_mean_hip: float | None = None
         self.prev_left_hip_x: float | None = None
@@ -499,6 +516,11 @@ class RealtimeCounterEngine:
         self.weak_support_seed_frame: int | None = None
         self.weak_support_pending_bonus = 0
         self.last_decision: CounterDecision | None = None
+        self.current_support_side: str | None = None
+        self.current_support_ratio: float = 0.0
+        self.current_dual_air_ratio: float = 0.0
+        self.enable_realtime_compensation = enable_realtime_compensation
+        self.pending_compensation: _PendingCountCompensation | None = None
 
     @staticmethod
     def _ema(alpha: float, value: float, previous: float | None) -> float:
@@ -589,6 +611,8 @@ class RealtimeCounterEngine:
             self.prev_left_wrist_y = None
             self.prev_right_wrist_x = None
             self.prev_right_wrist_y = None
+
+        self.current_dual_air_ratio = 0.0 if not self.dual_air_history else self.dual_air_history[-1]
 
         return mean_hip, left_knee, right_knee, left_foot, right_foot, leg_length, hip_motion, hip_velocity
 
@@ -877,6 +901,7 @@ class RealtimeCounterEngine:
     def warmup(self, signal: SignalFrame) -> None:
         self.last_decision = None
         self._step_internal(signal, allow_count=False)
+        self.pending_compensation = None
 
     def prime(self, signal: SignalFrame) -> None:
         self.last_decision = None
@@ -896,6 +921,7 @@ class RealtimeCounterEngine:
         self.weak_support_seed_frame = None
         self.weak_support_pending_bonus = 0
         self.last_decision = None
+        self.pending_compensation = None
 
     def _update_weak_support_recovery(
         self,
@@ -933,7 +959,50 @@ class RealtimeCounterEngine:
 
     def step(self, signal: SignalFrame) -> CounterEvent | None:
         self.last_decision = None
-        return self._step_internal(signal, allow_count=True)
+        event = self._step_internal(signal, allow_count=True)
+        if event is not None:
+            self.pending_compensation = _PendingCountCompensation(
+                frame_idx=event.frame_idx,
+                time_sec=event.time_sec,
+                counted_side=self.current_support_side,
+            ) if self.enable_realtime_compensation else None
+            return event
+
+        pending = self.pending_compensation
+        if not self.enable_realtime_compensation or pending is None:
+            return None
+        elapsed_frames = signal.frame_idx - pending.frame_idx
+        if elapsed_frames <= 0:
+            return None
+        if elapsed_frames > self.config.rope_stuck_window_frames:
+            self.pending_compensation = None
+            return None
+        pending.observed_frames += 1
+        if self.current_support_side == pending.counted_side and pending.counted_side is not None:
+            pending.same_side_frames += 1
+        elif self.current_support_side is not None and pending.counted_side is not None:
+            pending.opposite_side_seen = True
+        pending.max_support_ratio = max(pending.max_support_ratio, self.current_support_ratio)
+        pending.max_dual_air_ratio = max(pending.max_dual_air_ratio, self.current_dual_air_ratio)
+        if pending.opposite_side_seen or pending.max_dual_air_ratio >= self.config.rope_stuck_dual_air_recovery_ratio:
+            self.pending_compensation = None
+            return None
+        if pending.observed_frames < self.config.rope_stuck_min_hold_frames:
+            return None
+        same_side_ratio = pending.same_side_frames / max(1, pending.observed_frames)
+        if (
+            same_side_ratio >= self.config.rope_stuck_same_side_ratio
+            and pending.max_support_ratio >= self.config.rope_stuck_min_support_ratio
+        ):
+            self.accepted_running_count = max(0, self.accepted_running_count - 1)
+            self.pending_compensation = None
+            return CounterEvent(
+                frame_idx=signal.frame_idx,
+                time_sec=signal.time_sec,
+                running_count=self.accepted_running_count,
+                count_delta=-1,
+            )
+        return None
 
     def _step_internal(
         self,
@@ -945,6 +1014,9 @@ class RealtimeCounterEngine:
             self.candidate_side = None
             self.candidate_streak = 0
             self.active_side = None
+            self.current_support_side = None
+            self.current_support_ratio = 0.0
+            self.current_dual_air_ratio = 0.0
             return None
 
         _, left_knee, right_knee, left_foot, right_foot, leg_length, hip_motion, hip_velocity = self._update_signal_state(signal)
@@ -971,6 +1043,8 @@ class RealtimeCounterEngine:
                 leg_length,
             )
             support_ratio = max(support_ratio, relaxed_support_ratio)
+        self.current_support_side = side
+        self.current_support_ratio = support_ratio
 
         if support_ratio <= self.config.side_release_ratio:
             self.active_side = None
