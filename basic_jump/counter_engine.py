@@ -96,6 +96,11 @@ class EngineConfig:
     adaptive_motion_foot_ratio: float = 0.05
     adaptive_recent_hip_enabled: bool = True
     adaptive_recent_hip_floor: float = 0.032
+    rope_stuck_window_frames: int = 10
+    rope_stuck_min_hold_frames: int = 3
+    rope_stuck_contact_ratio: float = 0.67
+    rope_stuck_release_recovery_ratio: float = 0.018
+    rope_stuck_attempt_velocity_ratio: float = 0.003
 
     def to_dict(self) -> dict[str, float | int]:
         return asdict(self)
@@ -137,6 +142,7 @@ class CounterEvent:
     frame_idx: int
     time_sec: float
     running_count: int
+    count_delta: int = 1
 
 
 @dataclass
@@ -182,6 +188,16 @@ class StreamState:
     ready_progress: float
     countdown_remaining_sec: float
     count_started_at_sec: float | None
+
+
+@dataclass
+class _PendingCountCompensation:
+    frame_idx: int
+    time_sec: float
+    observed_frames: int = 0
+    contact_frames: int = 0
+    max_release_height_ratio: float = 0.0
+    max_abs_hip_velocity_ratio: float = 0.0
 
 
 def probe_video(path: str | Path) -> VideoMeta:
@@ -440,6 +456,9 @@ class _StateMachineCounter:
         self.last_count_frame: int | None = None
         self.running_count = 0
         self.interval_history: deque[int] = deque(maxlen=5)
+        self.current_contact_gate = False
+        self.current_release_height_ratio = 0.0
+        self.current_abs_hip_velocity_ratio = 0.0
 
     @staticmethod
     def _ema(alpha: float, value: float, previous: float | None) -> float:
@@ -480,6 +499,9 @@ class _StateMachineCounter:
 
     def _advance(self, signal: SignalFrame, allow_count: bool) -> CounterEvent | None:
         if not signal.detected:
+            self.current_contact_gate = False
+            self.current_release_height_ratio = 0.0
+            self.current_abs_hip_velocity_ratio = 0.0
             return None
         assert signal.left_foot_y is not None
         assert signal.right_foot_y is not None
@@ -490,11 +512,15 @@ class _StateMachineCounter:
         contact_gate = foot_motion >= contact_threshold and symmetry_y <= (
             self.config.symmetry_y_ratio * leg_length
         )
+        release_height_ratio = max(0.0, (self.floor_y - foot_motion) / leg_length)
         descend_ratio = self.config.fast_descend_velocity_ratio if fast_mode else self.config.descend_velocity_ratio
         ascend_ratio = self.config.fast_ascend_velocity_ratio if fast_mode else self.config.ascend_velocity_ratio
         min_refractory = self.config.fast_min_refractory_frames if fast_mode else self.config.min_refractory_frames
         descending = hip_vel >= (descend_ratio * leg_length)
         ascending = hip_vel <= -(ascend_ratio * leg_length)
+        self.current_contact_gate = contact_gate
+        self.current_release_height_ratio = release_height_ratio
+        self.current_abs_hip_velocity_ratio = abs(hip_vel) / max(leg_length, 1e-6)
         enough_refractory = (
             self.last_count_frame is None
             or (signal.frame_idx - self.last_count_frame) >= min_refractory
@@ -548,8 +574,9 @@ class _StateMachineCounter:
 
 
 class RealtimeCounterEngine:
-    def __init__(self, config: EngineConfig):
+    def __init__(self, config: EngineConfig, enable_realtime_compensation: bool = False):
         self.config = config
+        self.enable_realtime_compensation = enable_realtime_compensation
         self.state_engine = _StateMachineCounter(config)
         self.hip_history: deque[float] = deque(maxlen=config.motion_window_frames)
         self.foot_history: deque[float] = deque(maxlen=config.motion_window_frames)
@@ -560,8 +587,71 @@ class RealtimeCounterEngine:
         self.candidate_foot_history: deque[float] = deque(maxlen=config.adaptive_gap_history)
         self.last_candidate_frame: int | None = None
         self.last_accepted_frame: int | None = None
+        self.accepted_frame_history: deque[int] = deque()
         self.accepted_running_count = 0
         self.last_decision: CounterDecision | None = None
+        self.pending_compensation: _PendingCountCompensation | None = None
+
+    def _clear_pending_compensation(self) -> None:
+        self.pending_compensation = None
+
+    def _start_pending_compensation(self, candidate: CounterEvent) -> None:
+        if not self.enable_realtime_compensation:
+            return
+        self.pending_compensation = _PendingCountCompensation(
+            frame_idx=candidate.frame_idx,
+            time_sec=candidate.time_sec,
+        )
+
+    def _emit_compensation(self, signal: SignalFrame) -> CounterEvent | None:
+        if self.accepted_running_count <= 0:
+            self._clear_pending_compensation()
+            return None
+        self.accepted_running_count -= 1
+        if self.accepted_frame_history:
+            self.accepted_frame_history.pop()
+        self.last_accepted_frame = None if not self.accepted_frame_history else self.accepted_frame_history[-1]
+        self._clear_pending_compensation()
+        return CounterEvent(
+            frame_idx=signal.frame_idx,
+            time_sec=signal.time_sec,
+            running_count=self.accepted_running_count,
+            count_delta=-1,
+        )
+
+    def _maybe_compensate_recent_count(self, signal: SignalFrame) -> CounterEvent | None:
+        pending = self.pending_compensation
+        if not self.enable_realtime_compensation or pending is None:
+            return None
+        elapsed_frames = signal.frame_idx - pending.frame_idx
+        if elapsed_frames <= 0:
+            return None
+        if elapsed_frames > self.config.rope_stuck_window_frames:
+            self._clear_pending_compensation()
+            return None
+        pending.observed_frames += 1
+        if self.state_engine.current_contact_gate:
+            pending.contact_frames += 1
+        pending.max_release_height_ratio = max(
+            pending.max_release_height_ratio,
+            self.state_engine.current_release_height_ratio,
+        )
+        pending.max_abs_hip_velocity_ratio = max(
+            pending.max_abs_hip_velocity_ratio,
+            self.state_engine.current_abs_hip_velocity_ratio,
+        )
+        if pending.max_release_height_ratio >= self.config.rope_stuck_release_recovery_ratio:
+            self._clear_pending_compensation()
+            return None
+        if pending.observed_frames < self.config.rope_stuck_min_hold_frames:
+            return None
+        contact_ratio = pending.contact_frames / max(1, pending.observed_frames)
+        if (
+            contact_ratio >= self.config.rope_stuck_contact_ratio
+            and pending.max_abs_hip_velocity_ratio >= self.config.rope_stuck_attempt_velocity_ratio
+        ):
+            return self._emit_compensation(signal)
+        return None
 
     def _update_motion_history(self, signal: SignalFrame) -> None:
         if not signal.detected:
@@ -713,6 +803,7 @@ class RealtimeCounterEngine:
             return
         self._update_motion_history(signal)
         self.state_engine.warmup(signal)
+        self._clear_pending_compensation()
 
     def step(self, signal: SignalFrame) -> CounterEvent | None:
         self.last_decision = None
@@ -721,6 +812,11 @@ class RealtimeCounterEngine:
 
         self._update_motion_history(signal)
         candidate = self.state_engine.step(signal)
+        if candidate is not None:
+            self._clear_pending_compensation()
+        compensation = self._maybe_compensate_recent_count(signal)
+        if compensation is not None:
+            return compensation
         if candidate is None:
             return None
 
@@ -769,6 +865,7 @@ class RealtimeCounterEngine:
             return None
 
         self.last_accepted_frame = candidate.frame_idx
+        self.accepted_frame_history.append(candidate.frame_idx)
         self.accepted_running_count += 1
         self.last_decision = CounterDecision(
             frame_idx=candidate.frame_idx,
@@ -783,11 +880,13 @@ class RealtimeCounterEngine:
             min_recent_hip_ratio=min_recent_hip_ratio,
             cadence_locked=cadence_locked,
         )
-        return CounterEvent(
+        accepted_event = CounterEvent(
             frame_idx=candidate.frame_idx,
             time_sec=candidate.time_sec,
             running_count=self.accepted_running_count,
         )
+        self._start_pending_compensation(accepted_event)
+        return accepted_event
 
 
 class RealtimeStartGate:
@@ -915,7 +1014,7 @@ def run_dataset(
             warmup_frames=warmup_frames,
         )
         gt_count = len(ground_truth[stem])
-        predicted_count = len(events)
+        predicted_count = sum(event.count_delta for event in events)
         results.append(
             VideoResult(
                 stem=stem,
@@ -925,7 +1024,11 @@ def run_dataset(
                 exact_match=(predicted_count == gt_count),
                 eval_start_frame=eval_start_frame,
                 eval_end_frame=eval_end_frame,
-                predicted_frames=[event.frame_idx for event in events],
+                predicted_frames=[
+                    event.frame_idx
+                    for event in events
+                    for _ in range(max(0, event.count_delta))
+                ],
             )
         )
     return results

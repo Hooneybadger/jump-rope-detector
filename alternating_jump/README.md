@@ -24,7 +24,10 @@ flowchart LR
     F --> G
     G --> H{Active Side Switch?}
     H -->|Yes| I[Count +1]
-    H -->|No| J[Ignore / Keep Tracking]
+    I --> I1{줄걸림 후행 검증}
+    I1 -->|반대발 전환 확인| J[Count 유지]
+    I1 -->|같은 지지발 정체| K[Count -1 보정]
+    H -->|No| L[Ignore / Keep Tracking]
 ```
 
 ## 무엇을 1카운트로 보는가
@@ -217,6 +220,27 @@ flowchart LR
 그래서 엔진은 foot, knee, hip 모두를 smoothing한 뒤, leg length 기준으로 정규화해서 해석한다.  
 목표는 “장면 전체 변화”보다 “실제 landing 전환”을 더 안정적으로 읽는 것이다.
 
+### 6. 실시간에서 줄이 걸려 같은 발에 멈췄는데 이미 +1이 올라간 문제
+
+번갈아뛰기는 새 지지발로 넘어가는 첫 순간을 빠르게 잡아야 해서, realtime에서는 반대편 landing이 보이는 즉시 `+1`을 올린다.  
+하지만 줄이 걸리면 사용자는 실제로 다음 점프를 이어가지 못했는데도, 순간적인 support-side dominance만 보고 count가 먼저 확정될 수 있다.
+
+그래서 현재 realtime 엔진은 count 직후 짧은 후행 검증 구간을 추가로 둔다.
+
+- 방금 count된 쪽 지지발이 계속 유지되는가
+- 반대발 전환이 실제로 이어지지 않는가
+- support ratio는 충분했지만 dual-air 회복이 뒤따르지 않는가
+
+이 조합이 성립하면 엔진은 줄걸림으로 보고 방금 count한 값을 `-1` 해서 상쇄한다.
+
+즉 realtime에서는 아래 순서로 동작한다.
+
+1. 새 지지발 landing이 보이면 우선 `+1` 한다.
+2. 직후 몇 프레임 동안 반대발 전환이 실제로 이어지는지 본다.
+3. 같은 발에 정체되면 줄걸림으로 판단하고 `-1` 보정한다.
+
+오버레이는 엔진이 반환한 `running_count`를 그대로 사용하므로, 이 보정은 화면 숫자에도 즉시 반영된다.
+
 ## realtime에서 왜 별도 시작 절차가 필요한가
 
 realtime에서는 카메라에 사람이 들어오는 순간부터 곧바로 count를 올리면 오히려 UX가 나빠질 수 있다.  
@@ -237,12 +261,16 @@ sequenceDiagram
     G->>E: counting 시작
     U->>E: 첫 실제 번갈아뛰기
     E-->>U: landing 전환 순간 count +1
+    E-->>U: 줄걸림이면 후행 검증 뒤 count -1 보정
 ```
 
 핵심은 두 가지다.
 
 - 시작 전에는 count를 올리지 않는다.
 - 대신 그 시간 동안 엔진은 floor band와 내부 상태를 미리 적응시킨다.
+
+또한 counting 이후에는 줄걸림 보정 윈도우가 짧게 열린다.  
+그래서 landing 전환은 즉시 보이되, 같은 발에 멈춘 잘못된 count는 다음 몇 프레임 안에 되돌릴 수 있다.
 
 이렇게 해야 첫 landing이 늦거나, 시작 직후 count가 흔들리는 문제를 줄일 수 있다.
 

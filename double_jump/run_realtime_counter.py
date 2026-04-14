@@ -82,7 +82,7 @@ def _ensure_engine(
     if stream_phase == "SEARCHING" and not count_ready:
         return None
     if engine is None and count_ready:
-        engine = RealtimeCounterEngine(config)
+        engine = RealtimeCounterEngine(config, enable_realtime_compensation=True)
     return engine
 
 
@@ -278,7 +278,10 @@ def main() -> None:
                 if event is not None:
                     accepted_count = event.running_count
                     count_pulse_remaining_frames = count_pulse_total_frames
-                    print(f"[count] {accepted_count} @ frame={event.frame_idx} time={event.time_sec:.2f}s")
+                    print(
+                        f"[count] {accepted_count} ({event.count_delta:+d}) "
+                        f"@ frame={event.frame_idx} time={event.time_sec:.2f}s"
+                    )
                 elif args.debug_filter and engine.last_decision is not None and not engine.last_decision.accepted:
                     decision = engine.last_decision
                     print(

@@ -140,6 +140,10 @@ class EngineConfig:
     cycle_feature_frames: int = 32
     classifier_confidence_threshold: float = 0.45
     classifier_model_path: str | None = "double_jump/artifacts/cycle_classifier.json"
+    rope_stuck_window_frames: int = 12
+    rope_stuck_min_hold_frames: int = 3
+    rope_stuck_contact_ratio: float = 0.70
+    rope_stuck_attempt_flow_ratio: float = 0.010
 
     def to_dict(self) -> dict[str, float | int | bool]:
         return asdict(self)
@@ -309,6 +313,16 @@ class StreamState:
     ready_progress: float
     countdown_remaining_sec: float
     count_started_at_sec: float | None
+
+
+@dataclass
+class _PendingCountCompensation:
+    frame_idx: int
+    time_sec: float
+    observed_frames: int = 0
+    contact_frames: int = 0
+    airborne_seen: bool = False
+    max_attempt_flow_ratio: float = 0.0
 
 
 def probe_video(path: str | Path) -> VideoMeta:
@@ -1012,8 +1026,9 @@ class _AirborneStateMachine:
 
 
 class RealtimeCounterEngine:
-    def __init__(self, config: EngineConfig):
+    def __init__(self, config: EngineConfig, enable_realtime_compensation: bool = False):
         self.config = config
+        self.enable_realtime_compensation = enable_realtime_compensation
         self.classifier = CycleClassifier(
             target_frames=config.cycle_feature_frames,
             model_path=config.classifier_model_path,
@@ -1027,6 +1042,7 @@ class RealtimeCounterEngine:
         self.accepted_hip_history: deque[float] = deque(maxlen=config.adaptive_gap_history)
         self.accepted_foot_history: deque[float] = deque(maxlen=config.adaptive_gap_history)
         self.last_accepted_frame: int | None = None
+        self.accepted_frame_history: deque[int] = deque()
         self.accepted_running_count = 0
         self.wrist_flow_baseline_ratio = 0.0
         self.wrist_flow_smoothed_ratio = 0.0
@@ -1043,6 +1059,8 @@ class RealtimeCounterEngine:
         self.last_cycle_prediction: CyclePrediction | None = None
         self.last_decision: CounterDecision | None = None
         self.monitor = MonitorState()
+        self.pending_compensation: _PendingCountCompensation | None = None
+        self.current_attempt_flow_ratio = 0.0
 
     def _update_motion_history(self, signal: SignalFrame) -> None:
         if not signal.detected:
@@ -1353,28 +1371,103 @@ class RealtimeCounterEngine:
             cadence_locked=cadence_locked,
         )
 
+    def _clear_pending_compensation(self) -> None:
+        self.pending_compensation = None
+
+    def _start_pending_compensation(self, candidate: CounterEvent) -> None:
+        if not self.enable_realtime_compensation:
+            return
+        self.pending_compensation = _PendingCountCompensation(
+            frame_idx=candidate.frame_idx,
+            time_sec=candidate.time_sec,
+        )
+
+    def _emit_compensation(self, signal: SignalFrame) -> CounterEvent | None:
+        if self.accepted_running_count <= 0:
+            self._clear_pending_compensation()
+            return None
+        had_previous_interval = len(self.accepted_frame_history) > 1
+        self.accepted_running_count -= 1
+        if self.accepted_frame_history:
+            self.accepted_frame_history.pop()
+        if self.accepted_hip_history:
+            self.accepted_hip_history.pop()
+        if self.accepted_foot_history:
+            self.accepted_foot_history.pop()
+        if had_previous_interval and self.accepted_interval_history:
+            self.accepted_interval_history.pop()
+        self.last_accepted_frame = None if not self.accepted_frame_history else self.accepted_frame_history[-1]
+        self._clear_pending_compensation()
+        return CounterEvent(
+            frame_idx=signal.frame_idx,
+            time_sec=signal.time_sec,
+            running_count=self.accepted_running_count,
+            count_delta=-1,
+        )
+
+    def _maybe_compensate_recent_count(self, signal: SignalFrame) -> CounterEvent | None:
+        pending = self.pending_compensation
+        if not self.enable_realtime_compensation or pending is None:
+            return None
+        elapsed_frames = signal.frame_idx - pending.frame_idx
+        if elapsed_frames <= 0:
+            return None
+        if elapsed_frames > self.config.rope_stuck_window_frames:
+            self._clear_pending_compensation()
+            return None
+        pending.observed_frames += 1
+        if self.state_engine.contact_gate:
+            pending.contact_frames += 1
+        if self.state_engine.in_air:
+            pending.airborne_seen = True
+        pending.max_attempt_flow_ratio = max(
+            pending.max_attempt_flow_ratio,
+            self.current_attempt_flow_ratio,
+        )
+        if pending.airborne_seen:
+            self._clear_pending_compensation()
+            return None
+        if pending.observed_frames < self.config.rope_stuck_min_hold_frames:
+            return None
+        contact_ratio = pending.contact_frames / max(1, pending.observed_frames)
+        if (
+            contact_ratio >= self.config.rope_stuck_contact_ratio
+            and pending.max_attempt_flow_ratio >= self.config.rope_stuck_attempt_flow_ratio
+        ):
+            return self._emit_compensation(signal)
+        return None
+
     def warmup(self, signal: SignalFrame) -> None:
         self.last_decision = None
         self._step_internal(signal, allow_count=False)
+        self._clear_pending_compensation()
 
     def step(self, signal: SignalFrame) -> CounterEvent | None:
         self.last_decision = None
-        return self._step_internal(signal, allow_count=True)
+        event = self._step_internal(signal, allow_count=True)
+        if event is not None:
+            self._clear_pending_compensation()
+            self._start_pending_compensation(event)
+            return event
+        return self._maybe_compensate_recent_count(signal)
 
     def arm_for_counting(self) -> None:
         self.state_engine.arm_for_counting()
         self.last_accepted_frame = None
+        self.accepted_frame_history.clear()
         self.accepted_running_count = 0
         self.accepted_interval_history.clear()
         self.accepted_hip_history.clear()
         self.accepted_foot_history.clear()
         self.last_cycle_prediction = None
         self._reset_airborne_flow()
+        self._clear_pending_compensation()
 
     def _step_internal(self, signal: SignalFrame, allow_count: bool) -> CounterEvent | None:
         if not signal.detected:
             self.monitor = MonitorState(frame_idx=signal.frame_idx, time_sec=signal.time_sec, detected=False)
             self._reset_airborne_flow()
+            self.current_attempt_flow_ratio = 0.0
             return None
 
         self._update_motion_history(signal)
@@ -1387,6 +1480,7 @@ class RealtimeCounterEngine:
 
         flow_excess_ratio = self._update_wrist_flow(signal, is_in_air)
         ankle_flow_excess_ratio = self._update_ankle_flow(signal, is_in_air)
+        self.current_attempt_flow_ratio = max(flow_excess_ratio, ankle_flow_excess_ratio)
         completed_cycle: JumpCycleEvidence | None = None
         if not was_in_air and is_in_air:
             self._reset_airborne_flow()
@@ -1494,6 +1588,7 @@ class RealtimeCounterEngine:
         if self.last_accepted_frame is not None and signal.frame_idx > self.last_accepted_frame:
             self.accepted_interval_history.append(signal.frame_idx - self.last_accepted_frame)
         self.last_accepted_frame = signal.frame_idx
+        self.accepted_frame_history.append(signal.frame_idx)
         self.accepted_running_count += 1
         self.accepted_hip_history.append(metrics["hip_range_ratio"])
         self.accepted_foot_history.append(metrics["foot_range_ratio"])
