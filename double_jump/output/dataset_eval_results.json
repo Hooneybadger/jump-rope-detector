@@ -15,7 +15,7 @@
     "symmetry_y_ratio": 0.16,
     "takeoff_height_ratio": 0.008,
     "takeoff_hip_ratio": 0.004,
-    "min_airborne_frames": 1,
+    "min_airborne_frames": 2,
     "max_airborne_frames": 28,
     "landing_contact_frames": 1,
     "fast_mode_cadence_threshold": 7,
@@ -86,8 +86,12 @@
     "min_rope_pass_hints": 0,
     "rope_pass_separation_frames": 2,
     "cycle_feature_frames": 32,
-    "classifier_confidence_threshold": 0.45,
-    "classifier_model_path": "double_jump/artifacts/cycle_classifier.json"
+    "classifier_confidence_threshold": 0.55,
+    "classifier_model_path": "double_jump/artifacts/cycle_classifier.json",
+    "rope_stuck_window_frames": 12,
+    "rope_stuck_min_hold_frames": 3,
+    "rope_stuck_contact_ratio": 0.7,
+    "rope_stuck_attempt_flow_ratio": 0.01
   },
   "label_window": {
     "start_offset_frames": -15,
@@ -95,7 +99,7 @@
     "warmup_frames": 10
   },
   "summary": {
-    "overall_count_accuracy": 0.9766763848396501,
+    "overall_count_accuracy": 0.9650145772594753,
     "exact_video_count_accuracy": 0.0,
     "videos": [
       {
@@ -214,13 +218,12 @@
       {
         "stem": "2",
         "gt_count": 68,
-        "predicted_count": 67,
-        "count_error": -1,
+        "predicted_count": 64,
+        "count_error": -4,
         "exact_match": false,
         "eval_start_frame": 0,
         "eval_end_frame": 928,
         "predicted_frames": [
-          32,
           46,
           59,
           72,
@@ -282,18 +285,16 @@
           824,
           838,
           852,
-          867,
           881,
           895,
-          910,
-          924
+          910
         ]
       },
       {
         "stem": "3",
         "gt_count": 67,
-        "predicted_count": 65,
-        "count_error": -2,
+        "predicted_count": 64,
+        "count_error": -3,
         "exact_match": false,
         "eval_start_frame": 503,
         "eval_end_frame": 1419,
@@ -356,7 +357,6 @@
           1276,
           1291,
           1305,
-          1322,
           1338,
           1355,
           1370,
@@ -479,8 +479,101 @@
       }
     ],
     "total_gt_count": 343,
-    "total_predicted_count": 335,
-    "signed_total_error": -8,
-    "total_abs_error": 8
+    "total_predicted_count": 331,
+    "signed_total_error": -12,
+    "total_abs_error": 12,
+    "negative_videos": [
+      {
+        "stem": "01",
+        "video_dir": "basic_jump/video",
+        "false_positives": 0,
+        "event_frames": []
+      },
+      {
+        "stem": "01_realtime",
+        "video_dir": "basic_jump/video",
+        "false_positives": 0,
+        "event_frames": []
+      },
+      {
+        "stem": "02",
+        "video_dir": "basic_jump/video",
+        "false_positives": 0,
+        "event_frames": []
+      },
+      {
+        "stem": "02_realtime",
+        "video_dir": "basic_jump/video",
+        "false_positives": 0,
+        "event_frames": []
+      },
+      {
+        "stem": "03",
+        "video_dir": "basic_jump/video",
+        "false_positives": 0,
+        "event_frames": []
+      },
+      {
+        "stem": "03_realtime",
+        "video_dir": "basic_jump/video",
+        "false_positives": 0,
+        "event_frames": []
+      },
+      {
+        "stem": "04",
+        "video_dir": "basic_jump/video",
+        "false_positives": 0,
+        "event_frames": []
+      },
+      {
+        "stem": "04_realtime",
+        "video_dir": "basic_jump/video",
+        "false_positives": 0,
+        "event_frames": []
+      },
+      {
+        "stem": "05",
+        "video_dir": "basic_jump/video",
+        "false_positives": 0,
+        "event_frames": []
+      },
+      {
+        "stem": "06",
+        "video_dir": "basic_jump/video",
+        "false_positives": 0,
+        "event_frames": []
+      },
+      {
+        "stem": "07",
+        "video_dir": "basic_jump/video",
+        "false_positives": 0,
+        "event_frames": []
+      },
+      {
+        "stem": "08",
+        "video_dir": "basic_jump/video",
+        "false_positives": 0,
+        "event_frames": []
+      },
+      {
+        "stem": "09",
+        "video_dir": "basic_jump/video",
+        "false_positives": 0,
+        "event_frames": []
+      },
+      {
+        "stem": "10",
+        "video_dir": "basic_jump/video",
+        "false_positives": 0,
+        "event_frames": []
+      },
+      {
+        "stem": "11",
+        "video_dir": "basic_jump/video",
+        "false_positives": 0,
+        "event_frames": []
+      }
+    ],
+    "total_false_positives": 0
   }
 }

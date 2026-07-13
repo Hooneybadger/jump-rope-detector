@@ -212,8 +212,13 @@ cycle classifier가 있어도 보호 로직은 필요하다.
 즉 realtime에서는 아래 순서로 동작한다.
 
 1. jump cycle이 `double_under`로 분류되면 landing 시점에 우선 `+1` 한다.
-2. 직후 몇 프레임 동안 접지 정체와 다음 시도 흐름을 함께 본다.
-3. 시도는 있었지만 다시 뜨지 못하면 줄걸림으로 판단하고 `-1` 보정한다.
+2. 이후 관찰 윈도우(`rope_stuck_window_frames`) 동안 접지 정체와 다음 시도 흐름을 함께 본다.
+3. 윈도우 안에 airborne 회복이 있으면 보정 없이 그대로 둔다.
+4. 윈도우가 끝날 때까지 시도는 있었지만 다시 뜨지 못했으면 줄걸림으로 판단하고 `-1` 보정한다.
+
+줄걸림 판정은 반드시 **윈도우 종료 시점에 한 번만** 내린다.
+연속 점프에서는 착지 후 다음 이륙까지 몇 프레임의 정상 접지가 존재하므로,
+윈도우 중간에 성급하게 판정하면 정상 count가 전부 `-1`로 상쇄되는 문제가 생긴다.
 
 이 보정 역시 오버레이 숫자에 즉시 반영된다.  
 실시간 화면은 엔진의 `running_count`를 그대로 표시하므로, 보정 이벤트가 나오면 표시 count도 함께 내려간다.
@@ -279,8 +284,17 @@ source activate
 python double_jump/train_cycle_classifier.py \
   --video-dir videos/double_jump_video \
   --label-dir videos/double_jump_video \
+  --negative-video-dir basic_jump/video \
   --output double_jump/artifacts/cycle_classifier.json
 ```
+
+`--negative-video-dir`는 **더블언더가 전혀 없는 영상 디렉토리**를 negative로 추가한다.
+해당 디렉토리의 모든 cycle은 `basic_jump` 라벨로 학습된다.
+
+이 옵션이 중요한 이유: 더블언더 영상만으로 학습하면 negative가 "쉬는 동작"뿐이라서,
+분류기가 "리듬 있는 연속 점프 + 팔 회전"을 전부 `double_under`로 배워버린다.
+그 결과 실제 모아뛰기(1단 뛰기)도 그대로 카운트되는 문제가 생긴다.
+반드시 실제 모아뛰기 영상을 negative로 함께 넣어야 한다.
 
 카메라 입력:
 
@@ -315,6 +329,20 @@ MPLCONFIGDIR=/tmp/mpl python double_jump/run_dataset_eval.py \
   --video-dir videos/double_jump_video \
   --label-dir videos/double_jump_video
 ```
+
+모아뛰기 오카운트(false positive) 검증 포함:
+
+```bash
+source activate
+MPLCONFIGDIR=/tmp/mpl python double_jump/run_dataset_eval.py \
+  --video-dir videos/double_jump_video \
+  --label-dir videos/double_jump_video \
+  --negative-video-dir basic_jump/video
+```
+
+`--negative-video-dir`의 영상에는 더블언더가 없다고 가정하고,
+거기서 발생한 모든 카운트를 false positive로 리포트한다.
+모아뛰기가 더블언더로 카운트되는 회귀를 잡는 용도다.
 
 검증 결과 UI 영상 생성:
 

@@ -67,7 +67,7 @@ class EngineConfig:
     symmetry_y_ratio: float = 0.16
     takeoff_height_ratio: float = 0.008
     takeoff_hip_ratio: float = 0.004
-    min_airborne_frames: int = 1
+    min_airborne_frames: int = 2
     max_airborne_frames: int = 28
     landing_contact_frames: int = 1
     fast_mode_cadence_threshold: int = 7
@@ -138,7 +138,7 @@ class EngineConfig:
     min_rope_pass_hints: int = 0
     rope_pass_separation_frames: int = 2
     cycle_feature_frames: int = 32
-    classifier_confidence_threshold: float = 0.45
+    classifier_confidence_threshold: float = 0.55
     classifier_model_path: str | None = "double_jump/artifacts/cycle_classifier.json"
     rope_stuck_window_frames: int = 12
     rope_stuck_min_hold_frames: int = 3
@@ -1412,9 +1412,6 @@ class RealtimeCounterEngine:
         elapsed_frames = signal.frame_idx - pending.frame_idx
         if elapsed_frames <= 0:
             return None
-        if elapsed_frames > self.config.rope_stuck_window_frames:
-            self._clear_pending_compensation()
-            return None
         pending.observed_frames += 1
         if self.state_engine.contact_gate:
             pending.contact_frames += 1
@@ -1427,7 +1424,12 @@ class RealtimeCounterEngine:
         if pending.airborne_seen:
             self._clear_pending_compensation()
             return None
+        # 연속 점프에서는 다음 이륙까지 정상적으로 수 프레임의 접지가 있으므로,
+        # 줄걸림 판정은 관찰 윈도우가 끝날 때까지 airborne 회복이 없을 때만 내린다.
+        if elapsed_frames < self.config.rope_stuck_window_frames:
+            return None
         if pending.observed_frames < self.config.rope_stuck_min_hold_frames:
+            self._clear_pending_compensation()
             return None
         contact_ratio = pending.contact_frames / max(1, pending.observed_frames)
         if (
@@ -1435,6 +1437,7 @@ class RealtimeCounterEngine:
             and pending.max_attempt_flow_ratio >= self.config.rope_stuck_attempt_flow_ratio
         ):
             return self._emit_compensation(signal)
+        self._clear_pending_compensation()
         return None
 
     def warmup(self, signal: SignalFrame) -> None:
