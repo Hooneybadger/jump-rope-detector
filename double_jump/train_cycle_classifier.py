@@ -35,6 +35,13 @@ def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(description="Train a cycle-based double-under classifier.")
     parser.add_argument("--video-dir", default="videos/double_jump_video")
     parser.add_argument("--label-dir", default="videos/double_jump_video")
+    parser.add_argument(
+        "--negative-video-dir",
+        action="append",
+        default=None,
+        dest="negative_video_dirs",
+        help="Directory of videos that contain no double unders; every cycle is labeled basic_jump.",
+    )
     parser.add_argument("--target-frames", type=int, default=32)
     parser.add_argument("--epochs", type=int, default=400)
     parser.add_argument("--learning-rate", type=float, default=0.08)
@@ -72,26 +79,54 @@ def _label_cycle(start_frame: int, end_frame: int, gt_frames: list[int], toleran
     return "basic_jump"
 
 
+def _cycles_from_signals(
+    stem: str,
+    signals: list[SignalFrame],
+    config: EngineConfig,
+    target_frames: int,
+    gt_frames: list[int] | None,
+    tolerance: int,
+) -> list[LabeledCycle]:
+    cycles: list[LabeledCycle] = []
+    for start_frame, end_frame, cycle_frames in _collect_cycles(signals, config):
+        if gt_frames is None:
+            label = "basic_jump"
+        else:
+            label = _label_cycle(start_frame, end_frame, gt_frames, tolerance)
+        tensor = build_cycle_feature_tensor(cycle_frames, target_frames=target_frames)
+        cycles.append(
+            LabeledCycle(
+                stem=stem,
+                start_frame=start_frame,
+                end_frame=end_frame,
+                label=label,
+                feature_vector=flatten_cycle_feature_tensor(tensor),
+            )
+        )
+    return cycles
+
+
 def _build_dataset(
     video_dir: Path,
     ground_truth: dict[str, list[object]],
     config: EngineConfig,
     target_frames: int,
     tolerance: int,
+    negative_video_dirs: list[Path] | None = None,
 ) -> list[LabeledCycle]:
     dataset: list[LabeledCycle] = []
     for stem in sorted(ground_truth):
         _, signals = extract_signal_stream(video_dir / f"{stem}.mp4", config)
         gt_frames = [event.frame_idx for event in ground_truth[stem]]
-        for start_frame, end_frame, cycle_frames in _collect_cycles(signals, config):
-            tensor = build_cycle_feature_tensor(cycle_frames, target_frames=target_frames)
-            dataset.append(
-                LabeledCycle(
-                    stem=stem,
-                    start_frame=start_frame,
-                    end_frame=end_frame,
-                    label=_label_cycle(start_frame, end_frame, gt_frames, tolerance),
-                    feature_vector=flatten_cycle_feature_tensor(tensor),
+        dataset.extend(
+            _cycles_from_signals(stem, signals, config, target_frames, gt_frames, tolerance)
+        )
+    for negative_dir in negative_video_dirs or []:
+        for video_path in sorted(Path(negative_dir).glob("*.mp4")):
+            _, signals = extract_signal_stream(video_path, config)
+            dataset.extend(
+                _cycles_from_signals(
+                    f"neg:{video_path.stem}", signals, config, target_frames, None, tolerance
                 )
             )
     return dataset
@@ -136,6 +171,7 @@ def main() -> None:
         config,
         target_frames=args.target_frames,
         tolerance=args.match_tolerance_frames,
+        negative_video_dirs=args.negative_video_dirs,
     )
     if not dataset:
         raise RuntimeError("No jump cycles found for training.")
@@ -153,6 +189,14 @@ def main() -> None:
     logits = X @ weights.T + bias
     pred = np.argmax(_softmax(logits), axis=1)
     accuracy = float(np.mean(pred == y))
+    label_counts = {name: int(np.sum(y == idx)) for name, idx in label_to_idx.items()}
+    confusion = {
+        true_name: {
+            pred_name: int(np.sum((y == true_idx) & (pred == pred_idx)))
+            for pred_name, pred_idx in label_to_idx.items()
+        }
+        for true_name, true_idx in label_to_idx.items()
+    }
 
     output_path = Path(args.output)
     output_path.parent.mkdir(parents=True, exist_ok=True)
@@ -164,11 +208,16 @@ def main() -> None:
         "bias": bias.tolist(),
         "training_accuracy": accuracy,
         "sample_count": int(X.shape[0]),
+        "label_counts": label_counts,
+        "confusion": confusion,
+        "negative_video_dirs": [str(path) for path in (args.negative_video_dirs or [])],
         "config": asdict(config),
     }
     output_path.write_text(json.dumps(payload, ensure_ascii=False, indent=2), encoding="utf-8")
     print(f"[saved] {output_path}")
     print(f"[train] cycles={X.shape[0]} accuracy={accuracy:.4f}")
+    print(f"[train] label_counts={label_counts}")
+    print(f"[train] confusion={json.dumps(confusion)}")
 
 
 if __name__ == "__main__":

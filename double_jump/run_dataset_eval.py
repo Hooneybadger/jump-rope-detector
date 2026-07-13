@@ -19,6 +19,7 @@ from double_jump.counter_engine import (
     VideoResult,
     extract_signal_stream,
     load_ground_truth,
+    run_counter_on_signals,
     run_dataset,
     save_summary,
     search_best_config,
@@ -55,6 +56,13 @@ def parse_args() -> argparse.Namespace:
     )
     parser.add_argument("--classifier-model-path", default=base_config.classifier_model_path)
     parser.add_argument("--classifier-confidence-threshold", type=float, default=base_config.classifier_confidence_threshold)
+    parser.add_argument(
+        "--negative-video-dir",
+        action="append",
+        default=None,
+        dest="negative_video_dirs",
+        help="Directory of videos with no double unders; every count is reported as a false positive.",
+    )
     return parser.parse_args()
 
 
@@ -69,11 +77,41 @@ def build_signal_cache(
     }
 
 
+def evaluate_negative_videos(
+    video_dirs: list[str],
+    config: EngineConfig,
+    warmup_frames: int,
+) -> list[dict[str, object]]:
+    rows: list[dict[str, object]] = []
+    for video_dir in video_dirs:
+        for video_path in sorted(Path(video_dir).glob("*.mp4")):
+            _, signals = extract_signal_stream(video_path, config)
+            if not signals:
+                continue
+            events = run_counter_on_signals(
+                signals,
+                config,
+                start_frame=warmup_frames,
+                end_frame=None,
+                warmup_frames=warmup_frames,
+            )
+            rows.append(
+                {
+                    "stem": video_path.stem,
+                    "video_dir": str(video_dir),
+                    "false_positives": sum(event.count_delta for event in events),
+                    "event_frames": [event.frame_idx for event in events],
+                }
+            )
+    return rows
+
+
 def render_text_report(
     config: EngineConfig,
     window_config: LabelWindowConfig,
     results,
     summary: dict[str, object],
+    negative_rows: list[dict[str, object]] | None = None,
 ) -> str:
     lines = [
         "Double Jump Dataset Evaluation",
@@ -101,6 +139,12 @@ def render_text_report(
             "",
         ]
     )
+    if negative_rows is not None:
+        lines.append("Negative videos (no double unders, counts are false positives):")
+        for row in negative_rows:
+            lines.append(f"{row['video_dir']}/{row['stem']}: false_positives={row['false_positives']}")
+        total_fp = sum(row["false_positives"] for row in negative_rows)
+        lines.extend([f"Total False Positives: {total_fp}", ""])
     return "\n".join(lines)
 
 
@@ -110,13 +154,14 @@ def save_output_bundle(
     window_config: LabelWindowConfig,
     results,
     summary: dict[str, object],
+    negative_rows: list[dict[str, object]] | None = None,
 ) -> tuple[Path, Path]:
     output_dir.mkdir(parents=True, exist_ok=True)
     summary_path = output_dir / "dataset_eval_results.json"
     report_path = output_dir / "dataset_eval_report.txt"
     save_summary(summary_path, config, summary, window_config)
     report_path.write_text(
-        render_text_report(config, window_config, results, summary),
+        render_text_report(config, window_config, results, summary, negative_rows),
         encoding="utf-8",
     )
     return summary_path, report_path
@@ -342,6 +387,15 @@ def main() -> None:
 
     results = run_dataset(signal_cache, ground_truth, config, window_config)
     summary = summarize_results(results)
+    negative_rows = None
+    if args.negative_video_dirs:
+        negative_rows = evaluate_negative_videos(
+            args.negative_video_dirs,
+            config,
+            window_config.warmup_frames,
+        )
+        summary["negative_videos"] = negative_rows
+        summary["total_false_positives"] = sum(row["false_positives"] for row in negative_rows)
     save_summary(output_path, config, summary, window_config)
     output_summary_path, output_report_path = save_output_bundle(
         output_dir,
@@ -349,6 +403,7 @@ def main() -> None:
         window_config,
         results,
         summary,
+        negative_rows,
     )
 
     print("Config:", config.to_dict())
@@ -366,6 +421,10 @@ def main() -> None:
     )
     print(f"Exact Video Count Accuracy: {summary['exact_video_count_accuracy']:.4f}")
     print(f"Total Abs Error: {summary['total_abs_error']}")
+    if negative_rows is not None:
+        for row in negative_rows:
+            print(f"[negative] {row['video_dir']}/{row['stem']}: false_positives={row['false_positives']}")
+        print(f"Total False Positives: {summary['total_false_positives']}")
     print(f"Saved summary to: {output_path}")
     print(f"Saved output json to: {output_summary_path}")
     print(f"Saved output report to: {output_report_path}")
