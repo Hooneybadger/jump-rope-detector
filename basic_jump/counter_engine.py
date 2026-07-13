@@ -96,7 +96,7 @@ class EngineConfig:
     adaptive_motion_foot_ratio: float = 0.05
     adaptive_recent_hip_enabled: bool = True
     adaptive_recent_hip_floor: float = 0.032
-    rope_stuck_window_frames: int = 10
+    rope_stuck_window_frames: int = 15
     rope_stuck_min_hold_frames: int = 3
     rope_stuck_contact_ratio: float = 0.67
     rope_stuck_release_recovery_ratio: float = 0.018
@@ -502,6 +502,8 @@ class _StateMachineCounter:
             self.current_contact_gate = False
             self.current_release_height_ratio = 0.0
             self.current_abs_hip_velocity_ratio = 0.0
+            # 검출 공백 이전 값과의 차분으로 유령 hip 속도가 튀지 않게 한다.
+            self.prev_hip_motion = None
             return None
         assert signal.left_foot_y is not None
         assert signal.right_foot_y is not None
@@ -587,7 +589,7 @@ class RealtimeCounterEngine:
         self.candidate_foot_history: deque[float] = deque(maxlen=config.adaptive_gap_history)
         self.last_candidate_frame: int | None = None
         self.last_accepted_frame: int | None = None
-        self.accepted_frame_history: deque[int] = deque()
+        self.accepted_frame_history: deque[int] = deque(maxlen=64)
         self.accepted_running_count = 0
         self.last_decision: CounterDecision | None = None
         self.pending_compensation: _PendingCountCompensation | None = None
@@ -626,9 +628,6 @@ class RealtimeCounterEngine:
         elapsed_frames = signal.frame_idx - pending.frame_idx
         if elapsed_frames <= 0:
             return None
-        if elapsed_frames > self.config.rope_stuck_window_frames:
-            self._clear_pending_compensation()
-            return None
         pending.observed_frames += 1
         if self.state_engine.current_contact_gate:
             pending.contact_frames += 1
@@ -643,7 +642,12 @@ class RealtimeCounterEngine:
         if pending.max_release_height_ratio >= self.config.rope_stuck_release_recovery_ratio:
             self._clear_pending_compensation()
             return None
+        # 연속 점프에서는 다음 반등(raw 후보)이나 release 회복이 window 안에 정상적으로
+        # 도착하므로, 줄걸림 판정은 관찰 윈도우가 끝날 때까지 그 둘이 없을 때만 내린다.
+        if elapsed_frames < self.config.rope_stuck_window_frames:
+            return None
         if pending.observed_frames < self.config.rope_stuck_min_hold_frames:
+            self._clear_pending_compensation()
             return None
         contact_ratio = pending.contact_frames / max(1, pending.observed_frames)
         if (
@@ -651,6 +655,7 @@ class RealtimeCounterEngine:
             and pending.max_abs_hip_velocity_ratio >= self.config.rope_stuck_attempt_velocity_ratio
         ):
             return self._emit_compensation(signal)
+        self._clear_pending_compensation()
         return None
 
     def _update_motion_history(self, signal: SignalFrame) -> None:

@@ -974,9 +974,6 @@ class RealtimeCounterEngine:
         elapsed_frames = signal.frame_idx - pending.frame_idx
         if elapsed_frames <= 0:
             return None
-        if elapsed_frames > self.config.rope_stuck_window_frames:
-            self.pending_compensation = None
-            return None
         pending.observed_frames += 1
         if self.current_support_side == pending.counted_side and pending.counted_side is not None:
             pending.same_side_frames += 1
@@ -987,7 +984,12 @@ class RealtimeCounterEngine:
         if pending.opposite_side_seen or pending.max_dual_air_ratio >= self.config.rope_stuck_dual_air_recovery_ratio:
             self.pending_compensation = None
             return None
+        # 정상 스텝에서도 착지 후 다음 전환까지 같은 지지발이 수 프레임 유지되므로,
+        # 줄걸림 판정은 관찰 윈도우가 끝날 때까지 반대발 전환/양발 부양 회복이 없을 때만 내린다.
+        if elapsed_frames < self.config.rope_stuck_window_frames:
+            return None
         if pending.observed_frames < self.config.rope_stuck_min_hold_frames:
+            self.pending_compensation = None
             return None
         same_side_ratio = pending.same_side_frames / max(1, pending.observed_frames)
         if (
@@ -1002,6 +1004,7 @@ class RealtimeCounterEngine:
                 running_count=self.accepted_running_count,
                 count_delta=-1,
             )
+        self.pending_compensation = None
         return None
 
     def _step_internal(
@@ -1120,7 +1123,9 @@ class RealtimeCounterEngine:
                 and gap_frames is not None
                 and gap_frames >= self.config.alternation_reset_gap_frames
             ):
+                # 리셋 gap 이상 쉬었다면 새 출발이므로 이전에 계산된 recovery 보정도 버린다.
                 self.expected_side = None
+                alternation_recovery_count = None
             else:
                 alternation_recovery_count = self._alternation_recovery_count(
                     gap_frames,

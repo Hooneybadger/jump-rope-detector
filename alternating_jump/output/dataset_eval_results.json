@@ -71,7 +71,12 @@
     "weak_support_dual_air_active_frames": 2,
     "weak_support_bonus_max_opposition_ratio": 0.35,
     "bootstrap_sequence_required": false,
-    "bootstrap_max_gap_frames": 12
+    "bootstrap_max_gap_frames": 12,
+    "rope_stuck_window_frames": 10,
+    "rope_stuck_min_hold_frames": 3,
+    "rope_stuck_same_side_ratio": 0.7,
+    "rope_stuck_min_support_ratio": 0.1,
+    "rope_stuck_dual_air_recovery_ratio": 0.018
   },
   "label_window": {
     "start_offset_frames": 0,

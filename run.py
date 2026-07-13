@@ -267,7 +267,6 @@ def _build_menu_frame(hovered: Optional[JumpType]) -> np.ndarray:
 
 def run_menu() -> Optional[JumpType]:
     """Render the menu and return selected JumpType, or None to quit."""
-    state: dict = {"selected": None}
 
     def _on_mouse(event, x, y, flags, param):
         param["mx"], param["my"] = x, y
@@ -428,8 +427,8 @@ def show_results(final_count: int, jump_type: JumpType, duration_sec: float) -> 
         t1w, _ = _text_size(t1, 0.78, 2)
         _text(frame, t1, (cx - t1w // 2, cy - 100), 0.78, _ON_SURFACE, thickness=2)
 
-        # jump type line
-        jt_line = f"{meta['name_ko']}   {meta['name_en']}"
+        # jump type line (cv2.putText: ASCII only)
+        jt_line = meta["name_en"]
         jtw, _ = _text_size(jt_line, 0.56, 1)
         _text(frame, jt_line, (cx - jtw // 2, cy - 62), 0.56, accent, thickness=1, shadow=False)
 
@@ -558,7 +557,7 @@ def run_detector(jump_type: JumpType, source: str = "0") -> tuple[int, float]:
             if stream_state.phase == "SEARCHING" and not count_ready:
                 engine = None
             elif engine is None and count_ready:
-                engine = RealtimeCounterEngine(config)
+                engine = RealtimeCounterEngine(config, enable_realtime_compensation=True)
 
             if phase_changed:
                 if stream_state.phase == "COUNTING":
