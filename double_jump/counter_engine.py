@@ -1042,7 +1042,7 @@ class RealtimeCounterEngine:
         self.accepted_hip_history: deque[float] = deque(maxlen=config.adaptive_gap_history)
         self.accepted_foot_history: deque[float] = deque(maxlen=config.adaptive_gap_history)
         self.last_accepted_frame: int | None = None
-        self.accepted_frame_history: deque[int] = deque()
+        self.accepted_frame_history: deque[int] = deque(maxlen=64)
         self.accepted_running_count = 0
         self.wrist_flow_baseline_ratio = 0.0
         self.wrist_flow_smoothed_ratio = 0.0

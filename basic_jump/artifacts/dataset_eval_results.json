@@ -53,7 +53,12 @@
     "adaptive_motion_hip_ratio": 0.06,
     "adaptive_motion_foot_ratio": 0.05,
     "adaptive_recent_hip_enabled": true,
-    "adaptive_recent_hip_floor": 0.032
+    "adaptive_recent_hip_floor": 0.032,
+    "rope_stuck_window_frames": 15,
+    "rope_stuck_min_hold_frames": 3,
+    "rope_stuck_contact_ratio": 0.67,
+    "rope_stuck_release_recovery_ratio": 0.018,
+    "rope_stuck_attempt_velocity_ratio": 0.003
   },
   "label_window": {
     "start_offset_frames": -15,

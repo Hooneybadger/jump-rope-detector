@@ -289,7 +289,8 @@ def main() -> None:
                 event = engine.step(signal)
                 if event is not None:
                     accepted_count = event.running_count
-                    count_pulse_remaining_frames = count_pulse_total_frames
+                    if event.count_delta > 0:
+                        count_pulse_remaining_frames = count_pulse_total_frames
                     print(
                         f"[count] {accepted_count} ({event.count_delta:+d}) "
                         f"@ frame={event.frame_idx} time={event.time_sec:.2f}s"

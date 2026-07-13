@@ -1,7 +1,7 @@
 # 모아뛰기 측정에 사용된 기술 정리 노트
 
 이 문서는 `basic_jump` 디렉토리에서 모아뛰기 카운트를 구현할 때 사용한 기술들을 번호 순으로 정리한 문서다.  
-설명 대상은 주로 [basic_jump/counter_engine.py](/home/dongeon-yoon/jump-rope-detector/basic_jump/counter_engine.py), [basic_jump/run_dataset_eval.py](/home/dongeon-yoon/jump-rope-detector/basic_jump/run_dataset_eval.py), [basic_jump/README.md](/home/dongeon-yoon/jump-rope-detector/basic_jump/README.md)이다.
+설명 대상은 주로 [basic_jump/counter_engine.py](basic_jump/counter_engine.py), [basic_jump/run_dataset_eval.py](basic_jump/run_dataset_eval.py), [basic_jump/README.md](basic_jump/README.md)이다.
 
 설명 전 중요한 전제 3가지가 있다.
 
@@ -30,7 +30,7 @@ flowchart LR
 - 카운팅에 직접 쓰는 핵심 랜드마크는 `hip`, `ankle`, `heel`, `foot index`다.
 - 이 기술의 목적은 모아뛰기에서 몸 중심과 발의 상하 변화값을 안정적으로 얻는 것이다.
 - 구현 위치:
-   [basic_jump/counter_engine.py의 381번째 줄](/home/dongeon-yoon/jump-rope-detector/basic_jump/counter_engine.py#L381)
+   [basic_jump/counter_engine.py의 397번째 줄](basic_jump/counter_engine.py#L397)
 
 설정상 관련 수치:
 
@@ -44,7 +44,7 @@ flowchart LR
 - 좌우 발 랜드마크가 충분히 보이지 않아도 카운팅에서 제외한다.
 - 이 기술의 목적은 랜드마크 품질이 낮은 프레임은 초기에 버려서 후단 상태기계가 랜드마크의 흔들림에 오염되지 않게 하는 것이다.
 - 구현 위치:
-   [basic_jump/counter_engine.py의 307번째 줄](/home/dongeon-yoon/jump-rope-detector/basic_jump/counter_engine.py#L307)
+   [basic_jump/counter_engine.py의 323번째 줄](basic_jump/counter_engine.py#L323)
 
 설정된 임계값:
 
@@ -57,7 +57,7 @@ flowchart LR
 - visibility가 높은 발 랜드마크를 우선 사용하고, 부족하면 fallback 평균을 쓴다.
 - 이렇게 해서 하나의 발 랜드마크가 흔들릴 때 생기는 노이즈를 줄일 수 있다.
 - 구현 위치:
-   [basic_jump/counter_engine.py의 295번째 줄](/home/dongeon-yoon/jump-rope-detector/basic_jump/counter_engine.py#L295)
+   [basic_jump/counter_engine.py의 311번째 줄](basic_jump/counter_engine.py#L311)
 
 ```mermaid
 flowchart TD
@@ -75,7 +75,7 @@ flowchart TD
 - 대부분의 threshold는 `leg_length`로 나눈 ratio 형태로 처리한다.
 - 이 기술의 목적은 사람 키, 카메라 거리, 촬영 구도의 차이를 줄이는 것이다.
 - 구현 위치:
-   [basic_jump/counter_engine.py의 332번째 줄](/home/dongeon-yoon/jump-rope-detector/basic_jump/counter_engine.py#L332)
+   [basic_jump/counter_engine.py의 348번째 줄](basic_jump/counter_engine.py#L348)
 
 설정된 하한:
 
@@ -87,7 +87,7 @@ flowchart TD
 - 좌우 foot 평균으로 양발의 접지 높이 신호를 만든다.
 - basic_jump는 모아뛰기이므로 좌우 전환보다 양발 묶음의 반등 리듬(cadence)이 더 중요하다.
 - 구현 위치:
-   [basic_jump/counter_engine.py의 352번째 줄](/home/dongeon-yoon/jump-rope-detector/basic_jump/counter_engine.py#L352)
+   [basic_jump/counter_engine.py의 368번째 줄](basic_jump/counter_engine.py#L368)
 
 ## 6. EMA 기반 smoothing
 
@@ -95,7 +95,7 @@ flowchart TD
 - 표준 EMA와 빠른 EMA를 둘 다 계산한다.
 - 최근 interval이 짧아 빠른 리듬으로 판단되면 더 빠른 EMA를 써서 반응 속도를 높인다.
 - 구현 위치:
-   [basic_jump/counter_engine.py의 450번째 줄](/home/dongeon-yoon/jump-rope-detector/basic_jump/counter_engine.py#L450)
+   [basic_jump/counter_engine.py의 469번째 줄](basic_jump/counter_engine.py#L469)
 
 설정된 임계값:
 
@@ -111,7 +111,7 @@ flowchart TD
 - 실제 상태기계는 현재 프레임의 y좌표가 아니라 baseline에서 벗어난 정도인 residual motion을 본다.
 - 이 기술은 사용자가 카메라 앞뒤 혹은 옆쪽으로 서서히 이동하는 움직임으로 인한 거리 변화와 실제 점프 반등을 분리하기 위함이다.
 - 구현 위치:
-   [basic_jump/counter_engine.py의 468번째 줄](/home/dongeon-yoon/jump-rope-detector/basic_jump/counter_engine.py#L468)
+   [basic_jump/counter_engine.py의 487번째 줄](basic_jump/counter_engine.py#L487)
 
 설정된 임계값:
 
@@ -133,7 +133,7 @@ flowchart LR
 - foot residual의 상단 영역을 현재 바닥 근처라고 보고 계속 갱신한다.
 - 이 기술은 `floor_decay_ratio(=decay)`를 두어 점프를 하는 동안 바닥 추정이 너무 급하게 변하지 않도록 돕는다.
 - 구현 위치:
-   [basic_jump/counter_engine.py의 475번째 줄](/home/dongeon-yoon/jump-rope-detector/basic_jump/counter_engine.py#L475)
+   [basic_jump/counter_engine.py의 494번째 줄](basic_jump/counter_engine.py#L494)
 
 설정된 임계값:
 
@@ -145,7 +145,7 @@ flowchart LR
 - 좌우 발 높이 차가 너무 크지 않은지도 같이 본다.
 - 즉, “양발이 바닥 근처에 같이 있는 모아뛰기 접지 상태”를 gate로 만들어 count 후보로 넘기는 역할이다.
 - 구현 위치:
-   [basic_jump/counter_engine.py의 488번째 줄](/home/dongeon-yoon/jump-rope-detector/basic_jump/counter_engine.py#L488)
+   [basic_jump/counter_engine.py의 512번째 줄](basic_jump/counter_engine.py#L512)
 
 설정된 임계값:
 
@@ -168,7 +168,7 @@ flowchart TD
 - 빠른 리듬에서는 `fast_descend_velocity_ratio`, `fast_ascend_velocity_ratio`를 사용해 threshold 기준을 완화한다.
 - 이 기술의 핵심은 점프의 최고점을 세는 것이 아니라 접지 상태에서 하강 후 상승으로 바뀌는 첫 전환점을 세는 것이다.
 - 구현 위치:
-   [basic_jump/counter_engine.py의 472번째 줄](/home/dongeon-yoon/jump-rope-detector/basic_jump/counter_engine.py#L472)
+   [basic_jump/counter_engine.py의 491번째 줄](basic_jump/counter_engine.py#L491)
 
 설정된 임계값:
 
@@ -183,7 +183,7 @@ flowchart TD
 - `CONTACT`에서 하강을 본 뒤, 다음 프레임들에서 상승 전환이 오면 후보 count(+1 카운트)를 만든다.
 - 카운트 직후 `REBOUND_LOCK`으로 전환되어 같은 점프를 두 번 세는 것을 막는다.
 - 구현 위치:
-   [basic_jump/counter_engine.py의 426번째 줄](/home/dongeon-yoon/jump-rope-detector/basic_jump/counter_engine.py#L426)
+   [basic_jump/counter_engine.py의 442번째 줄](basic_jump/counter_engine.py#L442)
 
 설정된 임계값:
 
@@ -205,7 +205,7 @@ stateDiagram-v2
 - 최근 interval median이 짧으면 빠른 리듬으로 판단하여 fast mode로 전환된다.
 - fast mode에서는 smoothing, velocity threshold, refractory값이 빠른 리듬에 맞게 바뀐다.
 - 구현 위치:
-   [basic_jump/counter_engine.py의 493번째 줄](/home/dongeon-yoon/jump-rope-detector/basic_jump/counter_engine.py#L493)
+   [basic_jump/counter_engine.py의 518번째 줄](basic_jump/counter_engine.py#L518)
 
 설정된 임계값:
 
@@ -219,7 +219,7 @@ stateDiagram-v2
 - 이 값들이 기준을 통과해야 실제 점프라고 본다.
 - 이 기술은 손동작, 발장난 등 가짜 모아뛰기 동작을 걸러내기 위함이다.
 - 구현 위치:
-   [basic_jump/counter_engine.py의 566번째 줄](/home/dongeon-yoon/jump-rope-detector/basic_jump/counter_engine.py#L566)
+   [basic_jump/counter_engine.py의 661번째 줄](basic_jump/counter_engine.py#L661)
 
 설정된 임계값:
 
@@ -235,7 +235,7 @@ stateDiagram-v2
 - 그래서 `foot_to_hip_ratio`를 계산해 상한을 둔다.
 - 모아뛰기에서 body rebound가 빠진 가짜 이벤트를 줄이기 위함이다.
 - 구현 위치:
-   [basic_jump/counter_engine.py의 583번째 줄](/home/dongeon-yoon/jump-rope-detector/basic_jump/counter_engine.py#L583)
+   [basic_jump/counter_engine.py의 678번째 줄](basic_jump/counter_engine.py#L678)
 
 설정된 임계값:
 
@@ -247,7 +247,7 @@ stateDiagram-v2
 - 그래서 최근 짧은 구간의 hip range를 따로 본다.
 - 이 기술은 지금 막 반등이 실제로 있었는지를 더 엄격하게 보기 위함이다.
 - 구현 위치:
-   [basic_jump/counter_engine.py의 587번째 줄](/home/dongeon-yoon/jump-rope-detector/basic_jump/counter_engine.py#L587)
+   [basic_jump/counter_engine.py의 682번째 줄](basic_jump/counter_engine.py#L682)
 
 설정된 임계값:
 
@@ -260,7 +260,7 @@ stateDiagram-v2
 - 조건이 맞으면 `min_count_gap_frames`를 자동으로 줄인다.
 - 빠른 모아뛰기에서 undercount가 나는 문제를 줄이기 위한 기술이다.
 - 구현 위치:
-   [basic_jump/counter_engine.py의 612번째 줄](/home/dongeon-yoon/jump-rope-detector/basic_jump/counter_engine.py#L612)
+   [basic_jump/counter_engine.py의 707번째 줄](basic_jump/counter_engine.py#L707)
 
 설정된 임계값:
 
@@ -293,7 +293,7 @@ flowchart LR
 - `extended_motion_override`는 넓은 구간 motion과 최근 구간 motion의 비율까지 함께 봐서 accept 여지를 준다.
 - `foot_floor_override`는 foot range가 상대적으로 작아도 floor 근처 패턴과 hip motion이 맞으면 카운트한다.
 - 구현 위치:
-   [basic_jump/counter_engine.py의 668번째 줄](/home/dongeon-yoon/jump-rope-detector/basic_jump/counter_engine.py#L668)
+   [basic_jump/counter_engine.py의 763번째 줄](basic_jump/counter_engine.py#L763)
 
 설정된 임계값:
 
@@ -319,7 +319,7 @@ flowchart LR
 - hip range는 큰데 최근 hip range가 너무 작은 패턴을 stale tail로 본다.
 - cadence locked 상태에서 잘못된 패턴을 잘라내는 보호 로직이다.
 - 구현 위치:
-   [basic_jump/counter_engine.py의 702번째 줄](/home/dongeon-yoon/jump-rope-detector/basic_jump/counter_engine.py#L702)
+   [basic_jump/counter_engine.py의 797번째 줄](basic_jump/counter_engine.py#L797)
 
 설정된 임계값:
 
@@ -332,7 +332,7 @@ flowchart LR
 - 준비 자세가 일정 시간 유지되면 countdown을 거쳐 counting으로 진입한다.
 - 그동안 엔진은 floor band와 motion history를 미리 warmup시킨다.
 - 구현 위치:
-   [basic_jump/counter_engine.py의 793번째 줄](/home/dongeon-yoon/jump-rope-detector/basic_jump/counter_engine.py#L793)
+   [basic_jump/counter_engine.py의 897번째 줄](basic_jump/counter_engine.py#L897)
 
 ```mermaid
 sequenceDiagram
@@ -353,8 +353,8 @@ sequenceDiagram
 - warmup 프레임을 포함해 카운터를 돌린 뒤 예측 count와 GT count를 비교한다.
 - 결과는 JSON 요약과 텍스트 리포트, validation video로 저장한다.
 - 구현 위치:
-   [basic_jump/run_dataset_eval.py의 29번째 줄](/home/dongeon-yoon/jump-rope-detector/basic_jump/run_dataset_eval.py#L29)
-   [basic_jump/counter_engine.py의 899번째 줄](/home/dongeon-yoon/jump-rope-detector/basic_jump/counter_engine.py#L899)
+   [basic_jump/run_dataset_eval.py의 29번째 줄](basic_jump/run_dataset_eval.py#L29)
+   [basic_jump/counter_engine.py의 1003번째 줄](basic_jump/counter_engine.py#L1003)
 
 ## 21. Kinovea 라벨 데이터 사용 방식
 
@@ -378,8 +378,8 @@ sequenceDiagram
 - keyframe마다 point 개수를 세고 timestamp를 frame index로 변환한다.
 - 인접한 single point 라벨 둘은 하나의 이벤트로 병합한다.
 - 구현 위치:
-   [basic_jump/counter_engine.py의 207번째 줄](/home/dongeon-yoon/jump-rope-detector/basic_jump/counter_engine.py#L207)
-   [basic_jump/counter_engine.py의 235번째 줄](/home/dongeon-yoon/jump-rope-detector/basic_jump/counter_engine.py#L235)
+   [basic_jump/counter_engine.py의 223번째 줄](basic_jump/counter_engine.py#L223)
+   [basic_jump/counter_engine.py의 251번째 줄](basic_jump/counter_engine.py#L251)
 
 ```mermaid
 flowchart LR
@@ -396,7 +396,7 @@ flowchart LR
 - 같은 stem의 영상 fps를 참고해 frame 기준 GT 이벤트를 만든다.
 - 결과는 `stem -> LabelEvent 리스트` 형태로 사용된다.
 - 구현 위치:
-   [basic_jump/counter_engine.py의 285번째 줄](/home/dongeon-yoon/jump-rope-detector/basic_jump/counter_engine.py#L285)
+   [basic_jump/counter_engine.py의 301번째 줄](basic_jump/counter_engine.py#L301)
 
 ### 21.3 평가 윈도우 설정
 
@@ -404,7 +404,7 @@ flowchart LR
 - warmup frame도 따로 두어 엔진이 초반 상태를 적응하게 한다.
 - 이렇게 해야 라벨 구간만 딱 자른 영상처럼 잘못된 평가를 피할 수 있다.
 - 구현 위치:
-   [basic_jump/counter_engine.py의 861번째 줄](/home/dongeon-yoon/jump-rope-detector/basic_jump/counter_engine.py#L861)
+   [basic_jump/counter_engine.py의 965번째 줄](basic_jump/counter_engine.py#L965)
 
 현재 저장된 대표 결과 파일의 label window:
 
@@ -418,7 +418,7 @@ flowchart LR
 - predicted count와 비교해 `count_error`, `overall_count_accuracy`, `exact_video_count_accuracy`, `total_abs_error`를 계산한다.
 - 이 값들이 규칙 엔진의 성능 평가 기준이 된다.
 - 구현 위치:
-   [basic_jump/counter_engine.py의 934번째 줄](/home/dongeon-yoon/jump-rope-detector/basic_jump/counter_engine.py#L934)
+   [basic_jump/counter_engine.py의 1042번째 줄](basic_jump/counter_engine.py#L1042)
 
 현재 저장된 결과 파일 기준 수치:
 
@@ -434,8 +434,8 @@ flowchart LR
 - `overall_count_accuracy`, `total_abs_error`, `exact_video_count_accuracy` 순서로 best config를 선택한다.
 - 즉, Kinovea 라벨은 threshold와 보호 규칙을 정하는데 사용한다.
 - 구현 위치:
-   [basic_jump/counter_engine.py의 951번째 줄](/home/dongeon-yoon/jump-rope-detector/basic_jump/counter_engine.py#L951)
-   [basic_jump/counter_engine.py의 981번째 줄](/home/dongeon-yoon/jump-rope-detector/basic_jump/counter_engine.py#L981)
+   [basic_jump/counter_engine.py의 1059번째 줄](basic_jump/counter_engine.py#L1059)
+   [basic_jump/counter_engine.py의 1089번째 줄](basic_jump/counter_engine.py#L1089)
 
 grid search에 포함된 값 범위:
 
@@ -465,9 +465,9 @@ flowchart TD
 - 사람이 읽기 쉬운 텍스트 리포트도 생성한다.
 - 선택적으로 GT와 prediction을 같은 영상 위에 그린 validation video를 만든다.
 - 구현 위치:
-   [basic_jump/run_dataset_eval.py의 59번째 줄](/home/dongeon-yoon/jump-rope-detector/basic_jump/run_dataset_eval.py#L59)
-   [basic_jump/run_dataset_eval.py의 93번째 줄](/home/dongeon-yoon/jump-rope-detector/basic_jump/run_dataset_eval.py#L93)
-   [basic_jump/run_dataset_eval.py의 149번째 줄](/home/dongeon-yoon/jump-rope-detector/basic_jump/run_dataset_eval.py#L149)
+   [basic_jump/run_dataset_eval.py의 59번째 줄](basic_jump/run_dataset_eval.py#L59)
+   [basic_jump/run_dataset_eval.py의 93번째 줄](basic_jump/run_dataset_eval.py#L93)
+   [basic_jump/run_dataset_eval.py의 149번째 줄](basic_jump/run_dataset_eval.py#L149)
 
 ## 22. 실제로 “학습”된 것은 무엇인가
 

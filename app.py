@@ -347,7 +347,7 @@ class JumpRopeProcessor(VideoProcessorBase):
         if stream_state.phase == "SEARCHING" and not count_ready:
             self._engine = None
         elif self._engine is None and count_ready:
-            self._engine = self._RCE(self._config)
+            self._engine = self._RCE(self._config, enable_realtime_compensation=True)
 
         if phase_changed:
             if stream_state.phase == "COUNTING":

@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import json
+import sys
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Sequence
@@ -28,7 +29,7 @@ class CycleClassifier:
         model_path: str | Path | None = None,
     ) -> None:
         self.target_frames = target_frames
-        self.model_path = None if model_path in {None, ""} else Path(model_path)
+        self.model_path = self._resolve_model_path(model_path)
         self.weights: np.ndarray | None = None
         self.bias: np.ndarray | None = None
         self.class_names = list(CLASS_NAMES)
@@ -40,6 +41,26 @@ class CycleClassifier:
             self.weights = np.asarray(payload["weights"], dtype=np.float32)
             self.bias = np.asarray(payload["bias"], dtype=np.float32)
             self.source = f"softmax:{self.model_path.name}"
+        elif model_path not in {None, ""}:
+            print(
+                f"[cycle_classifier] model not found: {model_path} — "
+                "falling back to untrained heuristic scoring.",
+                file=sys.stderr,
+            )
+
+    @staticmethod
+    def _resolve_model_path(model_path: str | Path | None) -> Path | None:
+        if model_path in {None, ""}:
+            return None
+        path = Path(model_path)
+        if path.is_absolute() or path.exists():
+            return path
+        # CWD 기준으로 없으면 저장소 루트 기준으로 재시도한다.
+        # (run.py / streamlit 등이 저장소 밖에서 실행돼도 기본 모델을 찾도록)
+        repo_relative = Path(__file__).resolve().parents[1] / path
+        if repo_relative.exists():
+            return repo_relative
+        return path
 
     def _softmax(self, logits: np.ndarray) -> np.ndarray:
         shifted = logits - np.max(logits)
