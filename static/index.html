@@ -1,0 +1,155 @@
+<!doctype html>
+<html lang="ko">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="theme-color" content="#081426">
+  <title>Jump Rope Lab</title>
+  <link rel="stylesheet" href="/app.css">
+</head>
+<body>
+  <main id="login-view" class="login-view">
+    <section class="login-brand" aria-label="서비스 소개">
+      <div class="rope-mark rope-mark-large" aria-hidden="true"><span></span></div>
+      <p class="brand-name">Jump Rope Lab</p>
+      <h1>한 번의 도약도<br>놓치지 않도록.</h1>
+      <p class="login-copy">카메라 앞에 서면 자세를 찾고, 리듬을 읽고, 기록을 남깁니다.</p>
+      <div class="court-lines" aria-hidden="true"><i></i><i></i><i></i><i></i><i></i></div>
+    </section>
+    <section class="login-panel">
+      <form id="login-form" class="login-form">
+        <div>
+          <p class="section-kicker">다시 만나 반갑습니다</p>
+          <h2>로그인</h2>
+        </div>
+        <label>아이디<input id="login-username" name="username" autocomplete="username" required maxlength="50"></label>
+        <label>비밀번호<input id="login-password" name="password" type="password" autocomplete="current-password" required maxlength="200"></label>
+        <p id="login-error" class="form-error" role="alert"></p>
+        <button class="button button-primary" type="submit">훈련실 입장</button>
+      </form>
+    </section>
+  </main>
+
+  <div id="app-shell" class="app-shell" hidden>
+    <header class="topbar">
+      <button class="brand-button" data-nav="dashboard" aria-label="대시보드로 이동">
+        <span class="rope-mark" aria-hidden="true"><span></span></span>
+        <span>Jump Rope Lab</span>
+      </button>
+      <nav class="nav-tabs" aria-label="주 메뉴">
+        <button class="nav-tab is-active" data-nav="dashboard">훈련</button>
+        <button id="admin-tab" class="nav-tab" data-nav="admin" hidden>관리</button>
+      </nav>
+      <div class="user-cluster">
+        <span id="user-badge" class="user-badge"></span>
+        <button id="logout-button" class="text-button">로그아웃</button>
+      </div>
+    </header>
+
+    <main class="page-wrap">
+      <section id="dashboard-view" class="page-view">
+        <div class="dashboard-lead">
+          <div>
+            <p class="section-kicker">오늘의 훈련</p>
+            <h1 id="welcome-heading">리듬을 선택하세요.</h1>
+            <p>온몸이 화면에 들어오면 3초 뒤 자동으로 측정을 시작합니다.</p>
+          </div>
+          <div class="daily-ring" aria-hidden="true"><span id="summary-count">0</span><small>누적 점프</small></div>
+        </div>
+
+        <section class="mode-grid" aria-label="줄넘기 종목 선택">
+          <article class="mode-card mode-basic" data-mode-card="basic">
+            <div class="mode-glyph" aria-hidden="true"><i></i><span></span><i></i></div>
+            <div><h2>모아뛰기</h2><p>두 발의 착지와 반동 리듬을 함께 측정합니다.</p></div>
+            <button class="mode-start" data-mode="basic">측정 시작 <span>→</span></button>
+            <p class="locked-copy" hidden>이 종목의 사용 권한이 없습니다.</p>
+          </article>
+          <article class="mode-card mode-alternating" data-mode-card="alternating">
+            <div class="mode-glyph offset" aria-hidden="true"><i></i><span></span><i></i></div>
+            <div><h2>번갈아뛰기</h2><p>좌우 발의 교대와 지지 전환을 구분합니다.</p></div>
+            <button class="mode-start" data-mode="alternating">측정 시작 <span>→</span></button>
+            <p class="locked-copy" hidden>이 종목의 사용 권한이 없습니다.</p>
+          </article>
+          <article class="mode-card mode-double" data-mode-card="double">
+            <div class="mode-glyph double" aria-hidden="true"><i></i><span></span><i></i></div>
+            <div><h2>이중뛰기</h2><p>체공 구간과 손목 회전 특징을 함께 분석합니다.</p></div>
+            <button class="mode-start" data-mode="double">측정 시작 <span>→</span></button>
+            <p class="locked-copy" hidden>이 종목의 사용 권한이 없습니다.</p>
+          </article>
+        </section>
+
+        <section class="record-section">
+          <div class="section-heading">
+            <div><p class="section-kicker">기록</p><h2>최근 세션</h2></div>
+            <div class="summary-strip">
+              <span><b id="summary-sessions">0</b>회 훈련</span>
+              <span><b id="summary-duration">0분</b>측정</span>
+            </div>
+          </div>
+          <div class="table-shell">
+            <table>
+              <thead><tr><th>사용자</th><th>종목</th><th>횟수</th><th>시간</th><th>시작</th></tr></thead>
+              <tbody id="history-body"></tbody>
+            </table>
+            <p id="history-empty" class="empty-state">첫 측정을 시작하면 기록이 여기에 쌓입니다.</p>
+          </div>
+        </section>
+      </section>
+
+      <section id="admin-view" class="page-view" hidden>
+        <div class="admin-head">
+          <div><p class="section-kicker">접근 제어</p><h1>사용자와 권한</h1><p>계정별로 사용할 수 있는 줄넘기 종목을 지정합니다.</p></div>
+          <button id="open-create-user" class="button button-primary">사용자 추가</button>
+        </div>
+        <div class="admin-grid">
+          <section class="admin-panel"><h2>사용자</h2><div id="user-list" class="user-list"></div></section>
+          <section class="admin-panel"><h2>최근 감사 로그</h2><div id="audit-list" class="audit-list"></div></section>
+        </div>
+      </section>
+    </main>
+  </div>
+
+  <section id="workout-view" class="workout-view" hidden aria-label="실시간 측정">
+    <header class="workout-bar">
+      <div><button id="workout-back" class="icon-button" aria-label="측정 종료">×</button><span id="workout-mode-name">모아뛰기</span></div>
+      <div class="view-controls" aria-label="화면 크기">
+        <button data-size="compact">보통</button><button data-size="wide" class="is-active">넓게</button><button id="fullscreen-button">전체 화면</button>
+      </div>
+      <span id="connection-state" class="connection-state">카메라 연결 중</span>
+    </header>
+    <div id="workout-layout" class="workout-layout size-wide">
+      <div class="video-stage">
+        <video id="camera-source" playsinline muted hidden></video>
+        <canvas id="processed-canvas" width="640" height="360"></canvas>
+        <canvas id="capture-canvas" width="640" height="360" hidden></canvas>
+        <div id="countdown-overlay" class="countdown-overlay" hidden><span>3</span><small>곧 시작합니다</small></div>
+        <div id="camera-guide" class="camera-guide"><span></span><p>머리부터 발끝까지<br>화면 안에 맞춰 주세요</p></div>
+      </div>
+      <aside class="counter-panel">
+        <div><p id="phase-label" class="phase-label">자세 찾는 중</p><strong id="live-count">0</strong><span>회</span></div>
+        <div class="rhythm-rule" aria-hidden="true"><i></i><i></i><i></i><i></i><i></i><i></i><i></i></div>
+        <dl><div><dt>측정 시간</dt><dd id="live-time">00:00</dd></div><div><dt>카메라</dt><dd id="body-state">대기</dd></div></dl>
+        <button id="stop-workout" class="button button-stop">측정 끝내기</button>
+      </aside>
+    </div>
+    <div id="result-overlay" class="result-overlay" hidden>
+      <div class="result-card"><p>세션 완료</p><strong id="result-count">0</strong><span>회</span><p id="result-detail"></p><button id="result-close" class="button button-primary">기록 확인</button></div>
+    </div>
+  </section>
+
+  <dialog id="user-dialog" class="user-dialog">
+    <form id="user-form" method="dialog">
+      <div class="dialog-head"><div><p class="section-kicker">새 계정</p><h2>사용자 추가</h2></div><button id="close-user-dialog" type="button" class="icon-button" aria-label="닫기">×</button></div>
+      <label>아이디<input name="username" required pattern="[a-zA-Z0-9_.-]{3,50}" autocomplete="off"></label>
+      <label>이름<input name="display_name" required maxlength="80" autocomplete="off"></label>
+      <label>임시 비밀번호<input name="password" type="password" minlength="12" required autocomplete="new-password"></label>
+      <fieldset><legend>종목 권한</legend><label><input type="checkbox" name="can_basic" checked> 모아뛰기</label><label><input type="checkbox" name="can_alternating" checked> 번갈아뛰기</label><label><input type="checkbox" name="can_double"> 이중뛰기</label><label><input type="checkbox" name="can_view_history" checked> 기록 조회</label></fieldset>
+      <p id="user-form-error" class="form-error" role="alert"></p>
+      <button class="button button-primary" value="default">계정 만들기</button>
+    </form>
+  </dialog>
+
+  <div id="toast" class="toast" role="status" aria-live="polite"></div>
+  <script src="/app.js" defer></script>
+</body>
+</html>
