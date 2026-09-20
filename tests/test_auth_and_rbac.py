@@ -50,3 +50,24 @@ def test_member_cannot_open_admin_api(admin_client):
     response = admin_client.get("/api/admin/users")
     assert response.status_code == 403
 
+
+def test_admin_can_delete_selected_users_but_not_current_account(admin_client):
+    created_ids = []
+    for suffix in ("01", "02"):
+        response = admin_client.post("/api/admin/users", json={
+            "username": f"member{suffix}",
+            "display_name": f"회원 {suffix}",
+            "password": "member-password-123",
+        })
+        assert response.status_code == 201
+        created_ids.append(response.json()["id"])
+
+    deleted = admin_client.post("/api/admin/users/bulk-delete", json={"ids": created_ids})
+    assert deleted.status_code == 200
+    assert deleted.json() == {"deleted": 2}
+    assert {user["id"] for user in admin_client.get("/api/admin/users").json()}.isdisjoint(created_ids)
+
+    current_id = admin_client.get("/api/auth/me").json()["id"]
+    protected = admin_client.post("/api/admin/users/bulk-delete", json={"ids": [current_id]})
+    assert protected.status_code == 409
+

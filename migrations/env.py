@@ -8,7 +8,10 @@ from app import models  # noqa: F401
 
 config = context.config
 rendered_url = database_url.render_as_string(hide_password=False) if hasattr(database_url, "render_as_string") else str(database_url)
-config.set_main_option("sqlalchemy.url", rendered_url)
+# Alembic stores this value in ConfigParser, where percent signs trigger
+# interpolation. URL-encoded passwords (for example, ``!`` -> ``%21``) must
+# therefore escape percent signs before being assigned to sqlalchemy.url.
+config.set_main_option("sqlalchemy.url", rendered_url.replace("%", "%%"))
 if config.config_file_name is not None:
     fileConfig(config.config_file_name)
 target_metadata = Base.metadata
