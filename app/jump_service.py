@@ -5,7 +5,6 @@ import time
 from dataclasses import dataclass
 
 import cv2
-import mediapipe as mp
 import numpy as np
 
 
@@ -18,13 +17,14 @@ MODES = {
 
 @dataclass(frozen=True)
 class FrameResult:
-    image: bytes
     count: int
     phase: str
     ready: bool
     ready_progress: float
     countdown: float
     elapsed: float
+    landmarks: list[list[float]]
+    processing_ms: float
 
 
 class JumpCounterSession:
@@ -56,9 +56,6 @@ class JumpCounterSession:
         self.started_at = time.monotonic()
         self.count_started_at: float | None = None
         self.last_phase = self.gate.phase
-        self.mp_draw = mp.solutions.drawing_utils
-        self.mp_styles = mp.solutions.drawing_styles
-        self.mp_pose = mp.solutions.pose
 
     @property
     def elapsed(self) -> float:
@@ -66,6 +63,7 @@ class JumpCounterSession:
         return max(0.0, time.monotonic() - started)
 
     def process(self, payload: bytes, max_frame_bytes: int) -> FrameResult:
+        processing_started_at = time.perf_counter()
         if not payload or len(payload) > max_frame_bytes:
             raise ValueError("frame size is not allowed")
         data = np.frombuffer(payload, dtype=np.uint8)
@@ -105,26 +103,22 @@ class JumpCounterSession:
                 if event is not None:
                     self.count = int(event.running_count)
 
-        display = frame.copy()
+        landmarks = []
         if pose_result.pose_landmarks:
-            self.mp_draw.draw_landmarks(
-                display,
-                pose_result.pose_landmarks,
-                self.mp_pose.POSE_CONNECTIONS,
-                landmark_drawing_spec=self.mp_styles.get_default_pose_landmarks_style(),
-            )
-        ok, encoded = cv2.imencode(".jpg", display, [cv2.IMWRITE_JPEG_QUALITY, 82])
-        if not ok:
-            raise ValueError("frame encoding failed")
+            landmarks = [
+                [round(point.x, 4), round(point.y, 4), round(point.visibility, 3)]
+                for point in pose_result.pose_landmarks.landmark
+            ]
         self.frame_index += 1
         return FrameResult(
-            image=encoded.tobytes(),
             count=self.count,
             phase=stream_state.phase,
             ready=ready,
             ready_progress=float(stream_state.ready_progress),
             countdown=float(stream_state.countdown_remaining_sec),
             elapsed=self.elapsed,
+            landmarks=landmarks,
+            processing_ms=(time.perf_counter() - processing_started_at) * 1000,
         )
 
     def close(self) -> None:

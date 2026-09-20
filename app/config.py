@@ -9,7 +9,7 @@ from pydantic_settings import BaseSettings, SettingsConfigDict
 class Settings(BaseSettings):
     model_config = SettingsConfigDict(env_file=".env", env_file_encoding="utf-8", extra="ignore")
 
-    app_name: str = "Jump Rope Lab"
+    app_name: str = "헤아리오 (Hearalo)"
     environment: str = "development"
     database_url: str = ""
     db_host: str = ""
@@ -26,6 +26,13 @@ class Settings(BaseSettings):
     allowed_origins: str = "http://localhost:8080,http://127.0.0.1:8080,http://testserver"
     max_frame_bytes: int = Field(default=2_000_000, ge=100_000, le=8_000_000)
     max_concurrent_streams: int = Field(default=4, ge=1, le=32)
+    public_base_url: str = "http://localhost:8080"
+    smtp_host: str = ""
+    smtp_port: int = Field(default=587, ge=1, le=65535)
+    smtp_username: str = ""
+    smtp_password: str = ""
+    smtp_from: str = ""
+    smtp_starttls: bool = True
 
     @field_validator("admin_password")
     @classmethod

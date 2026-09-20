@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import asyncio
 import json
+import secrets
 from contextlib import asynccontextmanager
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
@@ -17,11 +18,22 @@ from sqlalchemy.orm import Session
 
 from .config import get_settings
 from .database import Base, SessionLocal, engine, get_db
-from .models import AuditLog, AuthSession, User, Workout, utcnow
-from .schemas import LoginInput, UserCreate, UserUpdate
+from .models import AuditLog, AuthSession, PasswordResetToken, User, Workout, utcnow
+from .notifications import send_email
+from .pdf import workout_pdf
+from .schemas import (
+    BulkDeleteInput,
+    LoginInput,
+    PasswordResetConfirm,
+    PasswordResetRequest,
+    SignupInput,
+    UserCreate,
+    UserUpdate,
+)
 from .security import (
     SESSION_COOKIE,
     clear_session_cookie,
+    hash_token,
     hash_password,
     login_limiter,
     new_session,
@@ -36,6 +48,8 @@ from .security import (
 settings = get_settings()
 STATIC_DIR = Path(__file__).resolve().parents[1] / "static"
 VALID_MODES = {"basic", "alternating", "double"}
+MODE_NAMES = {"basic": "모아뛰기", "alternating": "번갈아뛰기", "double": "이중뛰기"}
+STATUS_NAMES = {"completed": "완료", "interrupted": "중단", "running": "측정 중"}
 
 
 def _aware(value: datetime | None) -> datetime | None:
@@ -48,6 +62,7 @@ def _user_json(user: User, csrf_token: str | None = None) -> dict:
     data = {
         "id": user.id,
         "username": user.username,
+        "email": user.email,
         "displayName": user.display_name,
         "role": user.role,
         "active": user.is_active,
@@ -74,6 +89,30 @@ def _audit(db: Session, request: Request | None, actor_id: int | None, action: s
         detail=detail,
         ip_address=request.client.host if request and request.client else None,
     ))
+
+
+def _workout_json(workout: Workout, display_name: str) -> dict:
+    return {
+        "id": workout.id,
+        "user": display_name,
+        "mode": workout.mode,
+        "count": workout.count,
+        "duration": workout.duration_seconds,
+        "targetDuration": workout.target_duration_seconds,
+        "status": workout.status,
+        "startedAt": workout.started_at.isoformat(),
+        "endedAt": workout.ended_at.isoformat() if workout.ended_at else None,
+    }
+
+
+def _accessible_workout(workout_id: int, request: Request, db: Session) -> tuple[Workout, User, AuthSession]:
+    actor, auth_session = require_user(request, db)
+    workout = db.get(Workout, workout_id)
+    if workout is None or (actor.role != "admin" and workout.user_id != actor.id):
+        raise HTTPException(status.HTTP_404_NOT_FOUND, "측정 기록을 찾을 수 없습니다.")
+    if actor.role != "admin" and not actor.can_view_history:
+        raise HTTPException(status.HTTP_403_FORBIDDEN, "기록 조회 권한이 필요합니다.")
+    return workout, actor, auth_session
 
 
 def _seed_admin() -> None:
@@ -168,6 +207,86 @@ def login(payload: LoginInput, request: Request, response: Response, db: Session
     return _user_json(user, auth_session.csrf_token)
 
 
+@app.post("/api/auth/signup", status_code=201)
+def signup(payload: SignupInput, request: Request, response: Response, db: Session = Depends(get_db)):
+    ip = request.client.host if request.client else "unknown"
+    login_limiter.check(f"signup:{ip}")
+    user = User(
+        username=payload.username.strip().lower(),
+        email=payload.email.strip().lower(),
+        display_name=payload.display_name.strip(),
+        password_hash=hash_password(payload.password),
+        role="member",
+        can_basic=True,
+        can_alternating=True,
+        can_double=True,
+        can_view_history=True,
+    )
+    db.add(user)
+    try:
+        db.flush()
+    except IntegrityError as exc:
+        db.rollback()
+        raise HTTPException(status.HTTP_409_CONFLICT, "이미 사용 중인 아이디 또는 이메일입니다.") from exc
+    auth_session, raw_token = new_session(db, user, request)
+    _audit(db, request, user.id, "auth.signup", "user", str(user.id))
+    db.commit()
+    set_session_cookie(response, raw_token)
+    return _user_json(user, auth_session.csrf_token)
+
+
+@app.post("/api/auth/password-reset/request", status_code=202)
+def request_password_reset(payload: PasswordResetRequest, request: Request, db: Session = Depends(get_db)):
+    ip = request.client.host if request.client else "unknown"
+    login_limiter.check(f"reset:{ip}")
+    user = db.scalar(select(User).where(User.email == payload.email.strip().lower(), User.is_active.is_(True)))
+    response = {"message": "가입된 이메일이면 비밀번호 재설정 안내를 보냈습니다."}
+    if user is None:
+        return response
+    raw_token = secrets.token_urlsafe(48)
+    reset = PasswordResetToken(
+        token_hash=hash_token(raw_token),
+        user_id=user.id,
+        expires_at=utcnow() + timedelta(minutes=30),
+    )
+    db.add(reset)
+    _audit(db, request, user.id, "auth.password_reset_requested", "user", str(user.id))
+    db.commit()
+    reset_url = f"{settings.public_base_url.rstrip('/')}?reset={raw_token}"
+    if settings.smtp_host and settings.smtp_from:
+        try:
+            send_email(
+                user.email or payload.email,
+                "헤아리오 비밀번호 재설정",
+                f"30분 안에 아래 주소에서 새 비밀번호를 설정하세요.\n\n{reset_url}",
+            )
+        except Exception:
+            # Account discovery protection: keep the public response identical.
+            pass
+    if settings.environment in {"development", "test"}:
+        response["developmentToken"] = raw_token
+    return response
+
+
+@app.post("/api/auth/password-reset/confirm")
+def confirm_password_reset(payload: PasswordResetConfirm, request: Request, db: Session = Depends(get_db)):
+    reset = db.scalar(
+        select(PasswordResetToken).where(
+            PasswordResetToken.token_hash == hash_token(payload.token),
+            PasswordResetToken.used_at.is_(None),
+            PasswordResetToken.expires_at > utcnow(),
+        )
+    )
+    if reset is None:
+        raise HTTPException(status.HTTP_400_BAD_REQUEST, "재설정 링크가 만료되었거나 이미 사용되었습니다.")
+    reset.user.password_hash = hash_password(payload.password)
+    reset.used_at = utcnow()
+    db.query(AuthSession).filter(AuthSession.user_id == reset.user_id).delete()
+    _audit(db, request, reset.user_id, "auth.password_reset_completed", "user", str(reset.user_id))
+    db.commit()
+    return {"ok": True}
+
+
 @app.get("/api/auth/me")
 def me(request: Request, db: Session = Depends(get_db)):
     user, auth_session = require_user(request, db)
@@ -194,17 +313,9 @@ def dashboard(request: Request, db: Session = Depends(get_db)):
                func.coalesce(func.sum(Workout.duration_seconds), 0),
                func.count(Workout.id)).where(*filters)
     ).one()
-    recent_query = select(Workout, User.display_name).join(User).where(*filters).order_by(desc(Workout.started_at)).limit(12)
+    recent_query = select(Workout, User.display_name).join(User).where(*filters).order_by(desc(Workout.started_at))
     recent = [
-        {
-            "id": workout.id,
-            "user": display_name,
-            "mode": workout.mode,
-            "count": workout.count,
-            "duration": workout.duration_seconds,
-            "status": workout.status,
-            "startedAt": workout.started_at.isoformat(),
-        }
+        _workout_json(workout, display_name)
         for workout, display_name in db.execute(recent_query).all()
     ] if (user.role == "admin" or user.can_view_history) else []
     return {
@@ -233,6 +344,7 @@ def create_user(payload: UserCreate, request: Request, db: Session = Depends(get
     require_csrf(request, auth_session)
     user = User(
         username=payload.username.lower(),
+        email=payload.email.strip().lower() if payload.email else None,
         display_name=payload.display_name.strip(),
         password_hash=hash_password(payload.password),
         role=payload.role,
@@ -250,6 +362,22 @@ def create_user(payload: UserCreate, request: Request, db: Session = Depends(get
     _audit(db, request, actor.id, "user.create", "user", str(user.id), f"role={user.role}")
     db.commit()
     return _user_json(user)
+
+
+@app.post("/api/admin/users/bulk-delete")
+def delete_users(payload: BulkDeleteInput, request: Request, db: Session = Depends(get_db)):
+    actor, auth_session = _require_admin(request, db)
+    require_csrf(request, auth_session)
+    if actor.id in payload.ids:
+        raise HTTPException(status.HTTP_409_CONFLICT, "현재 로그인한 관리자 계정은 삭제할 수 없습니다.")
+    users = db.scalars(select(User).where(User.id.in_(payload.ids))).all()
+    if len(users) != len(payload.ids):
+        raise HTTPException(status.HTTP_404_NOT_FOUND, "삭제할 사용자 중 일부를 찾을 수 없습니다.")
+    for user in users:
+        _audit(db, request, actor.id, "user.delete", "user", str(user.id), f"username={user.username}")
+        db.delete(user)
+    db.commit()
+    return {"deleted": len(users)}
 
 
 @app.patch("/api/admin/users/{user_id}")
@@ -271,6 +399,62 @@ def update_user(user_id: int, payload: UserUpdate, request: Request, db: Session
     _audit(db, request, actor.id, "user.update", "user", str(user.id), ",".join(sorted(changes)))
     db.commit()
     return _user_json(user)
+
+
+@app.post("/api/workouts/bulk-delete")
+def delete_workouts(payload: BulkDeleteInput, request: Request, db: Session = Depends(get_db)):
+    actor, auth_session = require_user(request, db)
+    require_csrf(request, auth_session)
+    query = select(Workout).where(Workout.id.in_(payload.ids))
+    if actor.role != "admin":
+        query = query.where(Workout.user_id == actor.id)
+    workouts = db.scalars(query).all()
+    if len(workouts) != len(payload.ids):
+        raise HTTPException(status.HTTP_404_NOT_FOUND, "삭제할 측정 기록 중 일부를 찾을 수 없습니다.")
+    if any(workout.status == "running" for workout in workouts):
+        raise HTTPException(status.HTTP_409_CONFLICT, "측정 중인 기록은 삭제할 수 없습니다.")
+    for workout in workouts:
+        _audit(db, request, actor.id, "workout.delete", "workout", str(workout.id), "bulk=true")
+        db.delete(workout)
+    db.commit()
+    return {"deleted": len(workouts)}
+
+
+@app.get("/api/workouts/{workout_id}")
+def workout_detail(workout_id: int, request: Request, db: Session = Depends(get_db)):
+    workout, _, _ = _accessible_workout(workout_id, request, db)
+    return _workout_json(workout, workout.user.display_name)
+
+
+@app.get("/api/workouts/{workout_id}/pdf")
+def download_workout_pdf(workout_id: int, request: Request, db: Session = Depends(get_db)):
+    workout, _, _ = _accessible_workout(workout_id, request, db)
+    content = workout_pdf(
+        workout_id=workout.id,
+        user_name=workout.user.display_name,
+        mode_name=MODE_NAMES.get(workout.mode, workout.mode),
+        count=workout.count,
+        duration=workout.duration_seconds,
+        status_name=STATUS_NAMES.get(workout.status, workout.status),
+        started_at=_aware(workout.started_at),
+    )
+    return Response(
+        content=content,
+        media_type="application/pdf",
+        headers={"Content-Disposition": f'attachment; filename="jump-rope-result-{workout.id}.pdf"'},
+    )
+
+
+@app.delete("/api/workouts/{workout_id}", status_code=204)
+def delete_workout(workout_id: int, request: Request, db: Session = Depends(get_db)):
+    workout, actor, auth_session = _accessible_workout(workout_id, request, db)
+    require_csrf(request, auth_session)
+    if workout.status == "running":
+        raise HTTPException(status.HTTP_409_CONFLICT, "측정 중인 기록은 삭제할 수 없습니다.")
+    _audit(db, request, actor.id, "workout.delete", "workout", str(workout.id))
+    db.delete(workout)
+    db.commit()
+    return Response(status_code=204)
 
 
 @app.get("/api/admin/audit")
@@ -314,7 +498,11 @@ stream_slots = StreamSlots(settings.max_concurrent_streams)
 @app.websocket("/ws/count/{mode}")
 async def count_stream(websocket: WebSocket, mode: str):
     origin = (websocket.headers.get("origin") or "").rstrip("/")
-    if mode not in VALID_MODES or origin not in settings.origins:
+    try:
+        target_duration = int(websocket.query_params.get("duration", "60"))
+    except ValueError:
+        target_duration = 0
+    if mode not in VALID_MODES or origin not in settings.origins or not 10 <= target_duration <= 3600:
         await websocket.close(code=1008)
         return
     db = SessionLocal()
@@ -334,12 +522,17 @@ async def count_stream(websocket: WebSocket, mode: str):
         from .jump_service import JumpCounterSession
 
         processor = await run_in_threadpool(JumpCounterSession, mode)
-        workout = Workout(user_id=auth_session.user.id, mode=mode, status="running")
+        workout = Workout(
+            user_id=auth_session.user.id,
+            mode=mode,
+            status="running",
+            target_duration_seconds=target_duration,
+        )
         db.add(workout)
         db.flush()
         _audit(db, None, auth_session.user.id, "workout.start", "workout", str(workout.id), f"mode={mode}")
         db.commit()
-        await websocket.send_json({"type": "ready", "workoutId": workout.id})
+        await websocket.send_json({"type": "ready", "workoutId": workout.id, "targetDuration": target_duration})
 
         while True:
             message = await websocket.receive()
@@ -362,8 +555,11 @@ async def count_stream(websocket: WebSocket, mode: str):
                 "readyProgress": round(result.ready_progress, 3),
                 "countdown": round(result.countdown, 1),
                 "elapsed": round(result.elapsed, 1),
+                "landmarks": result.landmarks,
+                "processingMs": round(result.processing_ms, 1),
             })
-            await websocket.send_bytes(result.image)
+            if result.phase == "COUNTING" and result.elapsed >= target_duration:
+                break
 
         workout.status = "completed"
         workout.count = processor.count
@@ -371,7 +567,12 @@ async def count_stream(websocket: WebSocket, mode: str):
         workout.ended_at = utcnow()
         _audit(db, None, auth_session.user.id, "workout.complete", "workout", str(workout.id), f"count={workout.count}")
         db.commit()
-        await websocket.send_json({"type": "complete", "count": workout.count, "duration": workout.duration_seconds})
+        await websocket.send_json({
+            "type": "complete",
+            "workoutId": workout.id,
+            "count": workout.count,
+            "duration": workout.duration_seconds,
+        })
         await websocket.close(code=1000)
     except WebSocketDisconnect:
         if workout and workout.status == "running":
