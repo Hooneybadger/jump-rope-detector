@@ -31,6 +31,7 @@ FOOT_LANDMARKS = {
     ),
 }
 CORE_READY_LANDMARKS = (
+    mp_pose.PoseLandmark.NOSE,
     mp_pose.PoseLandmark.LEFT_SHOULDER,
     mp_pose.PoseLandmark.RIGHT_SHOULDER,
     mp_pose.PoseLandmark.LEFT_ELBOW,
@@ -846,6 +847,7 @@ class PoseSignalExtractor:
                 interpolation=cv2.INTER_LINEAR,
             )
         rgb = cv2.cvtColor(pose_frame, cv2.COLOR_BGR2RGB)
+        rgb.flags.writeable = False
         result = self.pose.process(rgb)
         signal = pose_result_to_signal(result, frame_idx, timestamp_sec, self.config)
         raw_detected = signal.detected

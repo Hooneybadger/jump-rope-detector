@@ -28,6 +28,13 @@ FOOT_LANDMARKS = {
     ),
 }
 CORE_READY_LANDMARKS = (
+    mp_pose.PoseLandmark.NOSE,
+    mp_pose.PoseLandmark.LEFT_SHOULDER,
+    mp_pose.PoseLandmark.RIGHT_SHOULDER,
+    mp_pose.PoseLandmark.LEFT_ELBOW,
+    mp_pose.PoseLandmark.RIGHT_ELBOW,
+    mp_pose.PoseLandmark.LEFT_WRIST,
+    mp_pose.PoseLandmark.RIGHT_WRIST,
     mp_pose.PoseLandmark.LEFT_HIP,
     mp_pose.PoseLandmark.RIGHT_HIP,
     mp_pose.PoseLandmark.LEFT_KNEE,
@@ -435,7 +442,7 @@ class PoseSignalExtractor:
         self.pose = mp_pose.Pose(
             static_image_mode=False,
             model_complexity=1,
-            smooth_landmarks=False,
+            smooth_landmarks=True,
             enable_segmentation=False,
             min_detection_confidence=0.5,
             min_tracking_confidence=0.5,
@@ -446,6 +453,7 @@ class PoseSignalExtractor:
 
     def process_bgr_frame(self, frame, frame_idx: int, timestamp_sec: float):
         rgb = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
+        rgb.flags.writeable = False
         result = self.pose.process(rgb)
         signal = pose_result_to_signal(result, frame_idx, timestamp_sec, self.config)
         return signal, result

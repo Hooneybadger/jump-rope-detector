@@ -4,14 +4,68 @@ const $ = (selector) => document.querySelector(selector);
 const $$ = (selector) => [...document.querySelectorAll(selector)];
 const state = {
   user: null, csrf: "", dashboard: null, stream: null, socket: null, sending: false,
-  mode: null, duration: 60, workoutId: null, closing: false, frameTimer: null, frameSentAt: 0,
+  mode: null, duration: 60, countdown: 3, workoutId: null, closing: false, frameTimer: null, frameSentAt: 0,
   selectedWorkouts: new Set(), selectedUsers: new Set(),
 };
 const FRAME_INTERVAL = 1000 / 12;
+const captureCanvas = $("#capture-canvas");
+const captureContext = captureCanvas.getContext("2d", { alpha: false });
+const poseCanvas = $("#processed-canvas");
+const poseContext = poseCanvas.getContext("2d");
 const poseConnections = [[11,12],[11,13],[13,15],[12,14],[14,16],[11,23],[12,24],[23,24],[23,25],[25,27],[27,29],[29,31],[24,26],[26,28],[28,30],[30,32]];
 const modeNames = { basic: "모아뛰기", alternating: "번갈아뛰기", double: "이중뛰기" };
+const cheerAssets = {
+  basic: {
+    animation: "/cheer-basic.gif", poster: "/cheer-basic-poster.png",
+    alt: "모아뛰기를 하는 남성 전신 애니메이션", caption: "두 발의 가벼운 리듬을 유지해요.",
+  },
+  alternating: {
+    animation: "/cheer-alternating.gif", poster: "/cheer-alternating-poster.png",
+    alt: "번갈아뛰기를 하는 남성 전신 애니메이션", caption: "좌우 발을 고르게 바꾸며 리듬을 이어가요.",
+  },
+  double: {
+    animation: "/cheer-double.gif", poster: "/cheer-double-poster.png",
+    alt: "이중뛰기를 하는 남성 전신 애니메이션", caption: "손목은 빠르게, 착지는 가볍게 이어가요.",
+  },
+};
 const statusNames = { completed: "완료", interrupted: "중단", running: "측정 중" };
 const authHeadings = { login: "다시 시작해 볼까요?", signup: "나만의 기록을 시작하세요.", "reset-request": "비밀번호를 다시 설정하세요.", "reset-confirm": "새 비밀번호를 정하세요." };
+let dashboardMotion = null;
+
+function scrollToModes() {
+  const reducedMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+  $("#mode-grid").scrollIntoView({ behavior: reducedMotion ? "auto" : "smooth", block: "start" });
+}
+
+function initDashboardMotion() {
+  if (dashboardMotion || !window.gsap || !window.ScrollTrigger) return;
+  window.gsap.registerPlugin(window.ScrollTrigger);
+  const media = window.gsap.matchMedia();
+  dashboardMotion = media;
+
+  media.add("(prefers-reduced-motion: no-preference)", () => {
+    const context = window.gsap.context(() => {
+      window.gsap.from(".dashboard-lead > *", {
+        opacity: 0, y: 24, duration: 0.8, stagger: 0.1, ease: "power3.out",
+      });
+      window.gsap.to(".telemetry-marquee > div", {
+        xPercent: -50, duration: 22, repeat: -1, ease: "none",
+      });
+      window.gsap.utils.toArray(".mode-card").forEach((card) => {
+        const visual = card.querySelector(".mode-visual svg");
+        window.gsap.timeline({
+          scrollTrigger: {
+            trigger: card, start: "top 92%", end: "bottom 14%", scrub: 0.6,
+          },
+        }).fromTo(visual, { scale: 0.8, opacity: 0.35 }, { scale: 1, opacity: 1, duration: 0.55 })
+          .to(visual, { scale: 0.94, opacity: 0.2, duration: 0.45 });
+      });
+    }, "#dashboard-view");
+    return () => context.revert();
+  });
+
+  window.requestAnimationFrame(() => window.ScrollTrigger.refresh());
+}
 
 async function api(path, options = {}) {
   const headers = { "Content-Type": "application/json", ...(options.headers || {}) };
@@ -43,6 +97,7 @@ function showApp(user) {
     const card = document.querySelector(`[data-mode-card="${mode}"]`); const allowed = Boolean(user.permissions[mode]);
     card.classList.toggle("is-locked", !allowed); card.querySelector(".locked-copy").hidden = allowed;
   }
+  window.requestAnimationFrame(initDashboardMotion);
   loadDashboard();
 }
 
@@ -201,10 +256,32 @@ function openProfile() {
   const name = user.displayName || user.username;
   $("#profile-avatar").textContent = name.slice(0, 1); $("#profile-name").textContent = name;
   $("#profile-role").textContent = user.role === "admin" ? "관리자" : "회원";
-  $("#profile-username").textContent = user.username; $("#profile-email").textContent = user.email || "등록된 이메일 없음";
+  $("#profile-username").value = user.username; $("#profile-display-name").value = user.displayName || ""; $("#profile-email").value = user.email || "";
+  $("#profile-form-error").textContent = ""; $("#profile-form").querySelectorAll('input[type="password"]').forEach((input) => { input.value = ""; });
+  $("#profile-form").querySelector("details").open = false;
   const permissions = $("#profile-permissions"); permissions.replaceChildren();
   Object.entries(modeNames).forEach(([key, label]) => { if (user.permissions[key]) { const item = document.createElement("span"); item.textContent = label; permissions.appendChild(item); } });
   $("#profile-dialog").showModal();
+}
+
+async function saveProfile(event) {
+  event.preventDefault();
+  const form = new FormData(event.currentTarget); const error = $("#profile-form-error"); const button = $("#save-profile");
+  const newPassword = String(form.get("new_password") || ""); const confirmation = String(form.get("new_password_confirm") || "");
+  error.textContent = "";
+  if (newPassword !== confirmation) { error.textContent = "새 비밀번호가 서로 다릅니다."; return; }
+  const payload = {
+    display_name: String(form.get("display_name") || "").trim(),
+    email: String(form.get("email") || "").trim() || null,
+    current_password: String(form.get("current_password") || "") || null,
+    new_password: newPassword || null,
+  };
+  button.disabled = true; button.textContent = "저장 중…";
+  try {
+    const user = await api("/api/auth/profile", { method: "PATCH", body: JSON.stringify(payload) });
+    $("#profile-dialog").close(); showApp(user); showToast("프로필을 저장했습니다.");
+  } catch (requestError) { error.textContent = requestError.message; }
+  finally { button.disabled = false; button.textContent = "프로필 저장"; }
 }
 
 let confirmResolver = null;
@@ -226,14 +303,19 @@ function openWorkoutSetup(mode) {
 async function startWorkout() {
   state.closing = false; state.workoutId = null;
   $("#workout-mode-name").textContent = modeNames[state.mode]; $("#workout-view").hidden = false; $("#result-overlay").hidden = true;
-  $("#live-count").textContent = "0"; $("#live-time").textContent = "00:00"; $("#target-time").textContent = formatTime(state.duration); $("#remaining-time").textContent = formatTime(state.duration); $("#time-progress").style.width = "100%";
-  $("#connection-state").textContent = "카메라 연결 중"; $("#camera-guide").hidden = false; $("#phase-label").textContent = "자세 찾는 중";
+  $("#live-count").textContent = "0"; $("#live-time").textContent = "00:00"; $("#target-time").textContent = formatTime(state.duration); $("#remaining-time").textContent = formatTime(state.duration); $("#time-progress").style.transform = "scaleX(1)";
+  const progress = $(".time-track"); progress.setAttribute("aria-valuemax", String(state.duration)); progress.setAttribute("aria-valuenow", String(state.duration));
+  $("#connection-state").textContent = "카메라 연결 중"; $("#camera-guide").hidden = false; $("#phase-label").textContent = "자세 찾는 중"; $("#body-state").textContent = "대기";
+  const cheer = $("#cheer-loop"); const cheerImage = cheer.querySelector("img"); cheer.hidden = false;
+  const cheerAsset = cheerAssets[state.mode] || cheerAssets.basic;
+  cheerImage.src = window.matchMedia("(prefers-reduced-motion: reduce)").matches ? cheerAsset.poster : cheerAsset.animation;
+  cheerImage.alt = cheerAsset.alt; cheer.querySelector("figcaption").textContent = cheerAsset.caption;
   try { if (!document.fullscreenElement && $("#workout-view").requestFullscreen) await $("#workout-view").requestFullscreen(); } catch { showToast("브라우저 메뉴에서도 전체 화면을 켤 수 있습니다."); }
   try {
     state.stream = await navigator.mediaDevices.getUserMedia({ video: { width: { ideal: 1280 }, height: { ideal: 720 }, frameRate: { ideal: 30, max: 60 }, facingMode: "user" }, audio: false });
     const video = $("#camera-source"); video.srcObject = state.stream; await video.play();
     const protocol = location.protocol === "https:" ? "wss" : "ws";
-    state.socket = new WebSocket(`${protocol}://${location.host}/ws/count/${state.mode}?duration=${state.duration}`);
+    state.socket = new WebSocket(`${protocol}://${location.host}/ws/count/${state.mode}?duration=${state.duration}&countdown=${state.countdown}`);
     state.socket.onopen = () => { $("#connection-state").textContent = "실시간 분석 연결됨"; };
     state.socket.onmessage = handleSocketMessage;
     state.socket.onclose = (event) => { state.sending = false; if (!state.closing && event.code !== 1000) { showToast(event.reason || "측정 연결이 종료되었습니다."); cleanupWorkout(); } };
@@ -261,9 +343,8 @@ function scheduleFrame(delay = 0) {
 function sendFrame() {
   if (state.sending || !state.socket || state.socket.readyState !== WebSocket.OPEN) return;
   const video = $("#camera-source"); if (!video.videoWidth) return scheduleFrame(100);
-  const canvas = $("#capture-canvas"); const context = canvas.getContext("2d", { alpha: false });
-  context.drawImage(video, 0, 0, canvas.width, canvas.height); state.sending = true;
-  canvas.toBlob((blob) => {
+  captureContext.drawImage(video, 0, 0, captureCanvas.width, captureCanvas.height); state.sending = true;
+  captureCanvas.toBlob((blob) => {
     if (blob && state.socket?.readyState === WebSocket.OPEN) {
       try { state.frameSentAt = performance.now(); state.socket.send(blob); }
       catch { state.sending = false; scheduleFrame(FRAME_INTERVAL); }
@@ -273,9 +354,9 @@ function sendFrame() {
 }
 
 function drawPose(landmarks) {
-  const canvas = $("#processed-canvas"); const context = canvas.getContext("2d"); context.clearRect(0, 0, canvas.width, canvas.height);
+  const canvas = poseCanvas; const context = poseContext; context.clearRect(0, 0, canvas.width, canvas.height);
   if (landmarks.length < 33) return;
-  context.lineWidth = 5; context.lineCap = "round"; context.lineJoin = "round"; context.strokeStyle = "rgba(200,255,61,.92)";
+  context.lineWidth = 5; context.lineCap = "round"; context.lineJoin = "round"; context.strokeStyle = "rgba(74,246,38,.92)";
   poseConnections.forEach(([from, to]) => {
     const a = landmarks[from]; const b = landmarks[to]; if (!a || !b || a[2] < .45 || b[2] < .45) return;
     context.beginPath(); context.moveTo(a[0] * canvas.width, a[1] * canvas.height); context.lineTo(b[0] * canvas.width, b[1] * canvas.height); context.stroke();
@@ -287,8 +368,10 @@ function drawPose(landmarks) {
 function updateWorkoutState(message) {
   $("#live-count").textContent = message.count; $("#live-time").textContent = formatTime(message.elapsed);
   const remaining = Math.max(0, state.duration - message.elapsed); $("#remaining-time").textContent = formatTime(remaining);
-  $("#time-progress").style.width = `${Math.max(0, (remaining / state.duration) * 100)}%`;
-  $("#body-state").textContent = message.ready ? "인식됨" : "위치 조정"; $("#camera-guide").hidden = message.ready;
+  $("#time-progress").style.transform = `scaleX(${Math.max(0, remaining / state.duration)})`;
+  $(".time-track").setAttribute("aria-valuenow", String(remaining));
+  $("#body-state").textContent = message.framed ? "인식됨" : message.readyProgress > 0 ? "인식 확인 중" : "위치 조정";
+  $("#camera-guide").hidden = Boolean(message.framed);
   const labels = { SEARCHING: "자세 찾는 중", COUNTDOWN: "준비", COUNTING: "측정 중" }; $("#phase-label").textContent = labels[message.phase] || message.phase;
   const countdown = $("#countdown-overlay"); countdown.hidden = message.phase !== "COUNTDOWN"; if (!countdown.hidden) countdown.querySelector("span").textContent = Math.max(1, Math.ceil(message.countdown));
 }
@@ -297,12 +380,13 @@ function stopWorkout() { if (state.socket?.readyState === WebSocket.OPEN) { stat
 
 function showResult(message) {
   $("#result-count").textContent = message.count; $("#result-detail").textContent = `${modeNames[state.mode]} · ${formatTime(message.duration)}`;
-  $("#result-overlay").hidden = false; stopMedia();
+  $("#cheer-loop").hidden = true; $("#result-overlay").hidden = false; stopMedia();
 }
 
 function stopMedia() {
   window.clearTimeout(state.frameTimer); state.frameTimer = null; state.stream?.getTracks().forEach((track) => track.stop()); state.stream = null; state.sending = false;
-  const canvas = $("#processed-canvas"); canvas.getContext("2d").clearRect(0, 0, canvas.width, canvas.height);
+  const video = $("#camera-source"); video.srcObject = null;
+  poseContext.clearRect(0, 0, poseCanvas.width, poseCanvas.height);
 }
 async function cleanupWorkout() {
   state.closing = true; stopMedia(); if (state.socket && state.socket.readyState < WebSocket.CLOSING) state.socket.close(); state.socket = null;
@@ -338,11 +422,21 @@ $("#reset-confirm-form").addEventListener("submit", async (event) => {
 $$(`[data-auth-target]`).forEach((button) => button.addEventListener("click", () => showAuthPanel(button.dataset.authTarget)));
 $("#logout-button").addEventListener("click", async () => { try { await api("/api/auth/logout", { method: "POST" }); } finally { showLogin(); } });
 $$(`[data-nav]`).forEach((button) => button.addEventListener("click", () => navigate(button.dataset.nav)));
+$("#jump-to-modes").addEventListener("click", scrollToModes);
+$("#start-next-session").addEventListener("click", scrollToModes);
 $$(`[data-mode]`).forEach((button) => button.addEventListener("click", () => openWorkoutSetup(button.dataset.mode)));
 $$(`[data-duration]`).forEach((button) => button.addEventListener("click", () => { $("#workout-duration").value = button.dataset.duration; $$(`[data-duration]`).forEach((item) => item.classList.toggle("is-active", item === button)); }));
 $("#workout-duration").addEventListener("input", () => $$(`[data-duration]`).forEach((button) => button.classList.toggle("is-active", button.dataset.duration === $("#workout-duration").value)));
+$$(`[data-countdown]`).forEach((button) => button.addEventListener("click", () => { $("#workout-countdown").value = button.dataset.countdown; $$(`[data-countdown]`).forEach((item) => item.classList.toggle("is-active", item === button)); }));
+$("#workout-countdown").addEventListener("input", () => $$(`[data-countdown]`).forEach((button) => button.classList.toggle("is-active", button.dataset.countdown === $("#workout-countdown").value)));
 $("#close-setup-dialog").addEventListener("click", () => $("#workout-setup-dialog").close());
-$("#workout-setup-form").addEventListener("submit", (event) => { event.preventDefault(); const duration = Number($("#workout-duration").value); if (!Number.isInteger(duration) || duration < 10 || duration > 3600) { $("#setup-error").textContent = "10초부터 3,600초 사이로 입력해 주세요."; return; } state.duration = duration; $("#workout-setup-dialog").close(); startWorkout(); });
+$("#workout-setup-form").addEventListener("submit", (event) => {
+  event.preventDefault();
+  const duration = Number($("#workout-duration").value); const countdown = Number($("#workout-countdown").value);
+  if (!Number.isInteger(duration) || duration < 10 || duration > 3600) { $("#setup-error").textContent = "측정 시간은 10초부터 3,600초 사이로 입력해 주세요."; return; }
+  if (!Number.isInteger(countdown) || countdown < 1 || countdown > 30) { $("#setup-error").textContent = "카운트다운은 1초부터 30초 사이로 입력해 주세요."; return; }
+  state.duration = duration; state.countdown = countdown; $("#workout-setup-dialog").close(); startWorkout();
+});
 $("#stop-workout").addEventListener("click", stopWorkout); $("#workout-back").addEventListener("click", stopWorkout);
 $("#result-close").addEventListener("click", async () => { await cleanupWorkout(); const reducedMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches; window.scrollTo({ top: $(".record-section").offsetTop - 90, behavior: reducedMotion ? "auto" : "smooth" }); });
 $("#result-download").addEventListener("click", () => { if (state.workoutId) window.location.assign(`/api/workouts/${state.workoutId}/pdf`); });
@@ -352,6 +446,7 @@ $("#history-select-all").addEventListener("change", (event) => { $$(`[data-recor
 $("#delete-selected-records").addEventListener("click", deleteSelectedRecords);
 $("#close-record-dialog").addEventListener("click", () => $("#record-dialog").close());
 $("#profile-button").addEventListener("click", openProfile); $("#close-profile-dialog").addEventListener("click", () => $("#profile-dialog").close());
+$("#profile-form").addEventListener("submit", saveProfile);
 $("#confirm-cancel").addEventListener("click", () => resolveConfirmation(false)); $("#confirm-accept").addEventListener("click", () => resolveConfirmation(true));
 $("#confirm-dialog").addEventListener("cancel", (event) => { event.preventDefault(); resolveConfirmation(false); });
 

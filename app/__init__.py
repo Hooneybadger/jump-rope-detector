@@ -1,2 +1,2 @@
-"""Hearalo real-time jump-rope web application."""
+"""Ttwimgyeol real-time jump-rope web application."""
 

@@ -38,6 +38,49 @@ def test_signup_rejects_duplicate_email(client):
     assert response.status_code == 409
 
 
+def test_member_can_edit_and_save_profile(client):
+    signed_up = signup(client)
+    client.headers["X-CSRF-Token"] = signed_up.json()["csrfToken"]
+
+    response = client.patch("/api/auth/profile", json={
+        "display_name": "리듬 점퍼",
+        "email": "rhythm@example.com",
+        "current_password": None,
+        "new_password": None,
+    })
+
+    assert response.status_code == 200
+    assert response.json()["displayName"] == "리듬 점퍼"
+    assert response.json()["email"] == "rhythm@example.com"
+    profile = client.get("/api/auth/me").json()
+    assert profile["displayName"] == "리듬 점퍼"
+    assert profile["email"] == "rhythm@example.com"
+
+
+def test_profile_password_change_requires_current_password(client):
+    signed_up = signup(client)
+    client.headers["X-CSRF-Token"] = signed_up.json()["csrfToken"]
+    payload = {
+        "display_name": "점퍼",
+        "email": "jumper@example.com",
+        "current_password": "wrong-password",
+        "new_password": "new-secure-password-456",
+    }
+
+    rejected = client.patch("/api/auth/profile", json=payload)
+    assert rejected.status_code == 400
+
+    payload["current_password"] = "secure-password-123"
+    changed = client.patch("/api/auth/profile", json=payload)
+    assert changed.status_code == 200
+    client.post("/api/auth/logout")
+    login = client.post("/api/auth/login", json={
+        "username": "jumper01",
+        "password": "new-secure-password-456",
+    })
+    assert login.status_code == 200
+
+
 def test_password_reset_token_is_single_use(client):
     assert signup(client).status_code == 201
     request = client.post("/api/auth/password-reset/request", json={"email": "jumper@example.com"})
@@ -127,11 +170,20 @@ def test_member_cannot_access_another_users_workout(client):
     assert client.delete(f"/api/workouts/{workout_id}").status_code == 404
 
 
-def test_invalid_workout_duration_is_rejected_before_stream_starts(client):
-    signed_up = signup(client)
-    assert signed_up.status_code == 201
+def test_invalid_workout_duration_is_rejected_before_stream_starts(admin_client):
     try:
-        with client.websocket_connect("/ws/count/basic?duration=9", headers={"origin": "http://testserver"}):
+        with admin_client.websocket_connect("/ws/count/basic?duration=9", headers={"origin": "http://testserver"}):
             raise AssertionError("invalid duration websocket should not connect")
+    except WebSocketDisconnect as exc:
+        assert exc.code == 1008
+
+
+def test_invalid_workout_countdown_is_rejected_before_stream_starts(admin_client):
+    try:
+        with admin_client.websocket_connect(
+            "/ws/count/basic?duration=60&countdown=31",
+            headers={"origin": "http://testserver"},
+        ):
+            raise AssertionError("invalid countdown websocket should not connect")
     except WebSocketDisconnect as exc:
         assert exc.code == 1008
