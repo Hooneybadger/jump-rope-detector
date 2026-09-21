@@ -26,6 +26,7 @@ from .schemas import (
     LoginInput,
     PasswordResetConfirm,
     PasswordResetRequest,
+    ProfileUpdate,
     SignupInput,
     UserCreate,
     UserUpdate,
@@ -48,6 +49,8 @@ from .security import (
 settings = get_settings()
 STATIC_DIR = Path(__file__).resolve().parents[1] / "static"
 VALID_MODES = {"basic", "alternating", "double"}
+MIN_COUNTDOWN_SECONDS = 1
+MAX_COUNTDOWN_SECONDS = 30
 MODE_NAMES = {"basic": "모아뛰기", "alternating": "번갈아뛰기", "double": "이중뛰기"}
 STATUS_NAMES = {"completed": "완료", "interrupted": "중단", "running": "측정 중"}
 
@@ -257,7 +260,7 @@ def request_password_reset(payload: PasswordResetRequest, request: Request, db: 
         try:
             send_email(
                 user.email or payload.email,
-                "헤아리오 비밀번호 재설정",
+                "뜀결 비밀번호 재설정",
                 f"30분 안에 아래 주소에서 새 비밀번호를 설정하세요.\n\n{reset_url}",
             )
         except Exception:
@@ -290,6 +293,40 @@ def confirm_password_reset(payload: PasswordResetConfirm, request: Request, db: 
 @app.get("/api/auth/me")
 def me(request: Request, db: Session = Depends(get_db)):
     user, auth_session = require_user(request, db)
+    return _user_json(user, auth_session.csrf_token)
+
+
+@app.patch("/api/auth/profile")
+def update_profile(payload: ProfileUpdate, request: Request, db: Session = Depends(get_db)):
+    user, auth_session = require_user(request, db)
+    require_csrf(request, auth_session)
+
+    display_name = payload.display_name.strip()
+    email = payload.email.strip().lower() if payload.email else None
+    if not display_name:
+        raise HTTPException(status.HTTP_422_UNPROCESSABLE_ENTITY, "이름을 입력해 주세요.")
+    if payload.new_password:
+        if not payload.current_password or not verify_password(user.password_hash, payload.current_password):
+            raise HTTPException(status.HTTP_400_BAD_REQUEST, "현재 비밀번호가 올바르지 않습니다.")
+        user.password_hash = hash_password(payload.new_password)
+        db.query(AuthSession).filter(AuthSession.user_id == user.id, AuthSession.id != auth_session.id).delete()
+
+    user.display_name = display_name
+    user.email = email
+    _audit(
+        db,
+        request,
+        user.id,
+        "profile.update",
+        "user",
+        str(user.id),
+        "display_name,email" + (",password" if payload.new_password else ""),
+    )
+    try:
+        db.commit()
+    except IntegrityError as exc:
+        db.rollback()
+        raise HTTPException(status.HTTP_409_CONFLICT, "이미 사용 중인 이메일입니다.") from exc
     return _user_json(user, auth_session.csrf_token)
 
 
@@ -500,9 +537,16 @@ async def count_stream(websocket: WebSocket, mode: str):
     origin = (websocket.headers.get("origin") or "").rstrip("/")
     try:
         target_duration = int(websocket.query_params.get("duration", "60"))
+        countdown_seconds = int(websocket.query_params.get("countdown", "3"))
     except ValueError:
         target_duration = 0
-    if mode not in VALID_MODES or origin not in settings.origins or not 10 <= target_duration <= 3600:
+        countdown_seconds = 0
+    if (
+        mode not in VALID_MODES
+        or origin not in settings.origins
+        or not 10 <= target_duration <= 3600
+        or not MIN_COUNTDOWN_SECONDS <= countdown_seconds <= MAX_COUNTDOWN_SECONDS
+    ):
         await websocket.close(code=1008)
         return
     db = SessionLocal()
@@ -521,7 +565,7 @@ async def count_stream(websocket: WebSocket, mode: str):
         await websocket.accept()
         from .jump_service import JumpCounterSession
 
-        processor = await run_in_threadpool(JumpCounterSession, mode)
+        processor = await run_in_threadpool(JumpCounterSession, mode, countdown_seconds)
         workout = Workout(
             user_id=auth_session.user.id,
             mode=mode,
@@ -532,7 +576,12 @@ async def count_stream(websocket: WebSocket, mode: str):
         db.flush()
         _audit(db, None, auth_session.user.id, "workout.start", "workout", str(workout.id), f"mode={mode}")
         db.commit()
-        await websocket.send_json({"type": "ready", "workoutId": workout.id, "targetDuration": target_duration})
+        await websocket.send_json({
+            "type": "ready",
+            "workoutId": workout.id,
+            "targetDuration": target_duration,
+            "countdown": countdown_seconds,
+        })
 
         while True:
             message = await websocket.receive()
@@ -552,6 +601,7 @@ async def count_stream(websocket: WebSocket, mode: str):
                 "count": result.count,
                 "phase": result.phase,
                 "ready": result.ready,
+                "framed": result.framed,
                 "readyProgress": round(result.ready_progress, 3),
                 "countdown": round(result.countdown, 1),
                 "elapsed": round(result.elapsed, 1),

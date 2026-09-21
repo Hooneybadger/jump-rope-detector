@@ -20,6 +20,7 @@ class FrameResult:
     count: int
     phase: str
     ready: bool
+    framed: bool
     ready_progress: float
     countdown: float
     elapsed: float
@@ -30,7 +31,7 @@ class FrameResult:
 class JumpCounterSession:
     """Small adapter around the three preserved counting engines."""
 
-    def __init__(self, mode: str) -> None:
+    def __init__(self, mode: str, countdown_seconds: float = 3.0) -> None:
         if mode not in MODES:
             raise ValueError("unsupported jump mode")
         module = importlib.import_module(MODES[mode])
@@ -41,7 +42,7 @@ class JumpCounterSession:
         self.visible = module.core_landmarks_visible
         self.gate = module.RealtimeStartGate(
             ready_hold_seconds=1.0,
-            countdown_seconds=3.0,
+            countdown_seconds=countdown_seconds,
             ready_dropout_seconds=0.35,
         )
         self.engine = None
@@ -50,7 +51,6 @@ class JumpCounterSession:
             "alternating": "begin_count_phase",
             "double": "arm_for_counting",
         }[mode]
-        self.uses_signal_detection = mode == "double"
         self.count = 0
         self.frame_index = 0
         self.started_at = time.monotonic()
@@ -59,8 +59,9 @@ class JumpCounterSession:
 
     @property
     def elapsed(self) -> float:
-        started = self.count_started_at or self.started_at
-        return max(0.0, time.monotonic() - started)
+        if self.count_started_at is None:
+            return 0.0
+        return max(0.0, time.monotonic() - self.count_started_at)
 
     def process(self, payload: bytes, max_frame_bytes: int) -> FrameResult:
         processing_started_at = time.perf_counter()
@@ -77,8 +78,6 @@ class JumpCounterSession:
         timestamp = time.monotonic() - self.started_at
         signal, pose_result = self.extractor.process_bgr_frame(frame, self.frame_index, timestamp)
         ready = self.visible(pose_result, 0.30, 0.80)
-        if self.uses_signal_detection:
-            ready = bool(signal.detected or ready)
         stream_state = self.gate.update(ready, timestamp)
         phase_changed = stream_state.phase != self.last_phase
 
@@ -114,6 +113,7 @@ class JumpCounterSession:
             count=self.count,
             phase=stream_state.phase,
             ready=ready,
+            framed=ready,
             ready_progress=float(stream_state.ready_progress),
             countdown=float(stream_state.countdown_remaining_sec),
             elapsed=self.elapsed,

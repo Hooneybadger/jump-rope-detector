@@ -67,18 +67,6 @@ def workout_pdf(*, workout_id: int, user_name: str, mode_name: str, count: int,
     font = FONT_PATH.read_bytes()
     cmap = _font_cmap(font)
     started = started_at.astimezone().strftime("%Y.%m.%d %H:%M")
-    lines = [
-        ("헤아리오 (Hearalo)", 24, 744, 22),
-        ("줄넘기 측정 결과", 24, 704, 15),
-        (f"기록 번호  {workout_id}", 24, 654, 11),
-        (f"사용자  {user_name}", 24, 626, 11),
-        (f"측정 종목  {mode_name}", 24, 598, 11),
-        (f"점프 횟수  {count:,}회", 24, 570, 11),
-        (f"측정 시간  {duration // 60:02d}:{duration % 60:02d}", 24, 542, 11),
-        (f"측정 상태  {status_name}", 24, 514, 11),
-        (f"측정 시작  {started}", 24, 486, 11),
-        ("이 결과는 헤아리오에 저장된 측정 기록입니다.", 24, 430, 9),
-    ]
     used: dict[int, int] = {}
 
     def encoded(value: str) -> str:
@@ -90,9 +78,36 @@ def workout_pdf(*, workout_id: int, user_name: str, mode_name: str, count: int,
             glyphs.append(f"{glyph:04X}")
         return "".join(glyphs)
 
-    content_parts = ["0.027 0.067 0.122 rg", "24 682 548 1 re f", "0.071 0.408 1 rg", "24 672 72 4 re f"]
-    for value, x, y, size in lines:
-        content_parts.append(f"BT /F1 {size} Tf {x} {y} Td <{encoded(value)}> Tj ET")
+    content_parts = [
+        "0.094 0.094 0.094 rg", "0 682 595 160 re f",
+        "0.902 0.098 0.098 rg", "36 696 72 4 re f",
+        "0.953 0.965 0.973 rg", "36 548 523 104 re f",
+        "0.851 0.878 0.906 rg", "297 564 1 72 re f",
+        "0.851 0.878 0.906 RG", "36 382 523 1 re S",
+    ]
+
+    def add_text(value: str, x: int, y: int, size: int, color: str = "0.094 0.094 0.094") -> None:
+        content_parts.append(f"{color} rg BT /F1 {size} Tf {x} {y} Td <{encoded(value)}> Tj ET")
+
+    add_text("뜀결", 36, 804, 10, "1 1 1")
+    add_text("줄넘기 측정 리포트", 36, 756, 24, "1 1 1")
+    add_text(f"{started}  ·  기록 {workout_id}", 36, 720, 9, "0.608 0.608 0.608")
+
+    add_text("점프 횟수", 52, 622, 9, "0.349 0.404 0.478")
+    add_text(f"{count:,}회", 52, 580, 24)
+    add_text("측정 시간", 322, 622, 9, "0.349 0.404 0.478")
+    add_text(f"{duration // 60:02d}:{duration % 60:02d}", 322, 580, 24)
+
+    add_text("측정 정보", 36, 510, 14)
+    add_text(f"사용자  {user_name}", 36, 478, 10)
+    add_text(f"측정 종목  {mode_name}", 300, 478, 10)
+    add_text(f"측정 상태  {status_name}", 36, 452, 10)
+    add_text(f"기록 번호  {workout_id}", 300, 452, 10)
+
+    add_text("기록 안내", 36, 346, 14)
+    add_text("이 문서는 측정이 완료된 시점의 점프 횟수와 측정 시간을 기록합니다.", 36, 314, 10)
+    add_text("상세 기록은 뜀결의 전체 측정 결과에서 다시 확인할 수 있습니다.", 36, 286, 10, "0.349 0.404 0.478")
+    add_text("뜀결  ·  동작을 읽고, 리듬을 기록하다", 36, 54, 8, "0.349 0.404 0.478")
     content = "\n".join(content_parts).encode("ascii")
     mappings = []
     for glyph, codepoint in sorted(used.items()):

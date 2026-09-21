@@ -28,6 +28,13 @@ class PasswordResetConfirm(StrictModel):
     password: str = Field(min_length=12, max_length=200)
 
 
+class ProfileUpdate(StrictModel):
+    display_name: str = Field(min_length=1, max_length=80)
+    email: str | None = Field(default=None, pattern=r"^[^\s@]+@[^\s@]+\.[^\s@]+$", max_length=254)
+    current_password: str | None = Field(default=None, min_length=1, max_length=200)
+    new_password: str | None = Field(default=None, min_length=12, max_length=200)
+
+
 class BulkDeleteInput(StrictModel):
     ids: list[int] = Field(min_length=1, max_length=500)
 
