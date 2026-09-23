@@ -1,25 +1,29 @@
 /* Industrial telemetry redesign: visual overrides only. */
 :root {
-  --night: #181818;
-  --navy: #1f1f1f;
-  --paper: #181818;
-  --white: #eaeaea;
-  --ink: #eaeaea;
-  --muted: #9b9b9b;
-  --line: #313131;
-  --blue: #e61919;
-  --blue-dark: #ff2a2a;
-  --lime: #4af626;
-  --coral: #e61919;
-  --cyan: #e61919;
-  --danger: #e61919;
-  --surface: #1f1f1f;
-  --surface-raised: #272727;
-  --focus: #4af626;
+  --night: #f0f9ff;
+  --navy: #ffffff;
+  --paper: #f0f9ff;
+  --white: #ffffff;
+  --ink: #0f172a;
+  --muted: #475569;
+  --line: #bae6fd;
+  --line-soft: #e0f0f8;
+  --blue: #22d3ee;
+  --blue-dark: #0891b2;
+  --accent-text: #0c4a6e;
+  --lime: #0284c7;
+  --coral: #22d3ee;
+  --cyan: #22d3ee;
+  --danger: #dc2626;
+  --surface: #ffffff;
+  --surface-raised: #eff7fb;
+  --focus: #0284c7;
+  --shadow-soft: 0 24px 64px rgba(2, 132, 199, .12);
+  --shadow-panel: 0 32px 96px rgba(12, 74, 110, .16);
   --motion: cubic-bezier(.32, .72, 0, 1);
-  --font-display: "Satoshi", "Gothic A1", "Malgun Gothic", sans-serif;
-  --font-data: "Geist Mono", "SFMono-Regular", Consolas, monospace;
-  color-scheme: dark;
+  --font-display: "Gothic A1", sans-serif;
+  --font-data: "Gothic A1", sans-serif;
+  color-scheme: light;
   background: var(--night);
   color: var(--ink);
   font-family: var(--font-display);
@@ -186,8 +190,8 @@ button:disabled {
 .brand-lockup,
 .brand-button {
   font-family: var(--font-data);
-  letter-spacing: .04em;
-  text-transform: uppercase;
+  letter-spacing: 0;
+  text-transform: none;
 }
 
 .brand-mark {
@@ -1547,5 +1551,369 @@ dialog::backdrop {
   .mode-visual svg {
     opacity: 1 !important;
     transform: none !important;
+  }
+}
+
+/* 2026-09-23 calm light palette: color and surface overrides only. */
+body::before {
+  opacity: .018;
+}
+
+.skip-link {
+  background: var(--ink);
+  color: var(--white);
+}
+
+.button-primary,
+.hero-action,
+.setup-presets button.is-active,
+.mode-start i {
+  background: var(--blue);
+  color: var(--ink);
+}
+
+.button-primary:hover,
+.hero-action:hover {
+  background: var(--blue-dark);
+  color: var(--ink);
+}
+
+.button-secondary,
+.button-stop {
+  border-color: var(--line);
+  background: var(--white);
+  color: var(--ink);
+}
+
+.button-secondary:hover,
+.button-stop:hover {
+  border-color: var(--blue-dark);
+  background: var(--surface-raised);
+  color: var(--ink);
+}
+
+.login-view,
+.login-brand,
+.app-shell {
+  background: var(--paper);
+  color: var(--ink);
+}
+
+.login-brand {
+  border-color: var(--line);
+}
+
+.login-message h1,
+.dashboard-lead h1,
+.admin-head h1 {
+  color: var(--ink);
+}
+
+.hero-jumper {
+  mix-blend-mode: multiply;
+  opacity: .09;
+}
+
+.hero-jumper .jumper-head {
+  fill: var(--ink);
+}
+
+.hero-jumper .jumper-body,
+.hero-jumper .count-path,
+.hero-jumper .count-slash {
+  stroke: var(--ink);
+}
+
+.login-panel {
+  background: var(--surface);
+  box-shadow: -24px 0 72px rgba(2, 132, 199, .08);
+}
+
+.auth-intro h2,
+.dialog-head h2,
+.auth-form label,
+.user-dialog label,
+.destination-field,
+.profile-dialog label,
+.auth-links button,
+.auth-back {
+  color: var(--ink);
+}
+
+.auth-form input,
+.user-dialog input[type="text"],
+.user-dialog input[type="password"],
+.user-dialog input[type="email"],
+.user-dialog input:not([type]),
+.destination-field input,
+.profile-dialog input {
+  border-color: var(--line);
+  background: var(--white);
+  color: var(--ink);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, .8);
+}
+
+.auth-form input:hover,
+.user-dialog input:hover,
+.destination-field input:hover,
+.profile-dialog input:hover {
+  border-color: var(--blue-dark);
+}
+
+.auth-form input:focus-visible,
+.user-dialog input:focus-visible,
+.destination-field input:focus-visible,
+.profile-dialog input:focus-visible {
+  border-color: var(--focus);
+}
+
+.auth-form input::placeholder,
+.destination-field input::placeholder,
+.profile-dialog input::placeholder {
+  color: var(--muted);
+}
+
+.topbar {
+  border-color: var(--line-soft);
+  background: rgba(255, 255, 255, .94);
+  box-shadow: 0 18px 48px rgba(2, 132, 199, .10);
+}
+
+.nav-tab:hover,
+.nav-tab.is-active,
+.profile-button:hover {
+  background: var(--surface-raised);
+  color: var(--ink);
+}
+
+.profile-button,
+.user-badge,
+.text-button:hover {
+  color: var(--ink);
+}
+
+.user-badge {
+  border-color: var(--line);
+  background: var(--surface-raised);
+}
+
+.telemetry-marquee,
+.dashboard-action {
+  background: var(--surface);
+  color: var(--ink);
+}
+
+.daily-readout > span,
+.metric-strip li span,
+.mode-card h2,
+.mode-start,
+.section-heading h2,
+.summary-strip b,
+.status,
+.dashboard-action h2 {
+  color: var(--ink);
+}
+
+.mode-card {
+  background: var(--surface);
+  box-shadow: inset 0 0 0 1px var(--line-soft);
+}
+
+.mode-card:hover {
+  background: var(--surface-raised);
+  box-shadow: inset 0 0 0 2px var(--blue), var(--shadow-soft);
+}
+
+.mode-visual svg .person {
+  stroke: var(--ink);
+}
+
+.mode-visual svg .person.head {
+  fill: var(--ink);
+}
+
+.mode-start:hover,
+.section-code {
+  color: var(--accent-text);
+}
+
+.locked-copy,
+.selection-delete,
+.record-action,
+th,
+td {
+  color: var(--ink);
+}
+
+.selection-delete:hover,
+.record-action:hover {
+  background: var(--blue);
+  color: var(--ink);
+}
+
+.selection-bar,
+.table-shell,
+.admin-panel,
+td {
+  background: var(--surface);
+}
+
+th,
+tbody tr:hover td {
+  background: var(--surface-raised);
+}
+
+dialog,
+.setup-dialog,
+.user-dialog,
+.record-dialog,
+.profile-dialog,
+.confirm-dialog,
+.result-card {
+  border-color: var(--line);
+  background: var(--surface);
+  color: var(--ink);
+  box-shadow: var(--shadow-panel);
+}
+
+.setup-dialog h2,
+.record-dialog h2,
+.profile-dialog h2,
+.confirm-dialog h2,
+.user-dialog h2,
+.admin-panel h2 {
+  color: var(--ink);
+}
+
+.setup-presets button {
+  border-color: var(--line);
+  background: var(--surface-raised);
+  color: var(--ink);
+}
+
+.setup-presets button:hover,
+.setup-presets button.is-active,
+.dialog-close:hover,
+.icon-button:hover,
+.fullscreen-button:hover {
+  border-color: var(--blue);
+  background: var(--blue);
+  color: var(--ink);
+}
+
+.dialog-close,
+.icon-button,
+.fullscreen-button,
+.profile-permissions span {
+  color: var(--ink);
+}
+
+.profile-permissions span {
+  border-color: var(--line);
+  background: var(--surface-raised);
+}
+
+.workout-view {
+  background: var(--paper);
+  color: var(--ink);
+}
+
+.workout-bar,
+.counter-panel {
+  border-color: var(--line);
+  background: var(--surface);
+}
+
+.workout-identity strong,
+.connection-state,
+.fullscreen-button,
+.counter-top output,
+.counter-panel dd,
+.time-readout > output {
+  color: var(--ink);
+}
+
+.time-track,
+.cheer-loop {
+  background: var(--surface-raised);
+}
+
+.phase-label,
+.section-kicker,
+.mode-index,
+.profile-kicker,
+.signal-label,
+.signal-label.dark,
+.dashboard-lead .signal-label,
+.metric-strip li b {
+  color: var(--accent-text);
+}
+
+.cheer-loop {
+  border-color: var(--line);
+}
+
+.result-card {
+  overflow: hidden;
+}
+
+.result-summary,
+.result-actions {
+  background: var(--surface);
+  color: var(--ink);
+}
+
+.result-summary {
+  background: var(--surface-raised);
+  border-right: 1px solid var(--line);
+}
+
+.result-summary > p:first-child,
+.result-summary > p:last-child {
+  color: var(--muted);
+}
+
+.toast {
+  border-color: var(--line);
+  background: var(--surface);
+  color: var(--ink);
+  box-shadow: 0 16px 48px rgba(2, 132, 199, .16);
+}
+
+.selection-delete,
+.button-danger,
+.record-action.is-danger {
+  border-color: var(--danger);
+  background: var(--white);
+  color: var(--danger);
+}
+
+.selection-delete:not(:disabled):hover,
+.button-danger:not(:disabled):hover,
+.record-action.is-danger:hover {
+  border-color: var(--danger);
+  background: var(--danger);
+  color: var(--white);
+}
+
+.button-danger-solid {
+  background: var(--danger);
+  color: var(--white);
+}
+
+.button-danger-solid:hover {
+  background: #dc2626;
+  color: var(--white);
+  transform: translateY(-2px);
+}
+
+@media (max-width: 767px) {
+  .login-panel {
+    box-shadow: 0 -24px 72px rgba(2, 132, 199, .08);
+  }
+
+  .result-summary {
+    border-right: 0;
+    border-bottom: 1px solid var(--line);
   }
 }
