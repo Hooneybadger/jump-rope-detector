@@ -1,6 +1,14 @@
 import importlib
 import sys
+from dataclasses import dataclass
 from types import ModuleType, SimpleNamespace
+
+
+@dataclass
+class FakeSignal:
+    frame_idx: int
+    time_sec: float
+    detected: bool = True
 
 
 class FakeGate:
@@ -18,8 +26,8 @@ class FakeGate:
 
 
 class FakeExtractor:
-    def process_bgr_frame(self, _frame, _frame_index, _timestamp):
-        return SimpleNamespace(detected=True), SimpleNamespace(pose_landmarks=None)
+    def process_bgr_frame(self, _frame, frame_index, timestamp):
+        return FakeSignal(frame_index, timestamp), SimpleNamespace(pose_landmarks=None)
 
     def close(self):
         pass

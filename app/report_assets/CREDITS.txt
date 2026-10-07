@@ -1,0 +1,3 @@
+Tier icons: Phosphor Icons (fill), MIT License, Copyright (c) 2023 Phosphor Icons.
+mark-on-dark.png: rendered from static/ttwimgyeol-mark-on-dark.svg.
+Gothic A1 (GothicA1-Bold-KSX1001.ttf subset): SIL Open Font License 1.1.

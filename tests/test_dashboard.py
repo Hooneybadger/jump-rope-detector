@@ -45,26 +45,35 @@ def test_current_brand_profile_editor_and_full_body_guide_are_rendered(client):
     assert "동작을 읽고,<br>리듬을 기록하다" in response.text
     assert "헤아리오" not in response.text
     assert 'id="profile-form"' in response.text
-    assert 'class="full-body-guide"' in response.text
+    assert 'id="camera-guide"' in response.text
+    assert 'href="#i-person-simple"' in response.text
 
 
-def test_industrial_telemetry_redesign_assets_and_accessibility_are_rendered(client):
+def test_arena_redesign_assets_and_accessibility_are_rendered(client):
     response = client.get("/")
     assert response.status_code == 200
-    assert 'href="/telemetry.css"' in response.text
-    assert 'src="/vendor/gsap.min.js"' in response.text
-    assert 'src="/vendor/ScrollTrigger.min.js"' in response.text
-    assert 'class="skip-link"' in response.text
-    assert 'id="mode-grid"' in response.text
-    assert 'class="metric-strip"' in response.text
-    assert 'role="progressbar"' in response.text
+    html = response.text
+    assert 'href="/app.css"' in html
+    assert "telemetry.css" not in html
+    assert 'src="/vendor/gsap.min.js"' in html
+    assert 'class="skip-link"' in html
+    assert 'id="mode-grid"' in html
+    assert 'role="progressbar"' in html
+    assert "—" not in html and "–" not in html
 
-    stylesheet = client.get("/telemetry.css")
-    assert stylesheet.status_code == 200
-    assert "grid-auto-flow: dense" in stylesheet.text
-    assert "prefers-reduced-motion: reduce" in stylesheet.text
-    assert "transition: all" not in stylesheet.text
+    stylesheet = client.get("/app.css").text
+    assert "prefers-reduced-motion: reduce" in stylesheet
+    assert "prefers-color-scheme: dark" in stylesheet
+    assert "transition: all" not in stylesheet
+    for asset in ("/img/court-hero.jpg", "/img/court-ambient.jpg", "/fonts/BlackHanSans-Regular.woff2", "/fonts/BarlowCondensed-Bold.woff2"):
+        assert client.get(asset).status_code == 200
 
-    assert client.get("/vendor/gsap.min.js").status_code == 200
-    assert client.get("/vendor/ScrollTrigger.min.js").status_code == 200
 
+def test_every_mode_shares_one_result_screen(client):
+    html = client.get("/").text
+    for element_id in ("result-overlay", "result-count", "result-mode", "result-status", "result-chart", "result-retry", "result-download"):
+        assert f'id="{element_id}"' in html
+    script = client.get("/app.js").text
+    assert "function showResult(message)" in script
+    assert "message.analysisFps" in script
+    assert "if (!message.finished) scheduleFrame" in script
