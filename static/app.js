@@ -5,9 +5,9 @@ const $$ = (selector) => [...document.querySelectorAll(selector)];
 const state = {
   user: null, csrf: "", dashboard: null, stream: null, socket: null, sending: false,
   mode: null, duration: 60, countdown: 3, workoutId: null, closing: false, frameTimer: null, frameSentAt: 0,
+  frameInterval: 1000 / 20, phase: "SEARCHING", lastCount: 0, lastElapsed: 0, timeline: [], resultShown: false,
   selectedWorkouts: new Set(), selectedUsers: new Set(),
 };
-const FRAME_INTERVAL = 1000 / 12;
 const captureCanvas = $("#capture-canvas");
 const captureContext = captureCanvas.getContext("2d", { alpha: false });
 const poseCanvas = $("#processed-canvas");
@@ -29,42 +29,28 @@ const cheerAssets = {
   },
 };
 const statusNames = { completed: "완료", interrupted: "중단", running: "측정 중" };
+const phaseLabels = { SEARCHING: "자세 찾는 중", COUNTDOWN: "준비", COUNTING: "측정 중", DONE: "측정 종료" };
+const phaseOrder = ["SEARCHING", "COUNTDOWN", "COUNTING", "DONE"];
+const reducedMotion = () => window.matchMedia("(prefers-reduced-motion: reduce)").matches;
 const authHeadings = { login: "다시 시작해 볼까요?", signup: "나만의 기록을 시작하세요.", "reset-request": "비밀번호를 다시 설정하세요.", "reset-confirm": "새 비밀번호를 정하세요." };
-let dashboardMotion = null;
+let dashboardEntered = false;
 
-function scrollToModes() {
-  const reducedMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
-  $("#mode-grid").scrollIntoView({ behavior: reducedMotion ? "auto" : "smooth", block: "start" });
+function playDashboardEntry() {
+  if (dashboardEntered || !window.gsap || reducedMotion()) return;
+  dashboardEntered = true;
+  window.gsap.from([".arena-header", ".lanes-section .section-title", ".lane"], {
+    opacity: 0, y: 18, duration: 0.7, stagger: 0.07, ease: "power3.out", clearProps: "transform,opacity",
+  });
 }
 
-function initDashboardMotion() {
-  if (dashboardMotion || !window.gsap || !window.ScrollTrigger) return;
-  window.gsap.registerPlugin(window.ScrollTrigger);
-  const media = window.gsap.matchMedia();
-  dashboardMotion = media;
-
-  media.add("(prefers-reduced-motion: no-preference)", () => {
-    const context = window.gsap.context(() => {
-      window.gsap.from(".dashboard-lead > *", {
-        opacity: 0, y: 24, duration: 0.8, stagger: 0.1, ease: "power3.out",
-      });
-      window.gsap.to(".telemetry-marquee > div", {
-        xPercent: -50, duration: 22, repeat: -1, ease: "none",
-      });
-      window.gsap.utils.toArray(".mode-card").forEach((card) => {
-        const visual = card.querySelector(".mode-visual svg");
-        window.gsap.timeline({
-          scrollTrigger: {
-            trigger: card, start: "top 92%", end: "bottom 14%", scrub: 0.6,
-          },
-        }).fromTo(visual, { scale: 0.8, opacity: 0.35 }, { scale: 1, opacity: 1, duration: 0.55 })
-          .to(visual, { scale: 0.94, opacity: 0.2, duration: 0.45 });
-      });
-    }, "#dashboard-view");
-    return () => context.revert();
+function bindLanePreview() {
+  $$(".lane").forEach((lane) => {
+    const image = lane.querySelector(".lane-figure img");
+    const play = () => { if (!reducedMotion() && !lane.classList.contains("is-locked")) image.src = image.dataset.motion; };
+    const rest = () => { image.src = image.dataset.poster; };
+    lane.addEventListener("pointerenter", play); lane.addEventListener("pointerleave", rest);
+    lane.addEventListener("focusin", play); lane.addEventListener("focusout", rest);
   });
-
-  window.requestAnimationFrame(() => window.ScrollTrigger.refresh());
 }
 
 async function api(path, options = {}) {
@@ -92,12 +78,12 @@ function showApp(user) {
   $("#user-badge").textContent = (user.displayName || user.username).slice(0, 1);
   $("#user-name").textContent = user.displayName || user.username;
   $("#admin-tab").hidden = user.role !== "admin";
-  $("#welcome-heading").innerHTML = `${escapeHtml(user.displayName)}님,<br>오늘도 뛰어볼까요?`;
+  $("#welcome-heading").innerHTML = `${escapeHtml(user.displayName || user.username)}님,<br>오늘 기록을 시작해 볼까요?`;
   for (const mode of Object.keys(modeNames)) {
     const card = document.querySelector(`[data-mode-card="${mode}"]`); const allowed = Boolean(user.permissions[mode]);
     card.classList.toggle("is-locked", !allowed); card.querySelector(".locked-copy").hidden = allowed;
   }
-  window.requestAnimationFrame(initDashboardMotion);
+  window.requestAnimationFrame(playDashboardEntry);
   loadDashboard();
 }
 
@@ -173,7 +159,7 @@ async function loadDashboard() {
     const data = await api("/api/dashboard"); state.dashboard = data;
     $("#summary-count").textContent = data.summary.count.toLocaleString("ko-KR");
     $("#summary-sessions").textContent = data.summary.sessions.toLocaleString("ko-KR");
-    $("#summary-duration").textContent = `${Math.round(data.summary.duration / 60)}분`;
+    $("#summary-duration").textContent = Math.round(data.summary.duration / 60).toLocaleString("ko-KR");
     const body = $("#history-body"); body.replaceChildren(); $("#history-empty").hidden = data.recent.length > 0;
     state.selectedWorkouts.clear();
     data.recent.forEach((item) => {
@@ -182,7 +168,7 @@ async function loadDashboard() {
       const checkbox = document.createElement("input"); checkbox.type = "checkbox"; checkbox.value = item.id; checkbox.dataset.recordSelect = "";
       checkbox.disabled = item.status === "running"; checkbox.setAttribute("aria-label", `${modeNames[item.mode] || item.mode} 기록 선택`);
       checkbox.addEventListener("change", updateHistorySelection); selectCell.appendChild(checkbox); row.appendChild(selectCell);
-      [item.user, modeNames[item.mode] || item.mode, `${item.count.toLocaleString("ko-KR")}회`, formatTime(item.duration), statusNames[item.status] || item.status, localDate(item.startedAt)].forEach((text, index) => { const cell = document.createElement("td"); cell.textContent = text; if (index === 4) cell.className = `status status-${item.status}`; row.appendChild(cell); });
+      [item.user, modeNames[item.mode] || item.mode, `${item.count.toLocaleString("ko-KR")}회`, formatTime(item.duration), statusNames[item.status] || item.status, localDate(item.startedAt)].forEach((text, index) => { const cell = document.createElement("td"); cell.textContent = text; if (index === 2 || index === 3) cell.className = "num"; if (index === 4) cell.className = `status status-${item.status}`; row.appendChild(cell); });
       const actions = document.createElement("td"); actions.className = "record-actions";
       const download = document.createElement("a"); download.className = "record-action"; download.href = `/api/workouts/${item.id}/pdf`; download.textContent = "PDF"; download.setAttribute("download", "");
       actions.append(actionButton("view", "상세", item.id), download, actionButton("delete", "삭제", item.id, "is-danger")); row.appendChild(actions);
@@ -300,37 +286,71 @@ function openWorkoutSetup(mode) {
   $("#workout-setup-dialog").showModal();
 }
 
-async function startWorkout() {
-  state.closing = false; state.workoutId = null;
-  $("#workout-mode-name").textContent = modeNames[state.mode]; $("#workout-view").hidden = false; $("#result-overlay").hidden = true;
-  $("#live-count").textContent = "0"; $("#live-time").textContent = "00:00"; $("#target-time").textContent = formatTime(state.duration); $("#remaining-time").textContent = formatTime(state.duration); $("#time-progress").style.transform = "scaleX(1)";
+function resetWorkoutScreen() {
+  state.phase = "SEARCHING"; state.lastCount = 0; state.lastElapsed = 0; state.timeline = []; state.resultShown = false;
+  $("#workout-mode-name").textContent = modeNames[state.mode]; $("#result-overlay").hidden = true;
+  $("#live-count").textContent = "0"; $("#live-time").textContent = "00:00"; $("#live-pace").textContent = "0";
+  $("#target-time").textContent = formatTime(state.duration); $("#remaining-time").textContent = formatTime(state.duration);
+  $("#time-progress").style.transform = "scaleX(1)"; $("#ready-progress").style.transform = "scaleX(0)";
   const progress = $(".time-track"); progress.setAttribute("aria-valuemax", String(state.duration)); progress.setAttribute("aria-valuenow", String(state.duration));
-  $("#connection-state").textContent = "카메라 연결 중"; $("#camera-guide").hidden = false; $("#phase-label").textContent = "자세 찾는 중"; $("#body-state").textContent = "대기";
+  $("#connection-state").textContent = "카메라 연결 중"; $("#camera-guide").hidden = false; $("#countdown-overlay").hidden = true; $("#body-state").textContent = "대기";
+  setPhase("SEARCHING");
   const cheer = $("#cheer-loop"); const cheerImage = cheer.querySelector("img"); cheer.hidden = false;
   const cheerAsset = cheerAssets[state.mode] || cheerAssets.basic;
-  cheerImage.src = window.matchMedia("(prefers-reduced-motion: reduce)").matches ? cheerAsset.poster : cheerAsset.animation;
+  cheerImage.src = reducedMotion() ? cheerAsset.poster : cheerAsset.animation;
   cheerImage.alt = cheerAsset.alt; cheer.querySelector("figcaption").textContent = cheerAsset.caption;
+}
+
+function setPhase(phase) {
+  state.phase = phase;
+  const current = phaseOrder.indexOf(phase);
+  $$(".phase-steps li").forEach((item, index) => {
+    item.classList.toggle("is-current", index === current); item.classList.toggle("is-done", index < current);
+    if (index === current) item.setAttribute("aria-current", "step"); else item.removeAttribute("aria-current");
+  });
+  const label = $("#phase-label"); label.textContent = phaseLabels[phase] || phase; label.classList.toggle("is-live", phase === "COUNTING");
+}
+
+async function startWorkout() {
+  state.closing = false; state.workoutId = null; $("#workout-view").hidden = false; resetWorkoutScreen();
   try { if (!document.fullscreenElement && $("#workout-view").requestFullscreen) await $("#workout-view").requestFullscreen(); } catch { showToast("브라우저 메뉴에서도 전체 화면을 켤 수 있습니다."); }
   try {
     state.stream = await navigator.mediaDevices.getUserMedia({ video: { width: { ideal: 1280 }, height: { ideal: 720 }, frameRate: { ideal: 30, max: 60 }, facingMode: "user" }, audio: false });
     const video = $("#camera-source"); video.srcObject = state.stream; await video.play();
     const protocol = location.protocol === "https:" ? "wss" : "ws";
     state.socket = new WebSocket(`${protocol}://${location.host}/ws/count/${state.mode}?duration=${state.duration}&countdown=${state.countdown}`);
-    state.socket.onopen = () => { $("#connection-state").textContent = "실시간 분석 연결됨"; };
+    state.socket.onopen = () => { $("#connection-state").textContent = "분석 서버 연결됨"; };
     state.socket.onmessage = handleSocketMessage;
-    state.socket.onclose = (event) => { state.sending = false; if (!state.closing && event.code !== 1000) { showToast(event.reason || "측정 연결이 종료되었습니다."); cleanupWorkout(); } };
+    state.socket.onclose = handleSocketClose;
     state.socket.onerror = () => showToast("분석 서버에 연결할 수 없습니다.");
   } catch (error) { showToast(error.name === "NotAllowedError" ? "카메라 사용 권한을 허용해 주세요." : "카메라를 시작할 수 없습니다."); cleanupWorkout(); }
 }
 
+function handleSocketClose(event) {
+  state.sending = false;
+  if (state.closing || state.resultShown) return;
+  if (state.phase === "COUNTING" && state.workoutId) {
+    // The server stores the session as interrupted; show what was measured instead of dropping the user back.
+    showResult({ workoutId: state.workoutId, mode: state.mode, count: state.lastCount, duration: Math.round(state.lastElapsed), targetDuration: state.duration, status: "interrupted", reason: "disconnected" });
+    return;
+  }
+  if (event.code !== 1000) showToast(event.reason || "측정 연결이 종료되었습니다.");
+  cleanupWorkout();
+}
+
 async function handleSocketMessage(event) {
   const message = JSON.parse(event.data);
-  if (message.type === "ready") { state.workoutId = message.workoutId; scheduleFrame(); return; }
+  if (message.type === "ready") {
+    state.workoutId = message.workoutId;
+    if (message.analysisFps) state.frameInterval = 1000 / message.analysisFps;
+    scheduleFrame(); return;
+  }
   if (message.type === "state") {
     const roundTrip = Math.max(0, performance.now() - state.frameSentAt); state.sending = false;
     updateWorkoutState(message); drawPose(message.landmarks || []);
     $("#connection-state").textContent = `분석 ${Math.round(message.processingMs || 0)}ms · 왕복 ${Math.round(roundTrip)}ms`;
-    if (!(message.phase === "COUNTING" && message.elapsed >= state.duration)) scheduleFrame(Math.max(0, FRAME_INTERVAL - roundTrip));
+    // Keep streaming until the server announces the finish; the server owns the clock.
+    if (!message.finished) scheduleFrame(Math.max(0, state.frameInterval - roundTrip));
     return;
   }
   if (message.type === "complete") { state.closing = true; state.workoutId = message.workoutId; showResult(message); }
@@ -347,40 +367,102 @@ function sendFrame() {
   captureCanvas.toBlob((blob) => {
     if (blob && state.socket?.readyState === WebSocket.OPEN) {
       try { state.frameSentAt = performance.now(); state.socket.send(blob); }
-      catch { state.sending = false; scheduleFrame(FRAME_INTERVAL); }
+      catch { state.sending = false; scheduleFrame(state.frameInterval); }
     }
-    else { state.sending = false; scheduleFrame(FRAME_INTERVAL); }
+    else { state.sending = false; scheduleFrame(state.frameInterval); }
   }, "image/jpeg", .62);
 }
 
 function drawPose(landmarks) {
   const canvas = poseCanvas; const context = poseContext; context.clearRect(0, 0, canvas.width, canvas.height);
   if (landmarks.length < 33) return;
-  context.lineWidth = 5; context.lineCap = "round"; context.lineJoin = "round"; context.strokeStyle = "rgba(74,246,38,.92)";
+  context.lineWidth = 5; context.lineCap = "round"; context.lineJoin = "round"; context.strokeStyle = "rgba(240,122,60,.92)";
   poseConnections.forEach(([from, to]) => {
     const a = landmarks[from]; const b = landmarks[to]; if (!a || !b || a[2] < .45 || b[2] < .45) return;
     context.beginPath(); context.moveTo(a[0] * canvas.width, a[1] * canvas.height); context.lineTo(b[0] * canvas.width, b[1] * canvas.height); context.stroke();
   });
-  context.fillStyle = "#ffffff";
+  context.fillStyle = "#eceff2";
   landmarks.forEach((point, index) => { if (index < 11 || point[2] < .55) return; context.beginPath(); context.arc(point[0] * canvas.width, point[1] * canvas.height, 5, 0, Math.PI * 2); context.fill(); });
 }
 
 function updateWorkoutState(message) {
-  $("#live-count").textContent = message.count; $("#live-time").textContent = formatTime(message.elapsed);
+  if (message.phase !== state.phase) setPhase(message.phase);
+  const countOutput = $("#live-count");
+  if (message.count !== state.lastCount) {
+    countOutput.textContent = message.count;
+    if (message.count > state.lastCount && !reducedMotion()) { countOutput.classList.remove("is-bumped"); void countOutput.offsetWidth; countOutput.classList.add("is-bumped"); }
+    state.lastCount = message.count;
+  }
+  if (message.phase === "COUNTING") {
+    state.lastElapsed = message.elapsed; state.timeline.push([message.elapsed, message.count]);
+    $("#live-pace").textContent = message.elapsed >= 3 ? Math.round(message.count / message.elapsed * 60) : "0";
+  }
+  $("#live-time").textContent = formatTime(message.elapsed);
   const remaining = Math.max(0, state.duration - message.elapsed); $("#remaining-time").textContent = formatTime(remaining);
   $("#time-progress").style.transform = `scaleX(${Math.max(0, remaining / state.duration)})`;
-  $(".time-track").setAttribute("aria-valuenow", String(remaining));
-  $("#body-state").textContent = message.framed ? "인식됨" : message.readyProgress > 0 ? "인식 확인 중" : "위치 조정";
-  $("#camera-guide").hidden = Boolean(message.framed);
-  const labels = { SEARCHING: "자세 찾는 중", COUNTDOWN: "준비", COUNTING: "측정 중" }; $("#phase-label").textContent = labels[message.phase] || message.phase;
-  const countdown = $("#countdown-overlay"); countdown.hidden = message.phase !== "COUNTDOWN"; if (!countdown.hidden) countdown.querySelector("span").textContent = Math.max(1, Math.ceil(message.countdown));
+  $(".time-track").setAttribute("aria-valuenow", String(Math.round(remaining)));
+  $("#body-state").textContent = message.framed ? "인식됨" : message.readyProgress > 0 ? "확인 중" : "위치 조정";
+  $("#ready-progress").style.transform = `scaleX(${message.framed && message.phase === "SEARCHING" ? Math.max(.06, message.readyProgress) : 0})`;
+  $("#camera-guide").hidden = Boolean(message.framed) || message.phase !== "SEARCHING";
+  const countdown = $("#countdown-overlay"); countdown.hidden = message.phase !== "COUNTDOWN";
+  if (!countdown.hidden) {
+    const digit = countdown.querySelector("span"); const next = String(Math.max(1, Math.ceil(message.countdown)));
+    if (digit.textContent !== next) { digit.textContent = next; digit.classList.remove("is-tick"); void digit.offsetWidth; digit.classList.add("is-tick"); }
+  }
 }
 
 function stopWorkout() { if (state.socket?.readyState === WebSocket.OPEN) { state.closing = true; state.socket.send(JSON.stringify({ type: "stop" })); } else cleanupWorkout(); }
 
+function segmentCounts(timeline, duration, size) {
+  const segments = Math.max(1, Math.ceil(Math.max(duration, 1) / size)); const ends = new Array(segments).fill(null);
+  timeline.forEach(([elapsed, count]) => { const index = Math.min(segments - 1, Math.floor(elapsed / size)); ends[index] = count; });
+  let previous = 0;
+  return ends.map((value) => { const end = value === null ? previous : value; const delta = Math.max(0, end - previous); previous = end; return delta; });
+}
+
+function bestWindow(timeline, size) {
+  let best = 0; let start = 0;
+  for (let end = 0; end < timeline.length; end += 1) {
+    while (timeline[end][0] - timeline[start][0] > size) start += 1;
+    const base = start > 0 ? timeline[start - 1][1] : 0;
+    best = Math.max(best, timeline[end][1] - base);
+  }
+  return best;
+}
+
+function renderRhythm(timeline, duration) {
+  const chart = $("#result-chart"); chart.replaceChildren();
+  const hasData = timeline.length > 1 && duration > 0;
+  chart.hidden = !hasData; $("#result-chart-empty").hidden = hasData;
+  if (!hasData) return;
+  const counts = segmentCounts(timeline, duration, 5); const peak = Math.max(...counts, 1); const bestIndex = counts.indexOf(Math.max(...counts));
+  chart.classList.toggle("is-dense", counts.length > 24);
+  chart.setAttribute("aria-label", `5초 구간별 횟수: ${counts.join(", ")}회`);
+  counts.forEach((value, index) => {
+    const bar = document.createElement("div"); bar.className = `rhythm-bar${index === bestIndex && value > 0 ? " is-best" : ""}`;
+    bar.style.height = `${Math.max(3, value / peak * 100)}%`; bar.style.setProperty("--i", index);
+    const label = document.createElement("span"); label.textContent = value; bar.appendChild(label); chart.appendChild(bar);
+  });
+}
+
 function showResult(message) {
-  $("#result-count").textContent = message.count; $("#result-detail").textContent = `${modeNames[state.mode]} · ${formatTime(message.duration)}`;
-  $("#cheer-loop").hidden = true; $("#result-overlay").hidden = false; stopMedia();
+  state.resultShown = true; setPhase("DONE"); stopMedia();
+  const mode = message.mode || state.mode; const duration = Number(message.duration) || 0; const target = Number(message.targetDuration) || state.duration;
+  const reason = message.reason || (message.status === "completed" ? "time" : "stopped");
+  const statusText = { time: "목표 시간 완료", stopped: "직접 종료", not_started: "측정 시작 전 종료", disconnected: "연결 끊김, 중단 기록으로 저장" }[reason] || "측정 종료";
+  const statusLine = $("#result-status");
+  statusLine.querySelector("span").textContent = statusText; statusLine.classList.toggle("is-muted", reason !== "time");
+  statusLine.querySelector("use").setAttribute("href", reason === "time" || reason === "stopped" ? "#i-check-circle" : "#i-warning-circle");
+  $("#result-mode").textContent = modeNames[mode] || mode;
+  $("#result-count").textContent = Number(message.count || 0).toLocaleString("ko-KR");
+  $("#result-duration").textContent = formatTime(duration); $("#result-target").textContent = `/ ${formatTime(target)}`;
+  $("#result-pace").textContent = duration > 0 ? Math.round(message.count / duration * 60) : "0";
+  $("#result-best").textContent = bestWindow(state.timeline, 10);
+  $("#result-detail").textContent = reason === "not_started" ? "전신 인식과 준비 시간이 끝나기 전에 종료되어 횟수를 세지 않았습니다." : reason === "disconnected" ? "연결이 끊기기 직전까지 센 횟수입니다." : "결과는 측정 기록에 자동 저장되었습니다.";
+  $("#result-download").hidden = !message.workoutId;
+  renderRhythm(state.timeline, duration);
+  $("#cheer-loop").hidden = true; $("#countdown-overlay").hidden = true; $("#camera-guide").hidden = true; $("#result-overlay").hidden = false;
+  $("#result-retry").focus({ preventScroll: true });
 }
 
 function stopMedia() {
@@ -388,9 +470,24 @@ function stopMedia() {
   const video = $("#camera-source"); video.srcObject = null;
   poseContext.clearRect(0, 0, poseCanvas.width, poseCanvas.height);
 }
+
+function closeSocket() {
+  state.closing = true; if (state.socket && state.socket.readyState < WebSocket.CLOSING) state.socket.close(); state.socket = null;
+}
+
 async function cleanupWorkout() {
-  state.closing = true; stopMedia(); if (state.socket && state.socket.readyState < WebSocket.CLOSING) state.socket.close(); state.socket = null;
+  closeSocket(); stopMedia();
   $("#workout-view").hidden = true; $("#result-overlay").hidden = true; if (document.fullscreenElement) await document.exitFullscreen().catch(() => {}); loadDashboard();
+}
+
+async function retryWorkout() {
+  closeSocket(); stopMedia(); await startWorkout();
+}
+
+function syncFullscreenIcon() {
+  const active = Boolean(document.fullscreenElement);
+  $("#fullscreen-button use").setAttribute("href", active ? "#i-arrows-in" : "#i-arrows-out");
+  $("#fullscreen-button").setAttribute("aria-label", active ? "전체 화면 끝내기" : "전체 화면 전환");
 }
 
 $("#login-form").addEventListener("submit", async (event) => {
@@ -422,8 +519,6 @@ $("#reset-confirm-form").addEventListener("submit", async (event) => {
 $$(`[data-auth-target]`).forEach((button) => button.addEventListener("click", () => showAuthPanel(button.dataset.authTarget)));
 $("#logout-button").addEventListener("click", async () => { try { await api("/api/auth/logout", { method: "POST" }); } finally { showLogin(); } });
 $$(`[data-nav]`).forEach((button) => button.addEventListener("click", () => navigate(button.dataset.nav)));
-$("#jump-to-modes").addEventListener("click", scrollToModes);
-$("#start-next-session").addEventListener("click", scrollToModes);
 $$(`[data-mode]`).forEach((button) => button.addEventListener("click", () => openWorkoutSetup(button.dataset.mode)));
 $$(`[data-duration]`).forEach((button) => button.addEventListener("click", () => { $("#workout-duration").value = button.dataset.duration; $$(`[data-duration]`).forEach((item) => item.classList.toggle("is-active", item === button)); }));
 $("#workout-duration").addEventListener("input", () => $$(`[data-duration]`).forEach((button) => button.classList.toggle("is-active", button.dataset.duration === $("#workout-duration").value)));
@@ -438,9 +533,11 @@ $("#workout-setup-form").addEventListener("submit", (event) => {
   state.duration = duration; state.countdown = countdown; $("#workout-setup-dialog").close(); startWorkout();
 });
 $("#stop-workout").addEventListener("click", stopWorkout); $("#workout-back").addEventListener("click", stopWorkout);
-$("#result-close").addEventListener("click", async () => { await cleanupWorkout(); const reducedMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches; window.scrollTo({ top: $(".record-section").offsetTop - 90, behavior: reducedMotion ? "auto" : "smooth" }); });
+$("#result-close").addEventListener("click", async () => { await cleanupWorkout(); $(".record-section").scrollIntoView({ behavior: reducedMotion() ? "auto" : "smooth", block: "start" }); });
+$("#result-retry").addEventListener("click", retryWorkout);
 $("#result-download").addEventListener("click", () => { if (state.workoutId) window.location.assign(`/api/workouts/${state.workoutId}/pdf`); });
-$("#fullscreen-button").addEventListener("click", () => document.fullscreenElement ? document.exitFullscreen() : $("#workout-view").requestFullscreen());
+$("#fullscreen-button").addEventListener("click", () => (document.fullscreenElement ? document.exitFullscreen() : $("#workout-view").requestFullscreen()).catch(() => showToast("전체 화면을 바꿀 수 없습니다.")));
+document.addEventListener("fullscreenchange", syncFullscreenIcon);
 $("#history-body").addEventListener("click", (event) => { const target = event.target.closest("button[data-action]"); if (!target) return; if (target.dataset.action === "view") openRecord(target.dataset.id); if (target.dataset.action === "delete") deleteRecord(target.dataset.id); });
 $("#history-select-all").addEventListener("change", (event) => { $$(`[data-record-select]:not(:disabled)`).forEach((item) => { item.checked = event.currentTarget.checked; }); updateHistorySelection(); });
 $("#delete-selected-records").addEventListener("click", deleteSelectedRecords);
@@ -460,4 +557,4 @@ $("#user-form").addEventListener("submit", async (event) => {
   catch (error) { $("#user-form-error").textContent = error.message; }
 });
 
-window.addEventListener("beforeunload", stopMedia); loadSession();
+window.addEventListener("beforeunload", stopMedia); bindLanePreview(); loadSession();

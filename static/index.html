@@ -3,65 +3,87 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-  <meta name="theme-color" content="#f0f9ff">
-  <meta name="description" content="MediaPipe Pose로 줄넘기 횟수와 훈련 기록을 실시간으로 측정하는 뜀결입니다.">
-  <meta property="og:title" content="뜀결 · 실시간 줄넘기 측정">
-  <meta property="og:description" content="카메라로 줄넘기 리듬을 읽고 횟수와 훈련 기록을 정확하게 헤아립니다.">
+  <meta name="theme-color" content="#eef0f2" media="(prefers-color-scheme: light)">
+  <meta name="theme-color" content="#0d1014" media="(prefers-color-scheme: dark)">
+  <meta name="color-scheme" content="light dark">
+  <meta name="description" content="카메라 한 대로 줄넘기 횟수와 리듬을 실시간으로 측정하는 뜀결입니다.">
+  <meta property="og:title" content="뜀결 - 실시간 줄넘기 측정">
+  <meta property="og:description" content="모아뛰기, 번갈아뛰기, 이중뛰기 횟수를 카메라로 실시간 측정합니다.">
   <link rel="icon" href="/ttwimgyeol-mark.svg" type="image/svg+xml">
+  <link rel="preload" href="/fonts/BarlowCondensed-Bold.woff2" as="font" type="font/woff2" crossorigin>
+  <link rel="preload" href="/fonts/BlackHanSans-Regular.woff2" as="font" type="font/woff2" crossorigin>
   <title>뜀결 - 실시간 줄넘기 측정</title>
   <link rel="stylesheet" href="/app.css">
-  <link rel="stylesheet" href="/telemetry.css">
 </head>
 <body>
+  <!-- Phosphor Icons (bold), MIT License, Copyright (c) 2023 Phosphor Icons -->
+  <svg class="icon-sprite" xmlns="http://www.w3.org/2000/svg" aria-hidden="true" focusable="false">
+    <symbol id="i-arrow-counter-clockwise" viewBox="0 0 256 256"><path d="M228,128a100,100,0,0,1-98.66,100H128a99.39,99.39,0,0,1-68.62-27.29,12,12,0,0,1,16.48-17.45,76,76,0,1,0-1.57-109c-.13.13-.25.25-.39.37L54.89,92H72a12,12,0,0,1,0,24H24a12,12,0,0,1-12-12V56a12,12,0,0,1,24,0V76.72L57.48,57.06A100,100,0,0,1,228,128Z"/></symbol>
+    <symbol id="i-arrow-right" viewBox="0 0 256 256"><path d="M224.49,136.49l-72,72a12,12,0,0,1-17-17L187,140H40a12,12,0,0,1,0-24H187L135.51,64.48a12,12,0,0,1,17-17l72,72A12,12,0,0,1,224.49,136.49Z"/></symbol>
+    <symbol id="i-arrows-in" viewBox="0 0 256 256"><path d="M148,96V48a12,12,0,0,1,24,0V67l31.51-31.52a12,12,0,0,1,17,17L189,84h19a12,12,0,0,1,0,24H160A12,12,0,0,1,148,96ZM96,148H48a12,12,0,0,0,0,24H67L35.51,203.51a12,12,0,0,0,17,17L84,189v19a12,12,0,0,0,24,0V160A12,12,0,0,0,96,148Zm93,24h19a12,12,0,0,0,0-24H160a12,12,0,0,0-12,12v48a12,12,0,0,0,24,0V189l31.51,31.52a12,12,0,0,0,17-17ZM96,36A12,12,0,0,0,84,48V67L52.49,35.51a12,12,0,0,0-17,17L67,84H48a12,12,0,0,0,0,24H96a12,12,0,0,0,12-12V48A12,12,0,0,0,96,36Z"/></symbol>
+    <symbol id="i-arrows-out" viewBox="0 0 256 256"><path d="M220,48V96a12,12,0,0,1-24,0V77l-35.51,35.52a12,12,0,0,1-17-17L179,60H160a12,12,0,0,1,0-24h48A12,12,0,0,1,220,48ZM95.51,143.51,60,179V160a12,12,0,0,0-24,0v48a12,12,0,0,0,12,12H96a12,12,0,0,0,0-24H77l35.51-35.51a12,12,0,0,0-17-17ZM208,148a12,12,0,0,0-12,12v19l-35.51-35.52a12,12,0,0,0-17,17L179,196H160a12,12,0,0,0,0,24h48a12,12,0,0,0,12-12V160A12,12,0,0,0,208,148ZM77,60H96a12,12,0,0,0,0-24H48A12,12,0,0,0,36,48V96a12,12,0,0,0,24,0V77l35.51,35.52a12,12,0,0,0,17-17Z"/></symbol>
+    <symbol id="i-check-circle" viewBox="0 0 256 256"><path d="M176.49,95.51a12,12,0,0,1,0,17l-56,56a12,12,0,0,1-17,0l-24-24a12,12,0,1,1,17-17L112,143l47.51-47.52A12,12,0,0,1,176.49,95.51ZM236,128A108,108,0,1,1,128,20,108.12,108.12,0,0,1,236,128Zm-24,0a84,84,0,1,0-84,84A84.09,84.09,0,0,0,212,128Z"/></symbol>
+    <symbol id="i-download-simple" viewBox="0 0 256 256"><path d="M228,144v64a12,12,0,0,1-12,12H40a12,12,0,0,1-12-12V144a12,12,0,0,1,24,0v52H204V144a12,12,0,0,1,24,0Zm-108.49,8.49a12,12,0,0,0,17,0l40-40a12,12,0,0,0-17-17L140,115V32a12,12,0,0,0-24,0v83L96.49,95.51a12,12,0,0,0-17,17Z"/></symbol>
+    <symbol id="i-lock-simple" viewBox="0 0 256 256"><path d="M208,76H180V56A52,52,0,0,0,76,56V76H48A20,20,0,0,0,28,96V208a20,20,0,0,0,20,20H208a20,20,0,0,0,20-20V96A20,20,0,0,0,208,76ZM100,56a28,28,0,0,1,56,0V76H100ZM204,204H52V100H204Z"/></symbol>
+    <symbol id="i-person-simple" viewBox="0 0 256 256"><path d="M128,76a40,40,0,1,0-40-40A40,40,0,0,0,128,76Zm0-56a16,16,0,1,1-16,16A16,16,0,0,1,128,20Zm91.41,90.43L183.06,93.12A44,44,0,0,0,164.4,88H91.6a44,44,0,0,0-18.66,5.12L36.59,110.43a12,12,0,1,0,10.82,21.43L84,113.41V140l-31,71a12,12,0,0,0,22,9.6L104,154.2l29,66.4a12,12,0,0,0,22-9.6l-31-71V113.41l36.59,18.45a12,12,0,1,0,10.82-21.43Z"/></symbol>
+    <symbol id="i-sign-out" viewBox="0 0 256 256"><path d="M116,216a12,12,0,0,1-12,12H48a20,20,0,0,1-20-20V48A20,20,0,0,1,48,28h56a12,12,0,0,1,0,24H52V204h52A12,12,0,0,1,116,216Zm108.49-96.49-40-40a12,12,0,0,0-17,17L187,116H104a12,12,0,0,0,0,24h83l-19.52,19.51a12,12,0,0,0,17,17l40-40A12,12,0,0,0,224.49,119.51Z"/></symbol>
+    <symbol id="i-timer" viewBox="0 0 256 256"><path d="M128,36a100,100,0,1,0,100,100A100.11,100.11,0,0,0,128,36Zm0,176a76,76,0,1,1,76-76A76.08,76.08,0,0,1,128,212ZM176.49,87.51a12,12,0,0,1,0,17l-40,40a12,12,0,0,1-17-17l40-40A12,12,0,0,1,176.49,87.51ZM84,12A12,12,0,0,1,96,0h64a12,12,0,0,1,0,24H96A12,12,0,0,1,84,12Z"/></symbol>
+    <symbol id="i-warning-circle" viewBox="0 0 256 256"><path d="M128,20A108,108,0,1,0,236,128,108.12,108.12,0,0,0,128,20Zm0,192a84,84,0,1,1,84-84A84.09,84.09,0,0,1,128,212Zm-12-80V80a12,12,0,0,1,24,0v52a12,12,0,0,1-24,0Zm28,40a16,16,0,1,1-16-16A16,16,0,0,1,144,172Z"/></symbol>
+    <symbol id="i-x" viewBox="0 0 256 256"><path d="M208.49,191.51a12,12,0,0,1-17,17L128,145,64.49,208.49a12,12,0,0,1-17-17L111,128,47.51,64.49a12,12,0,0,1,17-17L128,111l63.51-63.52a12,12,0,0,1,17,17L145,128Z"/></symbol>
+  </svg>
+
   <a class="skip-link" href="#main-content">본문으로 바로가기</a>
+
   <main id="login-view" class="login-view">
-    <section class="login-brand" aria-label="서비스 소개">
-      <div class="brand-lockup">
-        <img class="brand-mark" src="/ttwimgyeol-mark.svg" alt="">
-        <span>뜀결 <small>Ttwimgyeol</small></span>
+    <section class="login-arena" aria-label="서비스 소개">
+      <div class="brand-lockup on-photo">
+        <img class="brand-mark" src="/ttwimgyeol-mark-on-dark.svg" alt="" width="40" height="40">
+        <span>뜀결</span>
       </div>
-      <div class="login-message">
-        <p class="signal-label"><span></span> 실시간 동작 인식</p>
-        <h1>동작을 읽고,<br>리듬을 기록하다<span class="hero-inline-motion" aria-hidden="true"><svg viewBox="0 0 120 44"><path d="M8 31c18-28 86-28 104 0M43 30l17-20 17 20M60 10v27"/></svg></span></h1>
-        <p class="login-copy">카메라가 전신의 움직임을 읽어 줄넘기 횟수와 훈련 흐름을 또렷하게 기록합니다.</p>
+      <div class="arena-copy">
+        <h1>동작을 읽고,<br>리듬을 기록하다</h1>
+        <p>카메라 한 대로 모아뛰기, 번갈아뛰기, 이중뛰기 횟수를 실시간으로 셉니다.</p>
       </div>
-      <div class="brand-readout" aria-hidden="true"><span>POSE / ACTIVE</span><span>COUNT / LIVE</span><span>RECORD / READY</span></div>
-      <svg class="hero-jumper" viewBox="0 0 420 540" aria-hidden="true">
-        <path class="rope-path" d="M93 194C22 118 22 492 210 492s188-374 117-298"/>
-        <circle class="jumper-head" cx="210" cy="112" r="34"/>
-        <path class="jumper-body" d="M210 146v151M210 173l-61 57-48-30M210 173l61 57 48-30M210 297l-42 91-36 46M210 297l42 91 36 46"/>
-        <path class="handle-path" d="m91 188 18 26m220-26-18 26"/>
-        <path class="motion-path" d="M134 460h152M158 478h104"/>
-      </svg>
     </section>
 
     <section class="login-panel">
       <div class="auth-shell">
-        <div class="auth-intro"><h2 id="auth-heading">다시 시작해 볼까요?</h2></div>
+        <img class="brand-mark auth-mark" src="/ttwimgyeol-mark.svg" alt="" width="40" height="40">
+        <h2 id="auth-heading">다시 시작해 볼까요?</h2>
         <form id="login-form" class="auth-form" data-auth-panel="login">
-          <label>아이디<input id="login-username" name="username" autocomplete="username" required maxlength="50" placeholder="아이디 입력"></label>
-          <label>비밀번호<input id="login-password" name="password" type="password" autocomplete="current-password" required maxlength="200" placeholder="비밀번호 입력"></label>
-          <div class="auth-links"><button type="button" data-auth-target="reset-request">비밀번호 찾기</button><button type="button" data-auth-target="signup">회원가입</button></div>
+          <label class="field">아이디<input id="login-username" name="username" autocomplete="username" required maxlength="50" placeholder="아이디 입력"></label>
+          <label class="field">비밀번호<input id="login-password" name="password" type="password" autocomplete="current-password" required maxlength="200" placeholder="비밀번호 입력"></label>
           <p id="login-error" class="form-error" role="alert"></p>
-          <button class="button button-primary" type="submit">측정 시작하기</button>
+          <button class="button button-primary button-block" type="submit">로그인</button>
+          <div class="auth-links"><button type="button" data-auth-target="reset-request">비밀번호 찾기</button><button type="button" data-auth-target="signup">회원가입</button></div>
         </form>
         <form id="signup-form" class="auth-form" data-auth-panel="signup" hidden>
-          <div class="field-pair"><label>이름<input name="display_name" autocomplete="name" required maxlength="80" placeholder="표시할 이름"></label><label>아이디<input name="username" autocomplete="username" required pattern="[a-zA-Z0-9_.-]{3,50}" placeholder="영문·숫자 3자 이상"></label></div>
-          <label>이메일<input name="email" type="email" autocomplete="email" required maxlength="254" placeholder="name@example.com"></label>
-          <label>비밀번호<input name="password" type="password" autocomplete="new-password" required minlength="12" maxlength="200" placeholder="12자 이상"></label>
-          <label>비밀번호 확인<input name="password_confirm" type="password" autocomplete="new-password" required minlength="12" maxlength="200" placeholder="한 번 더 입력"></label>
-          <p id="signup-error" class="form-error" role="alert"></p><button class="button button-primary" type="submit">계정 만들기</button><button class="auth-back" type="button" data-auth-target="login">이미 계정이 있어요</button>
+          <div class="field-pair">
+            <label class="field">이름<input name="display_name" autocomplete="name" required maxlength="80" placeholder="표시할 이름"></label>
+            <label class="field">아이디<input name="username" autocomplete="username" required pattern="[a-zA-Z0-9_.-]{3,50}" placeholder="영문·숫자 3자 이상"></label>
+          </div>
+          <label class="field">이메일<input name="email" type="email" autocomplete="email" required maxlength="254" placeholder="name@example.com"></label>
+          <label class="field">비밀번호<input name="password" type="password" autocomplete="new-password" required minlength="12" maxlength="200" placeholder="12자 이상"></label>
+          <label class="field">비밀번호 확인<input name="password_confirm" type="password" autocomplete="new-password" required minlength="12" maxlength="200" placeholder="한 번 더 입력"></label>
+          <p id="signup-error" class="form-error" role="alert"></p>
+          <button class="button button-primary button-block" type="submit">계정 만들기</button>
+          <button class="auth-back" type="button" data-auth-target="login">이미 계정이 있어요</button>
         </form>
         <form id="reset-request-form" class="auth-form" data-auth-panel="reset-request" hidden>
           <p class="form-guide">가입할 때 입력한 이메일로 30분 동안 유효한 재설정 링크를 보냅니다.</p>
-          <label>이메일<input name="email" type="email" autocomplete="email" required maxlength="254" placeholder="name@example.com"></label>
-          <p id="reset-request-message" class="form-message" role="status"></p><p id="reset-request-error" class="form-error" role="alert"></p>
-          <button class="button button-primary" type="submit">재설정 안내 받기</button><button class="auth-back" type="button" data-auth-target="login">로그인으로 돌아가기</button>
+          <label class="field">이메일<input name="email" type="email" autocomplete="email" required maxlength="254" placeholder="name@example.com"></label>
+          <p id="reset-request-message" class="form-message" role="status"></p>
+          <p id="reset-request-error" class="form-error" role="alert"></p>
+          <button class="button button-primary button-block" type="submit">재설정 안내 받기</button>
+          <button class="auth-back" type="button" data-auth-target="login">로그인으로 돌아가기</button>
         </form>
         <form id="reset-confirm-form" class="auth-form" data-auth-panel="reset-confirm" hidden>
-          <input id="reset-token" name="token" type="hidden"><p class="form-guide">새 비밀번호를 입력하면 기존 로그인 세션이 모두 종료됩니다.</p>
-          <label>새 비밀번호<input name="password" type="password" autocomplete="new-password" required minlength="12" maxlength="200" placeholder="12자 이상"></label><label>비밀번호 확인<input name="password_confirm" type="password" autocomplete="new-password" required minlength="12" maxlength="200" placeholder="한 번 더 입력"></label>
-          <p id="reset-confirm-error" class="form-error" role="alert"></p><button class="button button-primary" type="submit">비밀번호 변경</button>
+          <input id="reset-token" name="token" type="hidden">
+          <p class="form-guide">새 비밀번호를 저장하면 기존 로그인 세션이 모두 종료됩니다.</p>
+          <label class="field">새 비밀번호<input name="password" type="password" autocomplete="new-password" required minlength="12" maxlength="200" placeholder="12자 이상"></label>
+          <label class="field">비밀번호 확인<input name="password_confirm" type="password" autocomplete="new-password" required minlength="12" maxlength="200" placeholder="한 번 더 입력"></label>
+          <p id="reset-confirm-error" class="form-error" role="alert"></p>
+          <button class="button button-primary button-block" type="submit">비밀번호 변경</button>
         </form>
       </div>
     </section>
@@ -69,65 +91,265 @@
 
   <div id="app-shell" class="app-shell" hidden>
     <header class="topbar">
-      <button class="brand-button" data-nav="dashboard" aria-label="훈련 화면으로 이동"><img class="brand-mark" src="/ttwimgyeol-mark.svg" alt=""><span>뜀결 <small>Ttwimgyeol</small></span></button>
-      <nav class="nav-tabs" aria-label="주 메뉴"><button class="nav-tab is-active" data-nav="dashboard">훈련</button><button id="admin-tab" class="nav-tab" data-nav="admin" hidden>관리</button></nav>
-      <div class="user-cluster"><button id="profile-button" class="profile-button" type="button" aria-label="내 프로필 보기"><span id="user-badge" class="user-badge"></span><span id="user-name"></span></button><button id="logout-button" class="text-button">로그아웃</button></div>
+      <button class="brand-button" data-nav="dashboard" aria-label="훈련 화면으로 이동">
+        <img class="brand-mark mark-light" src="/ttwimgyeol-mark.svg" alt="" width="32" height="32">
+        <img class="brand-mark mark-dark" src="/ttwimgyeol-mark-on-dark.svg" alt="" width="32" height="32">
+        <span>뜀결</span>
+      </button>
+      <nav class="nav-tabs" aria-label="주 메뉴">
+        <button class="nav-tab is-active" data-nav="dashboard">훈련</button>
+        <button id="admin-tab" class="nav-tab" data-nav="admin" hidden>관리</button>
+      </nav>
+      <div class="user-cluster">
+        <button id="profile-button" class="profile-button" type="button" aria-label="내 프로필 보기"><span id="user-badge" class="user-badge"></span><span id="user-name"></span></button>
+        <button id="logout-button" class="icon-button" type="button" aria-label="로그아웃" title="로그아웃"><svg class="icon" aria-hidden="true"><use href="#i-sign-out"/></svg></button>
+      </div>
     </header>
+
     <main id="main-content" class="page-wrap" tabindex="-1">
       <section id="dashboard-view" class="page-view">
-        <div class="dashboard-lead">
-          <div class="hero-copy"><p class="signal-label dark"><span></span> 실시간 측정 시스템 준비 완료</p><h1 id="welcome-heading">오늘도 가볍게<br>뛰어볼까요?</h1><p>전신이 프레임에 들어오면 MediaPipe Pose가 움직임을 읽고 줄넘기 횟수를 기록합니다.</p><button id="jump-to-modes" class="hero-action" type="button"><span>측정 종목 선택</span><i aria-hidden="true">↓</i></button></div>
-        </div>
-        <div class="telemetry-marquee" aria-hidden="true"><div><span>MEDIAPIPE POSE</span><span>12 FPS ANALYSIS</span><span>FULL BODY TRACKING</span><span>REAL TIME COUNT</span><span>MEDIAPIPE POSE</span><span>12 FPS ANALYSIS</span><span>FULL BODY TRACKING</span><span>REAL TIME COUNT</span></div></div>
-        <section class="metric-strip" aria-label="측정 시스템 흐름"><div class="daily-readout"><small>누적 점프</small><span id="summary-count">0</span><samp>JUMP / TOTAL</samp><i aria-hidden="true"></i></div><ol><li><b>01</b><span>전신 프레임</span></li><li><b>02</b><span>자세 인식</span></li><li><b>03</b><span>자동 계수</span></li></ol></section>
-        <section id="mode-grid" class="mode-grid" aria-label="줄넘기 종목 선택">
-          <article class="mode-card mode-basic" data-mode-card="basic"><div class="mode-visual" aria-hidden="true"><svg viewBox="0 0 220 170"><path class="rope" d="M57 67C15 19 11 158 110 158s95-139 53-91"/><circle class="person head" cx="110" cy="29" r="10"/><path class="person" d="M110 41v55M110 55 84 76 63 66M110 55l26 21 21-10M110 96l-16 29-4 22M110 96l16 29 4 22"/><path class="handle" d="m55 59 13 15m97-15-13 15"/><path class="motion" d="M79 153h62"/></svg></div><div><p class="mode-index">두 발 · 같은 박자</p><h2>모아뛰기</h2><p>두 발이 동시에 닿는 착지 리듬을 측정합니다.</p></div><button class="mode-start" data-mode="basic"><span>시간과 준비 시간 설정</span><i aria-hidden="true">시작</i></button><p class="locked-copy" hidden>이 종목의 사용 권한이 없습니다.</p></article>
-          <article class="mode-card mode-alternating" data-mode-card="alternating"><div class="mode-visual" aria-hidden="true"><svg viewBox="0 0 220 170"><path class="rope" d="M57 67C15 19 11 158 110 158s95-139 53-91"/><circle class="person head" cx="110" cy="29" r="10"/><path class="person" d="M110 41v55M110 55 84 76 63 66M110 55l26 21 21-10M110 96l-17 30-3 22M110 96l24 18 19-5"/><path class="handle" d="m55 59 13 15m97-15-13 15"/><path class="motion" d="M70 153h39m31-38h24"/></svg></div><div><p class="mode-index">좌우 · 교대 박자</p><h2>번갈아뛰기</h2><p>한 발씩 바뀌는 지지와 착지 리듬을 구분합니다.</p></div><button class="mode-start" data-mode="alternating"><span>시간과 준비 시간 설정</span><i aria-hidden="true">시작</i></button><p class="locked-copy" hidden>이 종목의 사용 권한이 없습니다.</p></article>
-          <article class="mode-card mode-double" data-mode-card="double"><div class="mode-visual" aria-hidden="true"><svg viewBox="0 0 220 170"><path class="rope" d="M55 64C10 14 8 158 110 158s100-144 55-94M65 75C34 41 31 145 110 145s76-104 45-70"/><circle class="person head" cx="110" cy="26" r="10"/><path class="person" d="M110 38v54M110 51 83 72 60 62M110 51l27 21 23-10M110 92l-18 27-13 7M110 92l18 27 13 7"/><path class="handle" d="m53 55 14 16m100-16-14 16"/><path class="motion" d="M76 137h68"/></svg></div><div><p class="mode-index">한 번 점프 · 두 번 회전</p><h2>이중뛰기</h2><p>한 번의 체공 사이 두 번 도는 줄의 속도를 분석합니다.</p></div><button class="mode-start" data-mode="double"><span>시간과 준비 시간 설정</span><i aria-hidden="true">시작</i></button><p class="locked-copy" hidden>이 종목의 사용 권한이 없습니다.</p></article>
+        <header class="arena-header">
+          <div class="arena-header-copy">
+            <h1 id="welcome-heading">오늘 기록을<br>시작해 볼까요?</h1>
+            <p>전신이 화면에 들어오면 자세를 인식하고, 준비 시간이 끝나는 순간부터 자동으로 셉니다.</p>
+          </div>
+          <dl class="scoreboard" aria-label="나의 누적 기록">
+            <div class="scoreboard-main"><dt>누적 점프</dt><dd><span id="summary-count" class="digits">0</span><small>회</small></dd></div>
+            <div><dt>훈련</dt><dd><span id="summary-sessions" class="digits">0</span><small>회</small></dd></div>
+            <div><dt>측정 시간</dt><dd><span id="summary-duration" class="digits">0</span><small>분</small></dd></div>
+          </dl>
+        </header>
+
+        <section class="lanes-section" aria-labelledby="lanes-title">
+          <h2 id="lanes-title" class="section-title">종목 선택</h2>
+          <div id="mode-grid" class="lanes">
+            <article class="lane" data-mode-card="basic">
+              <figure class="lane-figure"><img src="/cheer-basic-poster.png" data-poster="/cheer-basic-poster.png" data-motion="/cheer-basic.gif" alt="" width="320" height="320" loading="lazy"></figure>
+              <div class="lane-copy">
+                <h3>모아뛰기</h3>
+                <p class="lane-rhythm">두 발 · 한 박자</p>
+                <p>두 발이 함께 뜨고 함께 닿는 착지를 1회로 셉니다.</p>
+              </div>
+              <div class="lane-action">
+                <button class="button button-primary mode-start" data-mode="basic"><span>측정 시작</span><svg class="icon" aria-hidden="true"><use href="#i-arrow-right"/></svg></button>
+                <p class="locked-copy" hidden><svg class="icon" aria-hidden="true"><use href="#i-lock-simple"/></svg>사용 권한이 없는 종목입니다.</p>
+              </div>
+            </article>
+            <article class="lane" data-mode-card="alternating">
+              <figure class="lane-figure"><img src="/cheer-alternating-poster.png" data-poster="/cheer-alternating-poster.png" data-motion="/cheer-alternating.gif" alt="" width="320" height="320" loading="lazy"></figure>
+              <div class="lane-copy">
+                <h3>번갈아뛰기</h3>
+                <p class="lane-rhythm">왼발 · 오른발 교대</p>
+                <p>한 발씩 번갈아 딛는 착지 리듬을 구분해 셉니다.</p>
+              </div>
+              <div class="lane-action">
+                <button class="button button-primary mode-start" data-mode="alternating"><span>측정 시작</span><svg class="icon" aria-hidden="true"><use href="#i-arrow-right"/></svg></button>
+                <p class="locked-copy" hidden><svg class="icon" aria-hidden="true"><use href="#i-lock-simple"/></svg>사용 권한이 없는 종목입니다.</p>
+              </div>
+            </article>
+            <article class="lane" data-mode-card="double">
+              <figure class="lane-figure"><img src="/cheer-double-poster.png" data-poster="/cheer-double-poster.png" data-motion="/cheer-double.gif" alt="" width="320" height="320" loading="lazy"></figure>
+              <div class="lane-copy">
+                <h3>이중뛰기</h3>
+                <p class="lane-rhythm">한 번 점프 · 줄 두 바퀴</p>
+                <p>한 번 뛰는 동안 줄이 두 번 지나간 점프만 셉니다. 모아뛰기 점프는 세지 않습니다.</p>
+              </div>
+              <div class="lane-action">
+                <button class="button button-primary mode-start" data-mode="double"><span>측정 시작</span><svg class="icon" aria-hidden="true"><use href="#i-arrow-right"/></svg></button>
+                <p class="locked-copy" hidden><svg class="icon" aria-hidden="true"><use href="#i-lock-simple"/></svg>사용 권한이 없는 종목입니다.</p>
+              </div>
+            </article>
+          </div>
         </section>
-        <section class="record-section"><div class="section-heading"><div><p class="section-code">TRAINING ARCHIVE</p><h2>전체 측정 결과</h2><p>측정 데이터만 담은 PDF를 내려받거나 이전 기록을 다시 확인할 수 있습니다.</p></div><div class="summary-strip"><span><b id="summary-sessions">0</b>회 훈련</span><span><b id="summary-duration">0분</b>측정</span></div></div><div class="selection-bar"><label><input id="history-select-all" type="checkbox"> 전체 선택</label><span id="history-selection-count">선택 없음</span><button id="delete-selected-records" class="selection-delete" type="button" disabled>선택 기록 삭제</button></div><div class="table-shell"><table><thead><tr><th class="check-cell"><span class="visually-hidden">선택</span></th><th>사용자</th><th>종목</th><th>결과</th><th>시간</th><th>상태</th><th>시작</th><th><span class="visually-hidden">기록 관리</span></th></tr></thead><tbody id="history-body"></tbody></table><p id="history-empty" class="empty-state">첫 측정을 마치면 기록이 여기에 저장됩니다.</p></div></section>
-        <section class="dashboard-action" aria-labelledby="dashboard-action-title"><div><p class="section-code">NEXT SESSION</p><h2 id="dashboard-action-title">다음 리듬을 기록할 준비가 됐나요?</h2></div><button id="start-next-session" class="button button-primary" type="button"><span>종목 선택으로 이동</span><i aria-hidden="true">↘</i></button></section>
-        <footer class="site-footer"><span>뜀결 / TTWIMGYEOL</span><span>MEDIAPIPE POSE REAL TIME SYSTEM</span><span>2026</span></footer>
+
+        <section class="record-section" aria-labelledby="records-title">
+          <h2 id="records-title" class="section-title">측정 기록</h2>
+          <div class="records-panel">
+            <div class="selection-bar">
+              <label class="check-label"><input id="history-select-all" type="checkbox"> 전체 선택</label>
+              <span id="history-selection-count" class="selection-count">선택 없음</span>
+              <button id="delete-selected-records" class="button button-quiet-danger" type="button" disabled>선택 기록 삭제</button>
+            </div>
+            <div class="table-shell">
+              <table>
+                <thead><tr><th class="check-cell"><span class="visually-hidden">선택</span></th><th>사용자</th><th>종목</th><th class="num">결과</th><th class="num">시간</th><th>상태</th><th>시작</th><th><span class="visually-hidden">기록 관리</span></th></tr></thead>
+                <tbody id="history-body"></tbody>
+              </table>
+              <div id="history-empty" class="empty-state">
+                <svg class="icon" aria-hidden="true"><use href="#i-timer"/></svg>
+                <p><strong>아직 측정 기록이 없습니다.</strong> 위에서 종목을 고르고 첫 측정을 마치면 여기에 저장됩니다.</p>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <footer class="site-footer"><span>뜀결</span><span>동작을 읽고, 리듬을 기록하다</span></footer>
       </section>
-      <section id="admin-view" class="page-view" hidden><div class="admin-head"><div><h1>사용자와 권한</h1><p>계정별로 사용할 수 있는 줄넘기 종목을 지정합니다.</p></div><div class="admin-actions"><button id="delete-selected-users" class="button button-danger" type="button" disabled>선택 사용자 삭제</button><button id="open-create-user" class="button button-primary">사용자 추가</button></div></div><div class="admin-grid"><section class="admin-panel"><div class="admin-panel-head"><h2>사용자</h2><label><input id="user-select-all" type="checkbox"> 전체 선택</label></div><div id="user-list" class="user-list"></div></section><section class="admin-panel"><h2>최근 감사 로그</h2><div id="audit-list" class="audit-list"></div></section></div></section>
+
+      <section id="admin-view" class="page-view" hidden>
+        <header class="admin-head">
+          <div><h1>사용자와 권한</h1><p>계정별로 사용할 수 있는 줄넘기 종목을 지정합니다.</p></div>
+          <div class="admin-actions"><button id="delete-selected-users" class="button button-quiet-danger" type="button" disabled>선택 사용자 삭제</button><button id="open-create-user" class="button button-primary" type="button">사용자 추가</button></div>
+        </header>
+        <div class="admin-grid">
+          <section class="panel"><div class="panel-head"><h2>사용자</h2><label class="check-label"><input id="user-select-all" type="checkbox"> 전체 선택</label></div><div id="user-list" class="user-list"></div></section>
+          <section class="panel"><div class="panel-head"><h2>최근 감사 로그</h2></div><div id="audit-list" class="audit-list"></div></section>
+        </div>
+      </section>
     </main>
   </div>
 
-  <dialog id="workout-setup-dialog" class="setup-dialog" aria-labelledby="setup-heading">
+  <dialog id="workout-setup-dialog" class="dialog setup-dialog" aria-labelledby="setup-heading">
     <form id="workout-setup-form" method="dialog">
-      <button id="close-setup-dialog" class="dialog-close" type="button" aria-label="닫기"><svg class="close-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M5 5l14 14M19 5 5 19"/></svg></button>
-      <h2 id="setup-heading"><span id="setup-mode-name">모아뛰기</span> 설정</h2>
-      <p>자세가 안정적으로 인식된 뒤 선택한 준비 시간을 세고 측정을 시작합니다.</p>
-      <section class="setup-control-group" aria-labelledby="duration-label">
-        <div class="setup-label"><strong id="duration-label">측정 시간</strong><span>운동할 시간을 정하세요.</span></div>
-        <div class="setup-presets" role="group" aria-label="빠른 측정 시간 선택"><button type="button" data-duration="30">30초</button><button type="button" data-duration="60" class="is-active">1분</button><button type="button" data-duration="180">3분</button><button type="button" data-duration="300">5분</button></div>
-        <label class="setup-custom"><span>직접 입력</span><span><input id="workout-duration" name="duration" type="number" min="10" max="3600" step="1" value="60" inputmode="numeric" required><b>초</b></span></label>
-      </section>
-      <section class="setup-control-group" aria-labelledby="countdown-label">
-        <div class="setup-label"><strong id="countdown-label">카운트다운</strong><span>자세 인식 후 준비할 시간을 정하세요.</span></div>
-        <div class="setup-presets countdown-presets" role="group" aria-label="빠른 카운트다운 선택"><button type="button" data-countdown="3" class="is-active">3초</button><button type="button" data-countdown="5">5초</button><button type="button" data-countdown="10">10초</button></div>
-        <label class="setup-custom"><span>직접 입력</span><span><input id="workout-countdown" name="countdown" type="number" min="1" max="30" step="1" value="3" inputmode="numeric" required><b>초</b></span></label>
-      </section>
+      <div class="dialog-head">
+        <h2 id="setup-heading"><span id="setup-mode-name">모아뛰기</span> 측정 설정</h2>
+        <button id="close-setup-dialog" class="icon-button" type="button" aria-label="닫기"><svg class="icon" aria-hidden="true"><use href="#i-x"/></svg></button>
+      </div>
+      <p class="dialog-lead">전신이 1초 동안 안정적으로 보이면 준비 시간을 세고, 끝나는 순간 측정을 시작합니다.</p>
+      <fieldset class="setup-group">
+        <legend id="duration-label">측정 시간</legend>
+        <div class="segmented" role="group" aria-label="빠른 측정 시간 선택"><button type="button" data-duration="30">30초</button><button type="button" data-duration="60" class="is-active">1분</button><button type="button" data-duration="180">3분</button><button type="button" data-duration="300">5분</button></div>
+        <label class="field field-inline">직접 입력<span class="input-unit"><input id="workout-duration" name="duration" type="number" min="10" max="3600" step="1" value="60" inputmode="numeric" required><b>초</b></span></label>
+      </fieldset>
+      <fieldset class="setup-group">
+        <legend id="countdown-label">준비 시간</legend>
+        <div class="segmented" role="group" aria-label="빠른 준비 시간 선택"><button type="button" data-countdown="3" class="is-active">3초</button><button type="button" data-countdown="5">5초</button><button type="button" data-countdown="10">10초</button></div>
+        <label class="field field-inline">직접 입력<span class="input-unit"><input id="workout-countdown" name="countdown" type="number" min="1" max="30" step="1" value="3" inputmode="numeric" required><b>초</b></span></label>
+      </fieldset>
       <p id="setup-error" class="form-error" role="alert"></p>
-      <button class="button button-primary" type="submit">전체 화면으로 측정 시작</button>
+      <button class="button button-primary button-block" type="submit">전체 화면으로 측정 시작</button>
     </form>
   </dialog>
 
   <section id="workout-view" class="workout-view" hidden aria-label="실시간 측정">
-    <header class="workout-bar"><div class="workout-identity"><button id="workout-back" class="icon-button" aria-label="측정 종료"><svg class="close-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M5 5l14 14M19 5 5 19"/></svg></button><span class="live-dot"></span><strong id="workout-mode-name">모아뛰기</strong></div><span id="connection-state" class="connection-state">카메라 연결 중</span><button id="fullscreen-button" class="fullscreen-button">전체 화면</button></header>
+    <header class="workout-bar">
+      <div class="workout-identity">
+        <button id="workout-back" class="icon-button" type="button" aria-label="측정 종료"><svg class="icon" aria-hidden="true"><use href="#i-x"/></svg></button>
+        <strong id="workout-mode-name">모아뛰기</strong>
+      </div>
+      <ol class="phase-steps" aria-label="측정 단계">
+        <li data-step="SEARCHING">자세 인식</li>
+        <li data-step="COUNTDOWN">준비</li>
+        <li data-step="COUNTING">측정</li>
+        <li data-step="DONE">종료</li>
+      </ol>
+      <div class="workout-tools">
+        <span id="connection-state" class="connection-state">카메라 연결 중</span>
+        <button id="fullscreen-button" class="icon-button" type="button" aria-label="전체 화면 전환"><svg class="icon" aria-hidden="true"><use href="#i-arrows-out"/></svg></button>
+      </div>
+    </header>
+
     <div class="workout-layout">
-      <div class="video-stage"><video id="camera-source" playsinline muted autoplay></video><canvas id="processed-canvas" class="pose-overlay" width="1280" height="720" aria-hidden="true"></canvas><canvas id="capture-canvas" width="512" height="288" hidden></canvas><div class="camera-corners" aria-hidden="true"><i></i><i></i><i></i><i></i></div><div id="countdown-overlay" class="countdown-overlay" hidden><small>준비</small><span>3</span></div><div id="camera-guide" class="camera-guide"><svg class="full-body-guide" viewBox="0 0 160 280" aria-hidden="true"><rect x="20" y="12" width="120" height="256" rx="56"/><circle cx="80" cy="52" r="22"/><path d="M80 77v88M80 101l-38 45M80 101l38 45M80 165l-28 82M80 165l28 82"/></svg><p>머리부터 발끝까지<br>프레임 안에 맞춰 주세요</p></div></div>
-      <aside class="counter-panel"><div class="counter-top"><p id="phase-label" class="phase-label">자세 찾는 중</p><div><output id="live-count">0</output><span>회</span></div></div><div class="time-readout"><span>남은 시간</span><output id="remaining-time">01:00</output><div class="time-track" role="progressbar" aria-label="남은 시간" aria-valuemin="0" aria-valuemax="60" aria-valuenow="60"><i id="time-progress"></i></div></div><dl><div><dt>측정 시간</dt><dd id="live-time">00:00</dd></div><div><dt>목표 시간</dt><dd id="target-time">01:00</dd></div><div><dt>신체 인식</dt><dd id="body-state">대기</dd></div></dl><figure id="cheer-loop" class="cheer-loop"><img src="/cheer-basic.gif" alt="모아뛰기를 하는 남성 전신 애니메이션" width="320" height="320"><figcaption>두 발의 가벼운 리듬을 유지해요.</figcaption></figure><button id="stop-workout" class="button button-stop">측정 끝내기</button></aside>
+      <div class="video-stage">
+        <video id="camera-source" playsinline muted autoplay></video>
+        <canvas id="processed-canvas" class="pose-overlay" width="1280" height="720" aria-hidden="true"></canvas>
+        <canvas id="capture-canvas" width="512" height="288" hidden></canvas>
+        <div class="frame-guide" aria-hidden="true"><i></i><i></i><i></i><i></i></div>
+        <div id="camera-guide" class="camera-guide">
+          <svg class="icon" aria-hidden="true"><use href="#i-person-simple"/></svg>
+          <p>머리부터 발끝까지<br>화면 안에 들어와 주세요</p>
+          <div class="ready-meter" aria-hidden="true"><i id="ready-progress"></i></div>
+        </div>
+        <div id="countdown-overlay" class="countdown-overlay" hidden><small>준비</small><span>3</span></div>
+      </div>
+
+      <aside class="counter-panel" aria-live="off">
+        <p id="phase-label" class="phase-label">자세 찾는 중</p>
+        <div class="live-count"><output id="live-count" class="digits">0</output><span>회</span></div>
+        <div class="time-readout">
+          <div class="time-row"><span>남은 시간</span><output id="remaining-time" class="digits">01:00</output></div>
+          <div class="time-track" role="progressbar" aria-label="남은 시간" aria-valuemin="0" aria-valuemax="60" aria-valuenow="60"><i id="time-progress"></i></div>
+        </div>
+        <dl class="live-stats">
+          <div><dt>경과</dt><dd id="live-time" class="digits">00:00</dd></div>
+          <div><dt>분당</dt><dd id="live-pace" class="digits">0</dd></div>
+          <div><dt>목표</dt><dd id="target-time" class="digits">01:00</dd></div>
+          <div><dt>신체 인식</dt><dd id="body-state">대기</dd></div>
+        </dl>
+        <figure id="cheer-loop" class="cheer-loop"><img src="/cheer-basic.gif" alt="모아뛰기를 하는 남성 전신 애니메이션" width="320" height="320"><figcaption>두 발의 가벼운 리듬을 유지해요.</figcaption></figure>
+        <button id="stop-workout" class="button button-stop button-block" type="button">측정 끝내기</button>
+      </aside>
     </div>
-    <div id="result-overlay" class="result-overlay" hidden><div class="result-card"><div class="result-summary"><p><span></span> 측정 완료</p><div><strong id="result-count">0</strong><span>회</span></div><p id="result-detail"></p></div><div class="result-actions"><h2>기록에서 언제든<br>다시 확인하세요.</h2><p>이번 결과는 자동 저장되었습니다. PDF로 바로 보관할 수도 있습니다.</p><button id="result-download" class="button button-secondary" type="button">PDF 다운로드</button><button id="result-close" class="button button-primary" type="button">전체 기록 보기</button></div></div></div>
+
+    <div id="result-overlay" class="result-overlay" hidden role="dialog" aria-modal="true" aria-labelledby="result-title">
+      <div class="result-sheet">
+        <header class="result-head">
+          <div>
+            <p id="result-status" class="result-status"><svg class="icon" aria-hidden="true"><use href="#i-check-circle"/></svg><span>목표 시간 완료</span></p>
+            <h2 id="result-title"><span id="result-mode">모아뛰기</span> 측정 종료</h2>
+          </div>
+          <p id="result-detail" class="result-detail"></p>
+        </header>
+        <div class="result-body">
+          <div class="result-count"><strong id="result-count" class="digits">0</strong><span>회</span></div>
+          <dl class="result-metrics">
+            <div><dt>측정 시간</dt><dd><span id="result-duration" class="digits">00:00</span><small id="result-target">/ 01:00</small></dd></div>
+            <div><dt>분당 평균</dt><dd><span id="result-pace" class="digits">0</span><small>회/분</small></dd></div>
+            <div><dt>최고 10초 구간</dt><dd><span id="result-best" class="digits">0</span><small>회</small></dd></div>
+          </dl>
+        </div>
+        <section class="result-rhythm" aria-labelledby="rhythm-title">
+          <h3 id="rhythm-title">5초 구간별 횟수</h3>
+          <div id="result-chart" class="rhythm-chart" role="img" aria-label="구간별 횟수 그래프"></div>
+          <p id="result-chart-empty" class="rhythm-empty" hidden>측정이 시작되기 전에 끝나서 구간 기록이 없습니다.</p>
+        </section>
+        <footer class="result-actions">
+          <button id="result-retry" class="button button-primary" type="button"><svg class="icon" aria-hidden="true"><use href="#i-arrow-counter-clockwise"/></svg><span>같은 설정으로 다시 측정</span></button>
+          <button id="result-download" class="button button-secondary" type="button"><svg class="icon" aria-hidden="true"><use href="#i-download-simple"/></svg><span>PDF 저장</span></button>
+          <button id="result-close" class="button button-ghost" type="button">기록 목록으로</button>
+        </footer>
+      </div>
+    </div>
   </section>
 
-  <dialog id="record-dialog" class="record-dialog" aria-labelledby="record-title"><div class="record-dialog-head"><h2 id="record-title">모아뛰기 기록</h2><button id="close-record-dialog" class="icon-button" type="button" aria-label="닫기"><svg class="close-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M5 5l14 14M19 5 5 19"/></svg></button></div><dl><div><dt>사용자</dt><dd id="record-user"></dd></div><div><dt>점프 횟수</dt><dd id="record-count"></dd></div><div><dt>측정 시간</dt><dd id="record-duration"></dd></div><div><dt>측정 상태</dt><dd id="record-status"></dd></div><div><dt>측정 시작</dt><dd id="record-started"></dd></div></dl><a id="record-download" class="button button-primary" href="#">PDF 다운로드</a></dialog>
+  <dialog id="record-dialog" class="dialog record-dialog" aria-labelledby="record-title">
+    <div class="dialog-head"><h2 id="record-title">모아뛰기 기록</h2><button id="close-record-dialog" class="icon-button" type="button" aria-label="닫기"><svg class="icon" aria-hidden="true"><use href="#i-x"/></svg></button></div>
+    <dl class="detail-list"><div><dt>사용자</dt><dd id="record-user"></dd></div><div><dt>점프 횟수</dt><dd id="record-count"></dd></div><div><dt>측정 시간</dt><dd id="record-duration"></dd></div><div><dt>측정 상태</dt><dd id="record-status"></dd></div><div><dt>측정 시작</dt><dd id="record-started"></dd></div></dl>
+    <a id="record-download" class="button button-primary button-block" href="#"><svg class="icon" aria-hidden="true"><use href="#i-download-simple"/></svg><span>PDF 다운로드</span></a>
+  </dialog>
 
-  <dialog id="profile-dialog" class="profile-dialog" aria-labelledby="profile-title"><form id="profile-form"><div class="record-dialog-head"><div><p class="profile-kicker">계정 설정</p><h2 id="profile-title">내 프로필</h2></div><button id="close-profile-dialog" class="icon-button" type="button" aria-label="닫기"><svg class="close-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M5 5l14 14M19 5 5 19"/></svg></button></div><div class="profile-identity"><span id="profile-avatar"></span><div><strong id="profile-name"></strong><small id="profile-role"></small></div></div><div class="profile-fields"><label>아이디<input id="profile-username" name="username" readonly aria-readonly="true"></label><label>이름<input id="profile-display-name" name="display_name" required maxlength="80" autocomplete="name"></label><label>이메일<input id="profile-email" name="email" type="email" maxlength="254" autocomplete="email" placeholder="name@example.com"></label></div><details class="password-fields"><summary>비밀번호 변경</summary><div><label>현재 비밀번호<input name="current_password" type="password" maxlength="200" autocomplete="current-password"></label><label>새 비밀번호<input name="new_password" type="password" minlength="12" maxlength="200" autocomplete="new-password" placeholder="12자 이상"></label><label>새 비밀번호 확인<input name="new_password_confirm" type="password" minlength="12" maxlength="200" autocomplete="new-password"></label></div></details><h3>사용 가능한 측정</h3><div id="profile-permissions" class="profile-permissions"></div><p id="profile-form-error" class="form-error" role="alert"></p><button id="save-profile" class="button button-primary" type="submit">프로필 저장</button></form></dialog>
+  <dialog id="profile-dialog" class="dialog profile-dialog" aria-labelledby="profile-title">
+    <form id="profile-form">
+      <div class="dialog-head"><h2 id="profile-title">내 프로필</h2><button id="close-profile-dialog" class="icon-button" type="button" aria-label="닫기"><svg class="icon" aria-hidden="true"><use href="#i-x"/></svg></button></div>
+      <div class="profile-identity"><span id="profile-avatar"></span><div><strong id="profile-name"></strong><small id="profile-role"></small></div></div>
+      <div class="profile-fields">
+        <label class="field">아이디<input id="profile-username" name="username" readonly aria-readonly="true"></label>
+        <label class="field">이름<input id="profile-display-name" name="display_name" required maxlength="80" autocomplete="name"></label>
+        <label class="field">이메일<input id="profile-email" name="email" type="email" maxlength="254" autocomplete="email" placeholder="name@example.com"></label>
+      </div>
+      <details class="password-fields"><summary>비밀번호 변경</summary><div>
+        <label class="field">현재 비밀번호<input name="current_password" type="password" maxlength="200" autocomplete="current-password"></label>
+        <label class="field">새 비밀번호<input name="new_password" type="password" minlength="12" maxlength="200" autocomplete="new-password" placeholder="12자 이상"></label>
+        <label class="field">새 비밀번호 확인<input name="new_password_confirm" type="password" minlength="12" maxlength="200" autocomplete="new-password"></label>
+      </div></details>
+      <h3 class="profile-subhead">사용 가능한 측정</h3>
+      <div id="profile-permissions" class="chip-row"></div>
+      <p id="profile-form-error" class="form-error" role="alert"></p>
+      <button id="save-profile" class="button button-primary button-block" type="submit">프로필 저장</button>
+    </form>
+  </dialog>
 
-  <dialog id="user-dialog" class="user-dialog" aria-labelledby="user-dialog-title"><form id="user-form" method="dialog"><div class="dialog-head"><h2 id="user-dialog-title">사용자 추가</h2><button id="close-user-dialog" type="button" class="icon-button" aria-label="닫기"><svg class="close-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M5 5l14 14M19 5 5 19"/></svg></button></div><label>아이디<input name="username" required pattern="[a-zA-Z0-9_.-]{3,50}" autocomplete="off"></label><label>이름<input name="display_name" required maxlength="80" autocomplete="off"></label><label>이메일 (선택)<input name="email" type="email" maxlength="254" autocomplete="off"></label><label>임시 비밀번호<input name="password" type="password" minlength="12" required autocomplete="new-password"></label><fieldset><legend>종목 권한</legend><label><input type="checkbox" name="can_basic" checked> 모아뛰기</label><label><input type="checkbox" name="can_alternating" checked> 번갈아뛰기</label><label><input type="checkbox" name="can_double"> 이중뛰기</label><label><input type="checkbox" name="can_view_history" checked> 기록 조회</label></fieldset><p id="user-form-error" class="form-error" role="alert"></p><button class="button button-primary" value="default">계정 만들기</button></form></dialog>
-  <dialog id="confirm-dialog" class="confirm-dialog" aria-labelledby="confirm-title" aria-describedby="confirm-message"><h2 id="confirm-title">삭제 확인</h2><p id="confirm-message"></p><div><button id="confirm-cancel" class="button button-secondary" type="button">취소</button><button id="confirm-accept" class="button button-danger-solid" type="button">삭제</button></div></dialog>
-  <div id="toast" class="toast" role="status" aria-live="polite"></div><script src="/vendor/gsap.min.js" defer></script><script src="/vendor/ScrollTrigger.min.js" defer></script><script src="/app.js" defer></script>
+  <dialog id="user-dialog" class="dialog user-dialog" aria-labelledby="user-dialog-title">
+    <form id="user-form" method="dialog">
+      <div class="dialog-head"><h2 id="user-dialog-title">사용자 추가</h2><button id="close-user-dialog" type="button" class="icon-button" aria-label="닫기"><svg class="icon" aria-hidden="true"><use href="#i-x"/></svg></button></div>
+      <label class="field">아이디<input name="username" required pattern="[a-zA-Z0-9_.-]{3,50}" autocomplete="off"></label>
+      <label class="field">이름<input name="display_name" required maxlength="80" autocomplete="off"></label>
+      <label class="field">이메일 (선택)<input name="email" type="email" maxlength="254" autocomplete="off"></label>
+      <label class="field">임시 비밀번호<input name="password" type="password" minlength="12" required autocomplete="new-password"></label>
+      <fieldset class="permission-set"><legend>종목 권한</legend><label class="check-label"><input type="checkbox" name="can_basic" checked> 모아뛰기</label><label class="check-label"><input type="checkbox" name="can_alternating" checked> 번갈아뛰기</label><label class="check-label"><input type="checkbox" name="can_double"> 이중뛰기</label><label class="check-label"><input type="checkbox" name="can_view_history" checked> 기록 조회</label></fieldset>
+      <p id="user-form-error" class="form-error" role="alert"></p>
+      <button class="button button-primary button-block" value="default">계정 만들기</button>
+    </form>
+  </dialog>
+
+  <dialog id="confirm-dialog" class="dialog confirm-dialog" aria-labelledby="confirm-title" aria-describedby="confirm-message">
+    <h2 id="confirm-title">삭제 확인</h2>
+    <p id="confirm-message"></p>
+    <div class="confirm-actions"><button id="confirm-cancel" class="button button-secondary" type="button">취소</button><button id="confirm-accept" class="button button-danger" type="button">삭제</button></div>
+  </dialog>
+
+  <div id="toast" class="toast" role="status" aria-live="polite"></div>
+  <script src="/vendor/gsap.min.js" defer></script>
+  <script src="/app.js" defer></script>
 </body>
 </html>

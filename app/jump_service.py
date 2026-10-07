@@ -7,12 +7,27 @@ from dataclasses import dataclass
 import cv2
 import numpy as np
 
+from .signal_resampler import SignalResampler
+
 
 MODES = {
     "basic": "basic_jump.counter_engine",
     "alternating": "alternating_jump.counter_engine",
     "double": "double_jump.counter_engine",
 }
+
+# Frames per second the browser asks for. Clips replayed at the browser's 512x288 JPEG
+# quality counted closer to the labels at 20 fps than at 12 fps in every mode; a slow
+# server still sets its own pace because only one frame is in flight at a time.
+ANALYSIS_FPS = {
+    "basic": 20,
+    "alternating": 20,
+    "double": 20,
+}
+
+# Engines whose 30 fps frame thresholds need the stream expanded to 30 Hz. Only the
+# double-under engine was validated with this; the other engines count better on raw frames.
+RESAMPLED_MODES = {"double"}
 
 
 @dataclass(frozen=True)
@@ -46,6 +61,7 @@ class JumpCounterSession:
             ready_dropout_seconds=0.35,
         )
         self.engine = None
+        self.resampler = SignalResampler() if mode in RESAMPLED_MODES else None
         self.phase_hook = {
             "basic": None,
             "alternating": "begin_count_phase",
@@ -94,11 +110,13 @@ class JumpCounterSession:
                 self.count_started_at = time.monotonic()
             self.last_phase = stream_state.phase
 
+        engine_frames = [signal] if self.resampler is None else self.resampler.push(signal)
         if self.engine is not None:
-            if stream_state.phase != "COUNTING":
-                self.engine.warmup(signal)
-            else:
-                event = self.engine.step(signal)
+            for engine_frame in engine_frames:
+                if stream_state.phase != "COUNTING":
+                    self.engine.warmup(engine_frame)
+                    continue
+                event = self.engine.step(engine_frame)
                 if event is not None:
                     self.count = int(event.running_count)
 

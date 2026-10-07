@@ -100,6 +100,20 @@ components:
 
 # Design System: 뜀결 (Ttwimgyeol)
 
+## 2026-10-07 Arena Timing Board Redesign
+
+현재 구현의 최종 시각 기준은 `static/app.css` 한 파일이다. 아래의 2026-09-21 Industrial Telemetry 규칙과 그 이전 규칙은 더 이상 적용하지 않는다.
+
+- 컨셉: 체육관 코트에서 쓰는 경기 계측 전광판. 배경은 줄넘기 수업 중인 체육관 코트 사진(`static/img/court-*.jpg`, 미 해병대 퍼블릭 도메인 사진), 실시간 수치는 전광판 숫자처럼 보여 준다.
+- 색: 강조색은 코트 오렌지 하나뿐이다(밝은 테마 `#D9622A`, 어두운 테마 `#F07A3C`). 중립색은 차가운 슬레이트 계열이며 `prefers-color-scheme`로 밝은/어두운 테마를 자동 전환한다. 측정 화면과 결과 화면은 경기장 전광판처럼 항상 어둡다.
+- 글꼴: 제목 Black Han Sans, 본문 Gothic A1, 숫자 Barlow Condensed(고정폭 숫자). 모두 `static/fonts`에 로컬 포함(OFL).
+- 모서리: 표면 14px, 컨트롤 10px, 아바타와 진행 막대만 완전 원형.
+- 아이콘: Phosphor Icons(bold, MIT)를 `index.html` 상단 SVG 스프라이트로 인라인 포함한다. 직접 그린 아이콘은 쓰지 않는다.
+- 대시보드: 코트 사진 헤더 + 누적 전광판, 종목은 3열 카드 대신 전폭 레인 3줄, 기록은 표(모바일에서는 행 카드).
+- 측정 화면: 상단 단계 표시(자세 인식, 준비, 측정, 종료), 왼쪽 카메라, 오른쪽 전광판(횟수, 남은 시간, 경과, 분당, 신체 인식).
+- 결과 화면: 세 종목 공통. 종료 사유, 최종 횟수, 측정 시간, 분당 평균, 최고 10초 구간, 5초 구간별 막대그래프, 다시 측정/PDF/기록 목록.
+- 움직임: 횟수 증가 펄스, 카운트다운 숫자 전환, 결과 막대 상승, 대시보드 첫 진입, 레인 호버 시 동작 GIF 재생. `prefers-reduced-motion`에서는 모두 정지한다.
+
 ## 2026-09-21 Industrial Telemetry Override
 
 현재 구현의 최종 시각 기준은 `static/telemetry.css`와 `design-system/ttwimgyeol/MASTER.md`다. 아래 기존 문서에서 언급하는 밝은 Paper 화면, Instrument Blue, 둥근 모서리, 3열 동일 카드, 하단 내비게이션 규칙은 이번 전면 재설계에서 더 이상 적용하지 않는다.

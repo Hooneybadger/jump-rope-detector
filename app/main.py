@@ -474,6 +474,8 @@ def download_workout_pdf(workout_id: int, request: Request, db: Session = Depend
         duration=workout.duration_seconds,
         status_name=STATUS_NAMES.get(workout.status, workout.status),
         started_at=_aware(workout.started_at),
+        mode=workout.mode,
+        target_duration=workout.target_duration_seconds,
     )
     return Response(
         content=content,
@@ -563,7 +565,7 @@ async def count_stream(websocket: WebSocket, mode: str):
             await websocket.close(code=1013, reason="동시 측정 한도를 초과했습니다.")
             return
         await websocket.accept()
-        from .jump_service import JumpCounterSession
+        from .jump_service import ANALYSIS_FPS, JumpCounterSession
 
         processor = await run_in_threadpool(JumpCounterSession, mode, countdown_seconds)
         workout = Workout(
@@ -581,10 +583,21 @@ async def count_stream(websocket: WebSocket, mode: str):
             "workoutId": workout.id,
             "targetDuration": target_duration,
             "countdown": countdown_seconds,
+            "analysisFps": ANALYSIS_FPS[mode],
         })
 
+        # The server owns the finish line: it ends the session when the target time
+        # passes, even if the browser stops sending frames near the end.
+        end_reason = "stopped"
         while True:
-            message = await websocket.receive()
+            timeout = None
+            if processor.count_started_at is not None:
+                timeout = max(0.0, target_duration - processor.elapsed)
+            try:
+                message = await asyncio.wait_for(websocket.receive(), timeout=timeout)
+            except asyncio.TimeoutError:
+                end_reason = "time"
+                break
             if message["type"] == "websocket.disconnect":
                 raise WebSocketDisconnect(message.get("code", 1000))
             if message.get("text"):
@@ -596,6 +609,7 @@ async def count_stream(websocket: WebSocket, mode: str):
             if payload is None:
                 continue
             result = await run_in_threadpool(processor.process, payload, settings.max_frame_bytes)
+            finished = result.phase == "COUNTING" and result.elapsed >= target_duration
             await websocket.send_json({
                 "type": "state",
                 "count": result.count,
@@ -604,24 +618,31 @@ async def count_stream(websocket: WebSocket, mode: str):
                 "framed": result.framed,
                 "readyProgress": round(result.ready_progress, 3),
                 "countdown": round(result.countdown, 1),
-                "elapsed": round(result.elapsed, 1),
+                "elapsed": round(min(result.elapsed, target_duration), 1),
+                "finished": finished,
                 "landmarks": result.landmarks,
                 "processingMs": round(result.processing_ms, 1),
             })
-            if result.phase == "COUNTING" and result.elapsed >= target_duration:
+            if finished:
+                end_reason = "time"
                 break
 
-        workout.status = "completed"
+        counted = processor.count_started_at is not None
+        workout.status = "completed" if counted else "interrupted"
         workout.count = processor.count
-        workout.duration_seconds = round(processor.elapsed)
+        workout.duration_seconds = min(target_duration, round(processor.elapsed))
         workout.ended_at = utcnow()
         _audit(db, None, auth_session.user.id, "workout.complete", "workout", str(workout.id), f"count={workout.count}")
         db.commit()
         await websocket.send_json({
             "type": "complete",
             "workoutId": workout.id,
+            "mode": mode,
             "count": workout.count,
             "duration": workout.duration_seconds,
+            "targetDuration": target_duration,
+            "status": workout.status,
+            "reason": end_reason if counted else "not_started",
         })
         await websocket.close(code=1000)
     except WebSocketDisconnect:
