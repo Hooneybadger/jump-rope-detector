@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from datetime import datetime, timezone
 
-from sqlalchemy import Boolean, DateTime, ForeignKey, Index, Integer, String, Text
+from sqlalchemy import Boolean, DateTime, Float, ForeignKey, Index, Integer, LargeBinary, String, Text
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from .database import Base
@@ -26,6 +26,15 @@ class User(Base):
     can_alternating: Mapped[bool] = mapped_column(Boolean, default=True)
     can_double: Mapped[bool] = mapped_column(Boolean, default=False)
     can_view_history: Mapped[bool] = mapped_column(Boolean, default=True)
+    # Custom profile shown after the first login: pending -> completed | skipped.
+    profile_status: Mapped[str] = mapped_column(String(20), default="pending")
+    sex: Mapped[str | None] = mapped_column(String(10), nullable=True)
+    age: Mapped[int | None] = mapped_column(Integer, nullable=True)
+    height_cm: Mapped[float | None] = mapped_column(Float, nullable=True)
+    weight_kg: Mapped[float | None] = mapped_column(Float, nullable=True)
+    avatar: Mapped[bytes | None] = mapped_column(LargeBinary, nullable=True, deferred=True)
+    avatar_type: Mapped[str | None] = mapped_column(String(20), nullable=True)
+    avatar_updated_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
     failed_login_count: Mapped[int] = mapped_column(Integer, default=0)
     locked_until: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utcnow)

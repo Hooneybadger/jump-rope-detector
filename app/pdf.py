@@ -380,17 +380,58 @@ def _number(value: float) -> str:
     return f"{value:,.1f}" if value < 100 else f"{value:,.0f}"
 
 
+def _weight_table(weight: float) -> tuple[float, ...]:
+    """Five body masses around the user's own, 10 kg apart, never below 15 kg."""
+    shift = 0
+    while weight + (shift - 2) * 10 < 15:
+        shift += 1
+    return tuple(round(weight + (step + shift - 2) * 10, 1) for step in range(5))
+
+
 def _duration_label(minutes: float) -> str:
     if abs(minutes - round(minutes)) < 1e-6:
         return f"{round(minutes)}분"
     return _clock(round(minutes * 60))
 
 
+RESTING_NOTES = {
+    "schofield": "기초대사량(Schofield, 성별·나이·체중)",
+    "harris-benedict": "안정 시 대사량(Harris-Benedict, 성별·나이·키·체중)",
+    "standard": "표준 안정 시 대사량(1 MET)",
+}
+
+
+def _method_notes(estimate: calories.CalorieEstimate, advice: calories.Recommendation | None) -> list[str]:
+    resting = RESTING_NOTES[estimate.resting_method]
+    if estimate.basis is not None and estimate.basis.youth:
+        notes = [
+            f"총 소모량 = METy × {resting} ÷ 1440 × 시간(분). 휴식 대사량을 뺀 값은 (METy − 1)로 계산한 순수 운동 소모량입니다. 모든 값은 추정치입니다.",
+            "METy: Butte NF 외, Youth Compendium, Med Sci Sports Exerc 2018;50(2):246-256. 줄넘기(10260X)는 NCCOR가 칼로리 추정에 "
+            "권장하는 평활값 6.9·7.1·7.2·7.4(6~9·10~12·13~15·16~18세)를 씁니다.",
+        ]
+    else:
+        notes = [
+            f"총 소모량 = MET × 3.5 × 체중(kg) ÷ 200 × 시간(분). 휴식 대사량을 뺀 값은 같은 시간의 {resting}을 뺀 순수 운동 소모량입니다. 모든 값은 추정치입니다.",
+            "MET: Herrmann SD 외, 2024 Adult Compendium(19~59세), J Sport Health Sci 2024;13(1):6-12. 분당 횟수로 8.3·11.8·12.3, 이중뛰기 10.0. "
+            "번갈아뛰기는 최대혁(2004, 운동과학 13(1):25-34)에 따라 모아뛰기와 같습니다.",
+        ]
+        if estimate.met60 is not None:
+            notes[1] += (" Older Adult Compendium(Willis EA 외, 2024)에는 줄넘기가 없어 성인 값을 쓰고, "
+                         "강도만 60세 이상 안정 시 대사량 2.7 mL/kg/min 기준으로 환산합니다.")
+    if advice is not None:
+        notes.append(f"권장 시간: {advice.reason}. {advice.source}.")
+    else:
+        notes.append("맞춤 프로필을 만들면 내 성별·나이·키·체중으로 칼로리와 하루 권장 시간을 계산합니다.")
+    return notes
+
+
 def workout_pdf(*, workout_id: int, user_name: str, mode_name: str, count: int,
                 duration: int, status_name: str, started_at: datetime,
-                mode: str = "basic", target_duration: int | None = None) -> bytes:
+                mode: str = "basic", target_duration: int | None = None,
+                profile: calories.BodyProfile | None = None) -> bytes:
     report = _Report()
-    estimate = calories.estimate(mode, count, duration)
+    estimate = calories.estimate(mode, count, duration, profile=profile)
+    advice = calories.recommendation(profile)
     tier = calories.cheer_tier(mode, count)
     local = started_at.astimezone()
     started = f"{local:%Y.%m.%d} ({WEEKDAYS[local.weekday()]}) {local:%H:%M}"
@@ -431,7 +472,7 @@ def workout_pdf(*, workout_id: int, user_name: str, mode_name: str, count: int,
         report.text(value, right - 20, row_top + 15, 13, "bold", INK, "right")
 
     # Cheer card
-    top = 340
+    top = 336
     report.rect(left, top, width, 110, TINT, radius=12)
     report.image(ASSETS / f"tier-{tier.level}.png", left + 20, top + 19, 72, 72)
     report.text(tier.title, left + 110, top + 38, 18, "display", INK)
@@ -452,9 +493,15 @@ def workout_pdf(*, workout_id: int, user_name: str, mode_name: str, count: int,
         report.text("최고 단계 달성", ladder_right, top + 92, 9.5, "bold", ACCENT_TEXT, "right")
 
     # Calories
-    top = 474
+    top = 462
     report.text("예상 칼로리 소모량", left, top + 18, 17, "display", INK)
-    report.text(f"체중 {calories.REFERENCE_WEIGHT_KG} kg 기준", right, top + 16, 9, "regular", FAINT, "right")
+    if profile is not None and not profile.is_empty:
+        basis_note = f"내 맞춤 프로필 기준 · {profile.summary()}"
+        if not estimate.personal:
+            basis_note += f" · 체중은 {estimate.weight_kg:g} kg 기준"
+    else:
+        basis_note = f"체중 {calories.REFERENCE_WEIGHT_KG} kg 기준"
+    report.text(basis_note, right, top + 16, 9, "regular", ACCENT_TEXT if estimate.personal else FAINT, "right")
     card_top = top + 32
     report.rect(left, card_top, 214, 214, PANEL, radius=12)
     if estimate.basis is None:
@@ -465,18 +512,24 @@ def workout_pdf(*, workout_id: int, user_name: str, mode_name: str, count: int,
         kcal_text = _number(estimate.kcal)
         kcal_w = report.text(kcal_text, left + 18, card_top + 70, 46, "digits", INK)
         report.text("kcal", left + 24 + kcal_w, card_top + 68, 13, "bold", MUTED)
-        report.text(f"MET {estimate.basis.met:g}", left + 18, card_top + 96, 11, "bold", ACCENT_TEXT)
-        report.text(f"Compendium {estimate.basis.code}", left + 18 + report.width(f"MET {estimate.basis.met:g}", 11, "bold") + 8,
-                    card_top + 96, 9, "regular", FAINT)
-        report.paragraph(estimate.basis.label, left + 18, card_top + 116, 9.5, 180, "regular", MUTED)
-        report.text("체중별 환산 (kcal)", left + 18, card_top + 150, 8.5, "bold", MUTED)
-        cell_w = 178 / len(calories.WEIGHT_TABLE_KG)
-        for index, weight in enumerate(calories.WEIGHT_TABLE_KG):
+        report.text(f"휴식 대사량을 빼면 {_number(estimate.net_kcal)} kcal", left + 18, card_top + 90, 8.5, "regular", MUTED)
+        met_label = f"{'METy' if estimate.basis.youth else 'MET'} {estimate.basis.met:g}"
+        source = "Youth Compendium" if estimate.basis.youth else "Compendium"
+        report.text(met_label, left + 18, card_top + 114, 11, "bold", ACCENT_TEXT)
+        detail = f"60세 이상 기준 MET60+ {estimate.met60:.1f}" if estimate.met60 is not None else f"{source} {estimate.basis.code}"
+        report.text(detail, left + 18 + report.width(met_label, 11, "bold") + 8, card_top + 114, 9, "regular", FAINT)
+        report.text(estimate.basis.label, left + 18, card_top + 132, 9.5, "regular", MUTED)
+        report.text("체중별 총 소모량 (kcal)", left + 18, card_top + 152, 8.5, "bold", MUTED)
+        weights = _weight_table(estimate.weight_kg) if estimate.personal else calories.weight_table(profile)
+        cell_w = 178 / len(weights)
+        for index, weight in enumerate(weights):
             cx = left + 18 + cell_w * index + cell_w / 2
-            highlight = weight == calories.REFERENCE_WEIGHT_KG
+            highlight = weight == estimate.weight_kg
             if highlight:
                 report.rect(cx - cell_w / 2 + 2, card_top + 160, cell_w - 4, 40, WHITE, radius=6)
-            report.text(f"{weight}kg", cx, card_top + 175, 8, "regular", FAINT, "center")
+            report.text("나" if highlight and estimate.personal else f"{weight:g}kg", cx, card_top + 175, 8,
+                        "bold" if highlight and estimate.personal else "regular",
+                        ACCENT_TEXT if highlight and estimate.personal else FAINT, "center")
             report.text(_number(estimate.kcal_for(estimate.minutes, weight)), cx, card_top + 193, 12, "digits",
                         ACCENT_TEXT if highlight else INK, "center")
 
@@ -487,39 +540,38 @@ def workout_pdf(*, workout_id: int, user_name: str, mode_name: str, count: int,
     report.line(chart_left, base_top, chart_right, base_top, LINE, 1)
     if estimate.basis is not None:
         bars = [("이번 기록", estimate.minutes, estimate.kcal, count, True)]
-        planned = [1, 3, 5, 10]
-        if target_duration and target_duration / 60 not in planned:
-            planned.append(target_duration / 60)
-        for minutes in sorted(planned):
-            if abs(minutes - estimate.minutes) < 0.05:
+        required = [(advice.minutes, advice.label)] if advice else []
+        if target_duration:
+            required.append((target_duration / 60, None))
+        optional = [(minutes, None) for minutes in (1, 3, 5, 10)]
+        for minutes, label in required + optional:
+            if len(bars) >= 6 or any(abs(minutes - bar[1]) < 0.05 for bar in bars):
                 continue
-            bars.append((_duration_label(minutes), minutes, estimate.kcal_for(minutes), round(pace * minutes), False))
-        bars = sorted(bars, key=lambda bar: bar[1])[:6]
+            bars.append((label or _duration_label(minutes), minutes, estimate.kcal_for(minutes), round(pace * minutes), False))
+        bars.sort(key=lambda bar: bar[1])
         peak = max(bar[2] for bar in bars) or 1
         slot = (chart_right - chart_left) / len(bars)
         bar_w = min(30, slot * 0.5)
-        for index, (label, _, value, jumps, current) in enumerate(bars):
+        for index, (label, minutes, value, jumps, current) in enumerate(bars):
             cx = chart_left + slot * index + slot / 2
             height = max(2, value / peak * chart_h)
             report.rect(cx - bar_w / 2, base_top - height, bar_w, height, ACCENT if current else BAR, radius=3)
             report.text(_number(value), cx, base_top - height - 5, 10, "digits", ACCENT_TEXT if current else INK, "center")
+            if advice and not current and abs(minutes - advice.minutes) < 0.05:
+                report.text("권장", cx, base_top - height - 19, 8, "bold", ACCENT_TEXT, "center")
             report.text(label, cx, base_top + 14, 8.5, "bold", INK if current else MUTED, "center")
             report.text(f"약 {jumps:,}회", cx, base_top + 27, 8, "regular", FAINT, "center")
     else:
         report.text("계산할 기록이 없습니다.", chart_left, base_top - 50, 9.5, "regular", FAINT)
 
     # Method and references
-    top = 736
+    top = 724
     report.line(left, top, right, top)
-    notes = [
-        "산출식: kcal = MET × 3.5 × 체중(kg) ÷ 200 × 운동 시간(분). 실제 소모량은 체중, 체력, 쉬는 시간에 따라 달라지는 추정치입니다.",
-        "MET: Herrmann SD 외, 2024 Adult Compendium of Physical Activities, J Sport Health Sci 2024;13(1):6-12. "
-        "모아뛰기는 분당 횟수로 8.3·11.8·12.3, 이중뛰기는 10.0을 적용합니다.",
-        "번갈아뛰기는 같은 줄 회전 속도에서 모아뛰기와 산소섭취량 차이가 없다는 연구(최대혁, 2004, 운동과학 13(1):25-34)에 따라 같은 기준을 적용합니다.",
-    ]
-    note_top = top + 16
+    notes = _method_notes(estimate, advice)
+    note_top = top + 14
+    size = 7.5 if sum(len(report.wrap(note, 7.5, width)) for note in notes) <= 6 else 7
     for note in notes:
-        note_top += report.paragraph(note, left, note_top, 7.5, width, "regular", FAINT, 1.5) + 2
+        note_top += report.paragraph(note, left, note_top, size, width, "regular", FAINT, 1.45) + 2
     report.text("뜀결  ·  동작을 읽고, 리듬을 기록하다", left, 826, 8, "regular", FAINT)
     report.text("PAGE 1 / 1", right, 826, 8, "digits", FAINT, "right")
     return report.render()

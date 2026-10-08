@@ -12,12 +12,15 @@ from fastapi.testclient import TestClient
 
 from app.database import Base, engine
 from app.main import app
+from app.security import login_limiter
 
 
 @pytest.fixture
 def client():
     Base.metadata.drop_all(bind=engine)
     Base.metadata.create_all(bind=engine)
+    # Every test starts as a fresh client, so earlier signups must not count toward the rate limit.
+    login_limiter._attempts.clear()
     with TestClient(app, base_url="http://testserver") as test_client:
         yield test_client
     Base.metadata.drop_all(bind=engine)
