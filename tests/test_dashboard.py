@@ -77,3 +77,9 @@ def test_every_mode_shares_one_result_screen(client):
     assert "function showResult(message)" in script
     assert "message.analysisFps" in script
     assert "if (!message.finished) scheduleFrame" in script
+
+
+def test_page_and_code_are_revalidated_after_rebuild(client):
+    for path in ("/", "/index.html", "/app.js", "/app.css"):
+        assert client.get(path).headers["Cache-Control"] == "no-cache"
+    assert "Cache-Control" not in client.get("/img/court-hero-1280.jpg").headers

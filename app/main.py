@@ -16,12 +16,14 @@ from sqlalchemy import desc, func, select
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
+from .calories import BodyProfile, recommendation
 from .config import get_settings
 from .database import Base, SessionLocal, engine, get_db
 from .models import AuditLog, AuthSession, PasswordResetToken, User, Workout, utcnow
 from .notifications import send_email
 from .pdf import workout_pdf
 from .schemas import (
+    BodyProfileInput,
     BulkDeleteInput,
     LoginInput,
     PasswordResetConfirm,
@@ -53,6 +55,8 @@ MIN_COUNTDOWN_SECONDS = 1
 MAX_COUNTDOWN_SECONDS = 30
 MODE_NAMES = {"basic": "모아뛰기", "alternating": "번갈아뛰기", "double": "이중뛰기"}
 STATUS_NAMES = {"completed": "완료", "interrupted": "중단", "running": "측정 중"}
+AVATAR_MAX_BYTES = 512 * 1024
+AVATAR_TYPES = {"image/jpeg": b"\xff\xd8\xff", "image/png": b"\x89PNG\r\n\x1a\n", "image/webp": b"WEBP"}
 
 
 def _aware(value: datetime | None) -> datetime | None:
@@ -77,8 +81,44 @@ def _user_json(user: User, csrf_token: str | None = None) -> dict:
         },
     }
     if csrf_token:
+        # Only the signed-in user sees their own body profile; admin listings never include it.
         data["csrfToken"] = csrf_token
+        data["profile"] = _profile_json(user)
+        data["avatarUrl"] = (
+            f"/api/auth/avatar?v={int(_aware(user.avatar_updated_at).timestamp())}"
+            if user.avatar_type and user.avatar_updated_at else None
+        )
     return data
+
+
+def _body_profile(user: User) -> BodyProfile | None:
+    if user.profile_status != "completed":
+        return None
+    return BodyProfile(user.sex, user.age, user.height_cm, user.weight_kg)
+
+
+def _profile_json(user: User) -> dict:
+    profile = _body_profile(user)
+    advice = recommendation(profile)
+    return {
+        "status": user.profile_status,
+        "sex": user.sex,
+        "age": user.age,
+        "heightCm": user.height_cm,
+        "weightKg": user.weight_kg,
+        "bmi": round(profile.bmi, 1) if profile and profile.bmi else None,
+        "recommendation": {"seconds": advice.seconds, "reason": advice.reason} if advice else None,
+    }
+
+
+def _avatar_type(content: bytes) -> str | None:
+    for media_type, signature in AVATAR_TYPES.items():
+        if media_type == "image/webp":
+            if content[:4] == b"RIFF" and content[8:12] == signature:
+                return media_type
+        elif content.startswith(signature):
+            return media_type
+    return None
 
 
 def _audit(db: Session, request: Request | None, actor_id: int | None, action: str,
@@ -167,6 +207,9 @@ async def security_headers(request: Request, call_next):
     )
     if request.url.path.startswith("/api/"):
         response.headers["Cache-Control"] = "no-store"
+    elif request.url.path == "/" or request.url.path.endswith((".html", ".js", ".css")):
+        # Revalidate the page and its code together so a rebuild never pairs new HTML with stale JS.
+        response.headers["Cache-Control"] = "no-cache"
     return response
 
 
@@ -330,6 +373,72 @@ def update_profile(payload: ProfileUpdate, request: Request, db: Session = Depen
     return _user_json(user, auth_session.csrf_token)
 
 
+@app.put("/api/auth/body-profile")
+def save_body_profile(payload: BodyProfileInput, request: Request, db: Session = Depends(get_db)):
+    user, auth_session = require_user(request, db)
+    require_csrf(request, auth_session)
+    user.sex, user.age = payload.sex, payload.age
+    user.height_cm, user.weight_kg = payload.height_cm, payload.weight_kg
+    user.profile_status = "completed"
+    _audit(db, request, user.id, "profile.body_update", "user", str(user.id))
+    db.commit()
+    return _user_json(user, auth_session.csrf_token)
+
+
+@app.post("/api/auth/body-profile/skip")
+def skip_body_profile(request: Request, db: Session = Depends(get_db)):
+    user, auth_session = require_user(request, db)
+    require_csrf(request, auth_session)
+    if user.profile_status == "pending":
+        user.profile_status = "skipped"
+        db.commit()
+    return _user_json(user, auth_session.csrf_token)
+
+
+@app.get("/api/auth/avatar")
+def get_avatar(request: Request, db: Session = Depends(get_db)):
+    user, _ = require_user(request, db)
+    if not user.avatar_type or user.avatar is None:
+        raise HTTPException(status.HTTP_404_NOT_FOUND, "프로필 사진이 없습니다.")
+    return Response(content=user.avatar, media_type=user.avatar_type)
+
+
+def _store_avatar(request: Request, content: bytes | None) -> dict:
+    with SessionLocal() as db:
+        user, auth_session = require_user(request, db)
+        require_csrf(request, auth_session)
+        media_type = None
+        if content is not None:
+            media_type = _avatar_type(content)
+            if media_type is None:
+                raise HTTPException(status.HTTP_415_UNSUPPORTED_MEDIA_TYPE, "JPG, PNG, WebP 사진만 올릴 수 있습니다.")
+        user.avatar, user.avatar_type = content, media_type
+        user.avatar_updated_at = utcnow() if content is not None else None
+        _audit(db, request, user.id, "profile.avatar_update" if content else "profile.avatar_delete", "user", str(user.id))
+        db.commit()
+        return _user_json(user, auth_session.csrf_token)
+
+
+@app.put("/api/auth/avatar")
+async def upload_avatar(request: Request):
+    declared = request.headers.get("content-length")
+    if declared and declared.isdigit() and int(declared) > AVATAR_MAX_BYTES:
+        raise HTTPException(status.HTTP_413_REQUEST_ENTITY_TOO_LARGE, "사진 용량은 512KB 이하여야 합니다.")
+    content = bytearray()
+    async for chunk in request.stream():
+        content.extend(chunk)
+        if len(content) > AVATAR_MAX_BYTES:
+            raise HTTPException(status.HTTP_413_REQUEST_ENTITY_TOO_LARGE, "사진 용량은 512KB 이하여야 합니다.")
+    if not content:
+        raise HTTPException(status.HTTP_400_BAD_REQUEST, "사진 파일이 비어 있습니다.")
+    return await run_in_threadpool(_store_avatar, request, bytes(content))
+
+
+@app.delete("/api/auth/avatar")
+def delete_avatar(request: Request):
+    return _store_avatar(request, None)
+
+
 @app.post("/api/auth/logout")
 def logout(request: Request, response: Response, db: Session = Depends(get_db)):
     user, auth_session = require_user(request, db)
@@ -476,6 +585,7 @@ def download_workout_pdf(workout_id: int, request: Request, db: Session = Depend
         started_at=_aware(workout.started_at),
         mode=workout.mode,
         target_duration=workout.target_duration_seconds,
+        profile=_body_profile(workout.user),
     )
     return Response(
         content=content,

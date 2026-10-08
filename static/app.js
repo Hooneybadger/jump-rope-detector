@@ -29,6 +29,8 @@ const cheerAssets = {
   },
 };
 const statusNames = { completed: "완료", interrupted: "중단", running: "측정 중" };
+const sexNames = { male: "남성", female: "여성" };
+const AVATAR_SOURCE_LIMIT = 20 * 1024 * 1024;
 const phaseLabels = { SEARCHING: "자세 찾는 중", COUNTDOWN: "준비", COUNTING: "측정 중", DONE: "측정 종료" };
 const phaseOrder = ["SEARCHING", "COUNTDOWN", "COUNTING", "DONE"];
 const reducedMotion = () => window.matchMedia("(prefers-reduced-motion: reduce)").matches;
@@ -75,7 +77,7 @@ function showAuthPanel(name) {
 function showApp(user) {
   state.user = user; state.csrf = user.csrfToken || state.csrf;
   $("#login-view").hidden = true; $("#app-shell").hidden = false;
-  $("#user-badge").textContent = (user.displayName || user.username).slice(0, 1);
+  renderAvatar($("#user-badge"), user);
   $("#user-name").textContent = user.displayName || user.username;
   $("#admin-tab").hidden = user.role !== "admin";
   $("#welcome-heading").innerHTML = `${escapeHtml(user.displayName || user.username)}님,<br>오늘 기록을 시작해 볼까요?`;
@@ -83,8 +85,154 @@ function showApp(user) {
     const card = document.querySelector(`[data-mode-card="${mode}"]`); const allowed = Boolean(user.permissions[mode]);
     card.classList.toggle("is-locked", !allowed); card.querySelector(".locked-copy").hidden = allowed;
   }
+  renderBodyProfileCta(user);
   window.requestAnimationFrame(playDashboardEntry);
   loadDashboard();
+  if (user.profile && user.profile.status === "pending" && !$("#body-profile-dialog").open) openBodyProfile(true);
+}
+
+function renderAvatar(target, user) {
+  if (user.avatarUrl) {
+    const image = document.createElement("img"); image.src = user.avatarUrl; image.alt = ""; target.replaceChildren(image);
+  } else {
+    target.replaceChildren(document.createTextNode((user.displayName || user.username).slice(0, 1)));
+  }
+}
+
+function durationLabel(seconds) {
+  const minutes = Math.floor(seconds / 60); const rest = seconds % 60;
+  return [minutes ? `${minutes}분` : "", rest || !minutes ? `${rest}초` : ""].filter(Boolean).join(" ");
+}
+
+function renderBodyProfileCta(user) {
+  const profile = user.profile || {}; const advice = profile.recommendation;
+  $("#open-body-profile span").textContent = profile.status === "completed" ? "맞춤 프로필 설정" : "맞춤 프로필 만들기";
+  $("#body-profile-note").textContent = advice
+    ? `추천 측정 시간 ${durationLabel(advice.seconds)} · 하루 권장 운동량 기준`
+    : profile.status === "completed"
+      ? "나이, 키, 몸무게를 입력하면 하루 권장 운동량에 맞춘 측정 시간을 추천해 드려요."
+      : "프로필을 만들면 하루 권장 운동량에 맞춘 측정 시간을 추천해 드려요.";
+}
+
+let bodyProfileFirstRun = false;
+function openBodyProfile(firstRun = false) {
+  bodyProfileFirstRun = firstRun;
+  const profile = state.user.profile || {}; const completed = profile.status === "completed";
+  $("#body-profile-title").textContent = completed ? "맞춤 프로필 설정" : "맞춤 프로필 만들기";
+  $("#save-body-profile").textContent = completed ? "맞춤 프로필 저장" : "맞춤 프로필 생성";
+  $("#skip-body-profile").textContent = firstRun ? "건너뛰기" : "취소";
+  // A saved profile with no sex and no body data was saved as "선택 안 함"; a new profile starts unselected.
+  const hasBodyData = [profile.age, profile.heightCm, profile.weightKg].some((value) => value != null);
+  const chosenSex = profile.sex || (completed && !hasBodyData ? "" : null);
+  $$('#body-profile-form input[name="sex"]').forEach((input) => { input.checked = input.value === chosenSex; });
+  $("#body-age").value = profile.age ?? ""; $("#body-height").value = profile.heightCm ?? ""; $("#body-weight").value = profile.weightKg ?? "";
+  syncBodyFields();
+  $("#body-profile-error").textContent = "";
+  $("#body-profile-dialog").showModal();
+}
+
+const bodyInputs = () => [$("#body-age"), $("#body-height"), $("#body-weight")];
+
+function syncBodyFields() {
+  const declined = Boolean($('#body-profile-form input[name="sex"][value=""]:checked'));
+  bodyInputs().forEach((input) => { input.disabled = declined; if (declined) input.value = ""; });
+  $("#body-fields-hint").hidden = !declined;
+}
+
+function readOptionalNumber(input, label, integer) {
+  const raw = input.value.trim(); const min = Number(input.min); const max = Number(input.max);
+  const message = `${label}는 ${min}~${max} 사이${integer ? "의 정수" : ""}로 입력해 주세요.`;
+  if (input.validity.badInput) throw new Error(message);
+  if (!raw) return null;
+  const value = Number(raw);
+  if (!Number.isFinite(value) || value < min || value > max || (integer && !Number.isInteger(value))) throw new Error(message);
+  return value;
+}
+
+async function saveBodyProfile(event) {
+  event.preventDefault();
+  const error = $("#body-profile-error"); const button = $("#save-body-profile"); error.textContent = "";
+  let payload;
+  try {
+    payload = {
+      sex: new FormData(event.currentTarget).get("sex") || null,
+      age: readOptionalNumber($("#body-age"), "나이", true),
+      height_cm: readOptionalNumber($("#body-height"), "키", false),
+      weight_kg: readOptionalNumber($("#body-weight"), "몸무게", false),
+    };
+  } catch (inputError) { error.textContent = inputError.message; return; }
+  const label = button.textContent; button.disabled = true; button.textContent = "저장 중…";
+  try {
+    const user = await api("/api/auth/body-profile", { method: "PUT", body: JSON.stringify(payload) });
+    $("#body-profile-dialog").close(); showApp(user);
+    const advice = user.profile.recommendation;
+    showToast(advice ? `맞춤 프로필을 저장했어요. 추천 측정 시간은 ${durationLabel(advice.seconds)}입니다.` : "맞춤 프로필을 저장했어요.");
+  } catch (requestError) { error.textContent = requestError.message; }
+  finally { button.disabled = false; button.textContent = label; }
+}
+
+async function skipBodyProfile() {
+  const dialog = $("#body-profile-dialog");
+  if (!bodyProfileFirstRun) { dialog.close(); return; }
+  try {
+    const user = await api("/api/auth/body-profile/skip", { method: "POST" });
+    dialog.close(); showApp(user); showToast("훈련 화면의 '맞춤 프로필 만들기'에서 언제든 다시 만들 수 있어요.");
+  } catch (requestError) { $("#body-profile-error").textContent = requestError.message; }
+}
+
+function renderBodySummary(user) {
+  const profile = user.profile || {}; const advice = profile.recommendation;
+  const values = {
+    "#profile-sex": sexNames[profile.sex], "#profile-age": profile.age != null ? `${profile.age}세` : null,
+    "#profile-height": profile.heightCm != null ? `${profile.heightCm}cm` : null, "#profile-weight": profile.weightKg != null ? `${profile.weightKg}kg` : null,
+  };
+  Object.entries(values).forEach(([selector, value]) => { const cell = $(selector); cell.textContent = value || "미입력"; cell.classList.toggle("is-empty", !value); });
+  $("#edit-body-profile span").textContent = profile.status === "completed" ? "맞춤 프로필 설정" : "맞춤 프로필 만들기";
+  $("#profile-recommend").textContent = advice
+    ? `추천 측정 시간 ${durationLabel(advice.seconds)} · ${advice.reason}`
+    : profile.status === "completed"
+      ? "나이, 키, 몸무게를 입력하면 추천 측정 시간과 내 몸에 맞춘 칼로리를 볼 수 있어요."
+      : "맞춤 프로필을 만들면 추천 측정 시간과 내 몸에 맞춘 칼로리를 볼 수 있어요.";
+}
+
+function applyAvatar(user) {
+  state.user = user; renderAvatar($("#user-badge"), user); renderAvatar($("#profile-avatar"), user); $("#remove-avatar").hidden = !user.avatarUrl;
+}
+
+async function squareAvatar(file) {
+  const bitmap = await createImageBitmap(file);
+  const side = Math.min(bitmap.width, bitmap.height); const size = Math.min(256, side);
+  const canvas = document.createElement("canvas"); canvas.width = size; canvas.height = size;
+  const context = canvas.getContext("2d"); context.fillStyle = "#ffffff"; context.fillRect(0, 0, size, size);
+  context.drawImage(bitmap, (bitmap.width - side) / 2, (bitmap.height - side) / 2, side, side, 0, 0, size, size);
+  bitmap.close();
+  const webp = await new Promise((resolve) => canvas.toBlob(resolve, "image/webp", 0.86));
+  if (webp && webp.type === "image/webp") return webp;
+  return new Promise((resolve) => canvas.toBlob(resolve, "image/jpeg", 0.88));
+}
+
+async function changeAvatar(event) {
+  const input = event.currentTarget; const file = input.files && input.files[0]; input.value = "";
+  const error = $("#avatar-error"); error.textContent = "";
+  if (!file) return;
+  if (!file.type.startsWith("image/")) { error.textContent = "사진 파일만 올릴 수 있습니다."; return; }
+  if (file.size > AVATAR_SOURCE_LIMIT) { error.textContent = "20MB 이하의 사진을 골라 주세요."; return; }
+  const button = $("#change-avatar"); button.disabled = true;
+  try {
+    let blob;
+    try { blob = await squareAvatar(file); } catch { throw new Error("이 사진은 브라우저에서 읽을 수 없습니다. JPG나 PNG 사진을 골라 주세요."); }
+    const response = await fetch("/api/auth/avatar", { method: "PUT", credentials: "same-origin", headers: { "Content-Type": blob.type, "X-CSRF-Token": state.csrf }, body: blob });
+    const body = await response.json().catch(() => ({}));
+    if (!response.ok) throw new Error(body.error || "사진을 저장하지 못했습니다.");
+    applyAvatar(body); showToast("프로필 사진을 바꿨습니다.");
+  } catch (uploadError) { error.textContent = uploadError.message; }
+  finally { button.disabled = false; }
+}
+
+async function removeAvatar() {
+  $("#avatar-error").textContent = "";
+  try { applyAvatar(await api("/api/auth/avatar", { method: "DELETE" })); showToast("프로필 사진을 삭제했습니다."); }
+  catch (requestError) { $("#avatar-error").textContent = requestError.message; }
 }
 
 function escapeHtml(value) {
@@ -93,6 +241,7 @@ function escapeHtml(value) {
 
 function showLogin() {
   state.user = null; state.csrf = ""; $("#login-view").hidden = false; $("#app-shell").hidden = true; $("#workout-view").hidden = true;
+  $$("dialog[open]").forEach((dialog) => dialog.close());
   showAuthPanel("login");
 }
 
@@ -105,6 +254,27 @@ async function loadSession() {
 function formatTime(total) {
   const value = Math.max(0, Math.round(total || 0));
   return `${String(Math.floor(value / 60)).padStart(2, "0")}:${String(value % 60).padStart(2, "0")}`;
+}
+
+// 34 -> 34초, 120 -> 2분, 85 -> 1분 25초
+function renderDurationUnits(target, total) {
+  const value = Math.max(0, Math.round(total || 0));
+  const minutes = Math.floor(value / 60);
+  const seconds = value % 60;
+  const parts = [];
+  if (minutes) parts.push([minutes, "분"]);
+  if (seconds || !minutes) parts.push([seconds, "초"]);
+  target.replaceChildren(...parts.map(([number, unit]) => {
+    const part = document.createElement("span");
+    part.className = "duration-part";
+    const digits = document.createElement("span");
+    digits.className = "digits";
+    digits.textContent = number.toLocaleString("ko-KR");
+    const label = document.createElement("small");
+    label.textContent = unit;
+    part.append(digits, label);
+    return part;
+  }));
 }
 
 function localDate(value) { return new Intl.DateTimeFormat("ko-KR", { year: "numeric", month: "short", day: "numeric", hour: "2-digit", minute: "2-digit" }).format(new Date(value)); }
@@ -159,7 +329,7 @@ async function loadDashboard() {
     const data = await api("/api/dashboard"); state.dashboard = data;
     $("#summary-count").textContent = data.summary.count.toLocaleString("ko-KR");
     $("#summary-sessions").textContent = data.summary.sessions.toLocaleString("ko-KR");
-    $("#summary-duration").textContent = Math.round(data.summary.duration / 60).toLocaleString("ko-KR");
+    renderDurationUnits($("#summary-duration"), data.summary.duration);
     const body = $("#history-body"); body.replaceChildren(); $("#history-empty").hidden = data.recent.length > 0;
     state.selectedWorkouts.clear();
     data.recent.forEach((item) => {
@@ -240,7 +410,8 @@ async function deleteSelectedUsers() {
 function openProfile() {
   const user = state.user; if (!user) return;
   const name = user.displayName || user.username;
-  $("#profile-avatar").textContent = name.slice(0, 1); $("#profile-name").textContent = name;
+  renderAvatar($("#profile-avatar"), user); $("#remove-avatar").hidden = !user.avatarUrl; $("#avatar-error").textContent = "";
+  $("#profile-name").textContent = name; renderBodySummary(user);
   $("#profile-role").textContent = user.role === "admin" ? "관리자" : "회원";
   $("#profile-username").value = user.username; $("#profile-display-name").value = user.displayName || ""; $("#profile-email").value = user.email || "";
   $("#profile-form-error").textContent = ""; $("#profile-form").querySelectorAll('input[type="password"]').forEach((input) => { input.value = ""; });
@@ -283,6 +454,15 @@ function resolveConfirmation(value) {
 function openWorkoutSetup(mode) {
   if (!state.user.permissions[mode]) return;
   state.mode = mode; $("#setup-mode-name").textContent = modeNames[mode]; $("#setup-error").textContent = "";
+  const advice = state.user.profile && state.user.profile.recommendation;
+  const recommended = $("#recommended-duration"); const hint = $("#recommend-hint");
+  recommended.hidden = !advice; hint.hidden = !advice; recommended.dataset.duration = advice ? String(advice.seconds) : "";
+  if (advice) {
+    recommended.textContent = `추천 ${durationLabel(advice.seconds)}`;
+    hint.textContent = `${advice.reason}. 한 번에 어렵다면 여러 번 나눠 뛰어도 됩니다.`;
+    $("#workout-duration").value = String(advice.seconds);
+  }
+  $$(`[data-duration]`).forEach((button) => button.classList.toggle("is-active", button.dataset.duration === $("#workout-duration").value));
   $("#workout-setup-dialog").showModal();
 }
 
@@ -544,6 +724,15 @@ $("#delete-selected-records").addEventListener("click", deleteSelectedRecords);
 $("#close-record-dialog").addEventListener("click", () => $("#record-dialog").close());
 $("#profile-button").addEventListener("click", openProfile); $("#close-profile-dialog").addEventListener("click", () => $("#profile-dialog").close());
 $("#profile-form").addEventListener("submit", saveProfile);
+$("#open-body-profile").addEventListener("click", () => openBodyProfile(false));
+$("#edit-body-profile").addEventListener("click", () => { $("#profile-dialog").close(); openBodyProfile(false); });
+$("#body-profile-form").addEventListener("submit", saveBodyProfile);
+$$('#body-profile-form input[name="sex"]').forEach((input) => input.addEventListener("change", syncBodyFields));
+$("#skip-body-profile").addEventListener("click", skipBodyProfile);
+$("#body-profile-dialog").addEventListener("cancel", (event) => { event.preventDefault(); skipBodyProfile(); });
+$("#change-avatar").addEventListener("click", () => $("#avatar-input").click());
+$("#avatar-input").addEventListener("change", changeAvatar);
+$("#remove-avatar").addEventListener("click", removeAvatar);
 $("#confirm-cancel").addEventListener("click", () => resolveConfirmation(false)); $("#confirm-accept").addEventListener("click", () => resolveConfirmation(true));
 $("#confirm-dialog").addEventListener("cancel", (event) => { event.preventDefault(); resolveConfirmation(false); });
 

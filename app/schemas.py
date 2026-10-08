@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+from typing import Literal
+
 from pydantic import BaseModel, ConfigDict, Field, field_validator
 
 
@@ -33,6 +35,20 @@ class ProfileUpdate(StrictModel):
     email: str | None = Field(default=None, pattern=r"^[^\s@]+@[^\s@]+\.[^\s@]+$", max_length=254)
     current_password: str | None = Field(default=None, min_length=1, max_length=200)
     new_password: str | None = Field(default=None, min_length=12, max_length=200)
+
+
+class BodyProfileInput(StrictModel):
+    """Every field is optional; age is whole years only (no birth date is collected)."""
+
+    sex: Literal["male", "female"] | None = None
+    age: int | None = Field(default=None, ge=6, le=100)
+    height_cm: float | None = Field(default=None, ge=80, le=230)
+    weight_kg: float | None = Field(default=None, ge=15, le=250)
+
+    @field_validator("height_cm", "weight_kg")
+    @classmethod
+    def one_decimal(cls, value: float | None) -> float | None:
+        return None if value is None else round(value, 1)
 
 
 class BulkDeleteInput(StrictModel):
