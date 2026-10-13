@@ -1,0 +1,454 @@
+﻿[
+    {
+        "bytes":  232837662,
+        "path":  "C:\\Users\\IDBLAB\\pythonCode\\jump-rope-detector\\.bench-venv"
+    },
+    {
+        "bytes":  421159777,
+        "path":  "C:\\Users\\IDBLAB\\pythonCode\\jump-rope-detector\\.benchmark-node"
+    },
+    {
+        "bytes":  66647,
+        "path":  "C:\\Users\\IDBLAB\\pythonCode\\jump-rope-detector\\benchmark_results\\alternating_01_browser.json"
+    },
+    {
+        "bytes":  17421,
+        "path":  "C:\\Users\\IDBLAB\\pythonCode\\jump-rope-detector\\benchmark_results\\alternating_01_gpu.json"
+    },
+    {
+        "bytes":  17783,
+        "path":  "C:\\Users\\IDBLAB\\pythonCode\\jump-rope-detector\\benchmark_results\\alternating_01_legacy.json"
+    },
+    {
+        "bytes":  78354,
+        "path":  "C:\\Users\\IDBLAB\\pythonCode\\jump-rope-detector\\benchmark_results\\alternating_02_browser.json"
+    },
+    {
+        "bytes":  20974,
+        "path":  "C:\\Users\\IDBLAB\\pythonCode\\jump-rope-detector\\benchmark_results\\alternating_02_gpu.json"
+    },
+    {
+        "bytes":  22008,
+        "path":  "C:\\Users\\IDBLAB\\pythonCode\\jump-rope-detector\\benchmark_results\\alternating_02_legacy.json"
+    },
+    {
+        "bytes":  341389,
+        "path":  "C:\\Users\\IDBLAB\\pythonCode\\jump-rope-detector\\benchmark_results\\alternating_03_browser.json"
+    },
+    {
+        "bytes":  92324,
+        "path":  "C:\\Users\\IDBLAB\\pythonCode\\jump-rope-detector\\benchmark_results\\alternating_03_gpu.json"
+    },
+    {
+        "bytes":  94481,
+        "path":  "C:\\Users\\IDBLAB\\pythonCode\\jump-rope-detector\\benchmark_results\\alternating_03_legacy.json"
+    },
+    {
+        "bytes":  682065,
+        "path":  "C:\\Users\\IDBLAB\\pythonCode\\jump-rope-detector\\benchmark_results\\alternating_05_browser.json"
+    },
+    {
+        "bytes":  188503,
+        "path":  "C:\\Users\\IDBLAB\\pythonCode\\jump-rope-detector\\benchmark_results\\alternating_05_gpu.json"
+    },
+    {
+        "bytes":  191026,
+        "path":  "C:\\Users\\IDBLAB\\pythonCode\\jump-rope-detector\\benchmark_results\\alternating_05_legacy.json"
+    },
+    {
+        "bytes":  666150,
+        "path":  "C:\\Users\\IDBLAB\\pythonCode\\jump-rope-detector\\benchmark_results\\alternating_06_browser.json"
+    },
+    {
+        "bytes":  172248,
+        "path":  "C:\\Users\\IDBLAB\\pythonCode\\jump-rope-detector\\benchmark_results\\alternating_06_gpu.json"
+    },
+    {
+        "bytes":  178908,
+        "path":  "C:\\Users\\IDBLAB\\pythonCode\\jump-rope-detector\\benchmark_results\\alternating_06_legacy.json"
+    },
+    {
+        "bytes":  601964,
+        "path":  "C:\\Users\\IDBLAB\\pythonCode\\jump-rope-detector\\benchmark_results\\alternating_07_browser.json"
+    },
+    {
+        "bytes":  169319,
+        "path":  "C:\\Users\\IDBLAB\\pythonCode\\jump-rope-detector\\benchmark_results\\alternating_07_gpu.json"
+    },
+    {
+        "bytes":  172248,
+        "path":  "C:\\Users\\IDBLAB\\pythonCode\\jump-rope-detector\\benchmark_results\\alternating_07_legacy.json"
+    },
+    {
+        "bytes":  367790,
+        "path":  "C:\\Users\\IDBLAB\\pythonCode\\jump-rope-detector\\benchmark_results\\basic_01_browser.json"
+    },
+    {
+        "bytes":  100032,
+        "path":  "C:\\Users\\IDBLAB\\pythonCode\\jump-rope-detector\\benchmark_results\\basic_01_gpu.json"
+    },
+    {
+        "bytes":  102119,
+        "path":  "C:\\Users\\IDBLAB\\pythonCode\\jump-rope-detector\\benchmark_results\\basic_01_legacy.json"
+    },
+    {
+        "bytes":  136573,
+        "path":  "C:\\Users\\IDBLAB\\pythonCode\\jump-rope-detector\\benchmark_results\\basic_02_browser.json"
+    },
+    {
+        "bytes":  36255,
+        "path":  "C:\\Users\\IDBLAB\\pythonCode\\jump-rope-detector\\benchmark_results\\basic_02_gpu.json"
+    },
+    {
+        "bytes":  37713,
+        "path":  "C:\\Users\\IDBLAB\\pythonCode\\jump-rope-detector\\benchmark_results\\basic_02_legacy.json"
+    },
+    {
+        "bytes":  106681,
+        "path":  "C:\\Users\\IDBLAB\\pythonCode\\jump-rope-detector\\benchmark_results\\basic_03_browser.json"
+    },
+    {
+        "bytes":  28615,
+        "path":  "C:\\Users\\IDBLAB\\pythonCode\\jump-rope-detector\\benchmark_results\\basic_03_gpu.json"
+    },
+    {
+        "bytes":  29550,
+        "path":  "C:\\Users\\IDBLAB\\pythonCode\\jump-rope-detector\\benchmark_results\\basic_03_legacy.json"
+    },
+    {
+        "bytes":  52500,
+        "path":  "C:\\Users\\IDBLAB\\pythonCode\\jump-rope-detector\\benchmark_results\\basic_04_browser.json"
+    },
+    {
+        "bytes":  13919,
+        "path":  "C:\\Users\\IDBLAB\\pythonCode\\jump-rope-detector\\benchmark_results\\basic_04_gpu.json"
+    },
+    {
+        "bytes":  14585,
+        "path":  "C:\\Users\\IDBLAB\\pythonCode\\jump-rope-detector\\benchmark_results\\basic_04_legacy.json"
+    },
+    {
+        "bytes":  897391,
+        "path":  "C:\\Users\\IDBLAB\\pythonCode\\jump-rope-detector\\benchmark_results\\basic_05_browser.json"
+    },
+    {
+        "bytes":  243437,
+        "path":  "C:\\Users\\IDBLAB\\pythonCode\\jump-rope-detector\\benchmark_results\\basic_05_gpu.json"
+    },
+    {
+        "bytes":  251574,
+        "path":  "C:\\Users\\IDBLAB\\pythonCode\\jump-rope-detector\\benchmark_results\\basic_05_legacy.json"
+    },
+    {
+        "bytes":  1393849,
+        "path":  "C:\\Users\\IDBLAB\\pythonCode\\jump-rope-detector\\benchmark_results\\basic_06_browser.json"
+    },
+    {
+        "bytes":  366420,
+        "path":  "C:\\Users\\IDBLAB\\pythonCode\\jump-rope-detector\\benchmark_results\\basic_06_gpu.json"
+    },
+    {
+        "bytes":  382169,
+        "path":  "C:\\Users\\IDBLAB\\pythonCode\\jump-rope-detector\\benchmark_results\\basic_06_legacy.json"
+    },
+    {
+        "bytes":  2297105,
+        "path":  "C:\\Users\\IDBLAB\\pythonCode\\jump-rope-detector\\benchmark_results\\basic_07_browser.json"
+    },
+    {
+        "bytes":  624763,
+        "path":  "C:\\Users\\IDBLAB\\pythonCode\\jump-rope-detector\\benchmark_results\\basic_07_gpu.json"
+    },
+    {
+        "bytes":  645507,
+        "path":  "C:\\Users\\IDBLAB\\pythonCode\\jump-rope-detector\\benchmark_results\\basic_07_legacy.json"
+    },
+    {
+        "bytes":  91827,
+        "path":  "C:\\Users\\IDBLAB\\pythonCode\\jump-rope-detector\\benchmark_results\\basic_08_browser.json"
+    },
+    {
+        "bytes":  24535,
+        "path":  "C:\\Users\\IDBLAB\\pythonCode\\jump-rope-detector\\benchmark_results\\basic_08_gpu.json"
+    },
+    {
+        "bytes":  25555,
+        "path":  "C:\\Users\\IDBLAB\\pythonCode\\jump-rope-detector\\benchmark_results\\basic_08_legacy.json"
+    },
+    {
+        "bytes":  377651,
+        "path":  "C:\\Users\\IDBLAB\\pythonCode\\jump-rope-detector\\benchmark_results\\basic_09_browser.json"
+    },
+    {
+        "bytes":  98071,
+        "path":  "C:\\Users\\IDBLAB\\pythonCode\\jump-rope-detector\\benchmark_results\\basic_09_gpu.json"
+    },
+    {
+        "bytes":  101741,
+        "path":  "C:\\Users\\IDBLAB\\pythonCode\\jump-rope-detector\\benchmark_results\\basic_09_legacy.json"
+    },
+    {
+        "bytes":  341334,
+        "path":  "C:\\Users\\IDBLAB\\pythonCode\\jump-rope-detector\\benchmark_results\\basic_10_browser.json"
+    },
+    {
+        "bytes":  88720,
+        "path":  "C:\\Users\\IDBLAB\\pythonCode\\jump-rope-detector\\benchmark_results\\basic_10_gpu.json"
+    },
+    {
+        "bytes":  92897,
+        "path":  "C:\\Users\\IDBLAB\\pythonCode\\jump-rope-detector\\benchmark_results\\basic_10_legacy.json"
+    },
+    {
+        "bytes":  392502,
+        "path":  "C:\\Users\\IDBLAB\\pythonCode\\jump-rope-detector\\benchmark_results\\double_1_browser.json"
+    },
+    {
+        "bytes":  107422,
+        "path":  "C:\\Users\\IDBLAB\\pythonCode\\jump-rope-detector\\benchmark_results\\double_1_gpu.json"
+    },
+    {
+        "bytes":  110388,
+        "path":  "C:\\Users\\IDBLAB\\pythonCode\\jump-rope-detector\\benchmark_results\\double_1_legacy.json"
+    },
+    {
+        "bytes":  337097,
+        "path":  "C:\\Users\\IDBLAB\\pythonCode\\jump-rope-detector\\benchmark_results\\double_2_browser.json"
+    },
+    {
+        "bytes":  90729,
+        "path":  "C:\\Users\\IDBLAB\\pythonCode\\jump-rope-detector\\benchmark_results\\double_2_gpu.json"
+    },
+    {
+        "bytes":  93933,
+        "path":  "C:\\Users\\IDBLAB\\pythonCode\\jump-rope-detector\\benchmark_results\\double_2_legacy.json"
+    },
+    {
+        "bytes":  497418,
+        "path":  "C:\\Users\\IDBLAB\\pythonCode\\jump-rope-detector\\benchmark_results\\double_3_browser.json"
+    },
+    {
+        "bytes":  131512,
+        "path":  "C:\\Users\\IDBLAB\\pythonCode\\jump-rope-detector\\benchmark_results\\double_3_gpu.json"
+    },
+    {
+        "bytes":  135165,
+        "path":  "C:\\Users\\IDBLAB\\pythonCode\\jump-rope-detector\\benchmark_results\\double_3_legacy.json"
+    },
+    {
+        "bytes":  389505,
+        "path":  "C:\\Users\\IDBLAB\\pythonCode\\jump-rope-detector\\benchmark_results\\double_4_browser.json"
+    },
+    {
+        "bytes":  105720,
+        "path":  "C:\\Users\\IDBLAB\\pythonCode\\jump-rope-detector\\benchmark_results\\double_4_gpu.json"
+    },
+    {
+        "bytes":  109581,
+        "path":  "C:\\Users\\IDBLAB\\pythonCode\\jump-rope-detector\\benchmark_results\\double_4_legacy.json"
+    },
+    {
+        "bytes":  165897,
+        "path":  "C:\\Users\\IDBLAB\\pythonCode\\jump-rope-detector\\benchmark_results\\60fps\\alternating_01_browser.json"
+    },
+    {
+        "bytes":  51254,
+        "path":  "C:\\Users\\IDBLAB\\pythonCode\\jump-rope-detector\\benchmark_results\\60fps\\alternating_01_gpu.json"
+    },
+    {
+        "bytes":  189716,
+        "path":  "C:\\Users\\IDBLAB\\pythonCode\\jump-rope-detector\\benchmark_results\\60fps\\alternating_02_browser.json"
+    },
+    {
+        "bytes":  58958,
+        "path":  "C:\\Users\\IDBLAB\\pythonCode\\jump-rope-detector\\benchmark_results\\60fps\\alternating_02_gpu.json"
+    },
+    {
+        "bytes":  832860,
+        "path":  "C:\\Users\\IDBLAB\\pythonCode\\jump-rope-detector\\benchmark_results\\60fps\\alternating_03_browser.json"
+    },
+    {
+        "bytes":  259571,
+        "path":  "C:\\Users\\IDBLAB\\pythonCode\\jump-rope-detector\\benchmark_results\\60fps\\alternating_03_gpu.json"
+    },
+    {
+        "bytes":  1646956,
+        "path":  "C:\\Users\\IDBLAB\\pythonCode\\jump-rope-detector\\benchmark_results\\60fps\\alternating_05_browser.json"
+    },
+    {
+        "bytes":  518484,
+        "path":  "C:\\Users\\IDBLAB\\pythonCode\\jump-rope-detector\\benchmark_results\\60fps\\alternating_05_gpu.json"
+    },
+    {
+        "bytes":  1671537,
+        "path":  "C:\\Users\\IDBLAB\\pythonCode\\jump-rope-detector\\benchmark_results\\60fps\\alternating_06_browser.json"
+    },
+    {
+        "bytes":  515027,
+        "path":  "C:\\Users\\IDBLAB\\pythonCode\\jump-rope-detector\\benchmark_results\\60fps\\alternating_06_gpu.json"
+    },
+    {
+        "bytes":  1427660,
+        "path":  "C:\\Users\\IDBLAB\\pythonCode\\jump-rope-detector\\benchmark_results\\60fps\\alternating_07_browser.json"
+    },
+    {
+        "bytes":  447926,
+        "path":  "C:\\Users\\IDBLAB\\pythonCode\\jump-rope-detector\\benchmark_results\\60fps\\alternating_07_gpu.json"
+    },
+    {
+        "bytes":  895857,
+        "path":  "C:\\Users\\IDBLAB\\pythonCode\\jump-rope-detector\\benchmark_results\\60fps\\basic_01_browser.json"
+    },
+    {
+        "bytes":  281193,
+        "path":  "C:\\Users\\IDBLAB\\pythonCode\\jump-rope-detector\\benchmark_results\\60fps\\basic_01_gpu.json"
+    },
+    {
+        "bytes":  335788,
+        "path":  "C:\\Users\\IDBLAB\\pythonCode\\jump-rope-detector\\benchmark_results\\60fps\\basic_02_browser.json"
+    },
+    {
+        "bytes":  104139,
+        "path":  "C:\\Users\\IDBLAB\\pythonCode\\jump-rope-detector\\benchmark_results\\60fps\\basic_02_gpu.json"
+    },
+    {
+        "bytes":  259187,
+        "path":  "C:\\Users\\IDBLAB\\pythonCode\\jump-rope-detector\\benchmark_results\\60fps\\basic_03_browser.json"
+    },
+    {
+        "bytes":  80508,
+        "path":  "C:\\Users\\IDBLAB\\pythonCode\\jump-rope-detector\\benchmark_results\\60fps\\basic_03_gpu.json"
+    },
+    {
+        "bytes":  128567,
+        "path":  "C:\\Users\\IDBLAB\\pythonCode\\jump-rope-detector\\benchmark_results\\60fps\\basic_04_browser.json"
+    },
+    {
+        "bytes":  39771,
+        "path":  "C:\\Users\\IDBLAB\\pythonCode\\jump-rope-detector\\benchmark_results\\60fps\\basic_04_gpu.json"
+    },
+    {
+        "bytes":  2180913,
+        "path":  "C:\\Users\\IDBLAB\\pythonCode\\jump-rope-detector\\benchmark_results\\60fps\\basic_05_browser.json"
+    },
+    {
+        "bytes":  682000,
+        "path":  "C:\\Users\\IDBLAB\\pythonCode\\jump-rope-detector\\benchmark_results\\60fps\\basic_05_gpu.json"
+    },
+    {
+        "bytes":  3451903,
+        "path":  "C:\\Users\\IDBLAB\\pythonCode\\jump-rope-detector\\benchmark_results\\60fps\\basic_06_browser.json"
+    },
+    {
+        "bytes":  1066606,
+        "path":  "C:\\Users\\IDBLAB\\pythonCode\\jump-rope-detector\\benchmark_results\\60fps\\basic_06_gpu.json"
+    },
+    {
+        "bytes":  5583596,
+        "path":  "C:\\Users\\IDBLAB\\pythonCode\\jump-rope-detector\\benchmark_results\\60fps\\basic_07_browser.json"
+    },
+    {
+        "bytes":  1743878,
+        "path":  "C:\\Users\\IDBLAB\\pythonCode\\jump-rope-detector\\benchmark_results\\60fps\\basic_07_gpu.json"
+    },
+    {
+        "bytes":  224901,
+        "path":  "C:\\Users\\IDBLAB\\pythonCode\\jump-rope-detector\\benchmark_results\\60fps\\basic_08_browser.json"
+    },
+    {
+        "bytes":  69921,
+        "path":  "C:\\Users\\IDBLAB\\pythonCode\\jump-rope-detector\\benchmark_results\\60fps\\basic_08_gpu.json"
+    },
+    {
+        "bytes":  946965,
+        "path":  "C:\\Users\\IDBLAB\\pythonCode\\jump-rope-detector\\benchmark_results\\60fps\\basic_09_browser.json"
+    },
+    {
+        "bytes":  292651,
+        "path":  "C:\\Users\\IDBLAB\\pythonCode\\jump-rope-detector\\benchmark_results\\60fps\\basic_09_gpu.json"
+    },
+    {
+        "bytes":  852780,
+        "path":  "C:\\Users\\IDBLAB\\pythonCode\\jump-rope-detector\\benchmark_results\\60fps\\basic_10_browser.json"
+    },
+    {
+        "bytes":  263770,
+        "path":  "C:\\Users\\IDBLAB\\pythonCode\\jump-rope-detector\\benchmark_results\\60fps\\basic_10_gpu.json"
+    },
+    {
+        "bytes":  946350,
+        "path":  "C:\\Users\\IDBLAB\\pythonCode\\jump-rope-detector\\benchmark_results\\60fps\\double_1_browser.json"
+    },
+    {
+        "bytes":  295959,
+        "path":  "C:\\Users\\IDBLAB\\pythonCode\\jump-rope-detector\\benchmark_results\\60fps\\double_1_gpu.json"
+    },
+    {
+        "bytes":  824324,
+        "path":  "C:\\Users\\IDBLAB\\pythonCode\\jump-rope-detector\\benchmark_results\\60fps\\double_2_browser.json"
+    },
+    {
+        "bytes":  257397,
+        "path":  "C:\\Users\\IDBLAB\\pythonCode\\jump-rope-detector\\benchmark_results\\60fps\\double_2_gpu.json"
+    },
+    {
+        "bytes":  1241270,
+        "path":  "C:\\Users\\IDBLAB\\pythonCode\\jump-rope-detector\\benchmark_results\\60fps\\double_3_browser.json"
+    },
+    {
+        "bytes":  386021,
+        "path":  "C:\\Users\\IDBLAB\\pythonCode\\jump-rope-detector\\benchmark_results\\60fps\\double_3_gpu.json"
+    },
+    {
+        "bytes":  945880,
+        "path":  "C:\\Users\\IDBLAB\\pythonCode\\jump-rope-detector\\benchmark_results\\60fps\\double_4_browser.json"
+    },
+    {
+        "bytes":  296404,
+        "path":  "C:\\Users\\IDBLAB\\pythonCode\\jump-rope-detector\\benchmark_results\\60fps\\double_4_gpu.json"
+    },
+    {
+        "bytes":  11555921,
+        "path":  "C:\\Users\\IDBLAB\\pythonCode\\jump-rope-detector\\benchmark_results\\comparison.json"
+    },
+    {
+        "bytes":  12332,
+        "path":  "C:\\Users\\IDBLAB\\pythonCode\\jump-rope-detector\\benchmark_results\\summary.json"
+    },
+    {
+        "bytes":  2979,
+        "path":  "C:\\Users\\IDBLAB\\pythonCode\\jump-rope-detector\\benchmark_results\\comparison.csv"
+    },
+    {
+        "bytes":  1457,
+        "path":  "C:\\Users\\IDBLAB\\pythonCode\\jump-rope-detector\\benchmark_results\\protocol.json"
+    },
+    {
+        "bytes":  282195,
+        "path":  "C:\\Users\\IDBLAB\\pythonCode\\jump-rope-detector\\benchmark_results\\input_manifest.json"
+    },
+    {
+        "bytes":  2831769,
+        "path":  "C:\\Users\\IDBLAB\\pythonCode\\jump-rope-detector\\benchmark_results\\browser-smoke.json"
+    },
+    {
+        "bytes":  762722,
+        "path":  "C:\\Users\\IDBLAB\\pythonCode\\jump-rope-detector\\benchmark_results\\smoke-basic.png"
+    },
+    {
+        "bytes":  198273,
+        "path":  "C:\\Users\\IDBLAB\\pythonCode\\jump-rope-detector\\benchmark_results\\smoke-alternating.png"
+    },
+    {
+        "bytes":  769130,
+        "path":  "C:\\Users\\IDBLAB\\pythonCode\\jump-rope-detector\\benchmark_results\\smoke-double.png"
+    },
+    {
+        "bytes":  192299,
+        "path":  "C:\\Users\\IDBLAB\\pythonCode\\jump-rope-detector\\benchmark_results\\60fps\\live-fps-before-scheduler-fix.json"
+    },
+    {
+        "bytes":  180077,
+        "path":  "C:\\Users\\IDBLAB\\pythonCode\\jump-rope-detector\\benchmark_results\\60fps\\live-fps-with-midtest-screenshot.json"
+    }
+]

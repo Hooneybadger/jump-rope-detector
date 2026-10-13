@@ -1,0 +1,16 @@
+[
+  {
+    "test": "software-gpu",
+    "poseClosed": true,
+    "streamClosed": true,
+    "socketClosed": true,
+    "viewHidden": true
+  },
+  {
+    "test": "cancel-startup",
+    "poseClosed": true,
+    "streamClosed": true,
+    "socketClosed": true,
+    "viewHidden": true
+  }
+]

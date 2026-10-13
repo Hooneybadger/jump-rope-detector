@@ -5,7 +5,9 @@ const $$ = (selector) => [...document.querySelectorAll(selector)];
 const state = {
   user: null, csrf: "", dashboard: null, stream: null, socket: null, sending: false,
   mode: null, duration: 60, countdown: 3, workoutId: null, closing: false, frameTimer: null, frameSentAt: 0,
-  frameInterval: 1000 / 20, phase: "SEARCHING", lastCount: 0, lastElapsed: 0, timeline: [], resultShown: false,
+  frameInterval: 1000 / 60, phase: "SEARCHING", lastCount: 0, lastElapsed: 0, timeline: [], resultShown: false,
+  pose: null, workoutGeneration: 0, frameStartedAt: 0, processingTimes: [],
+  cameraMediaTime: -1, lastAnalyzedMediaTime: -1, videoFrameCallback: null,
   selectedWorkouts: new Set(), selectedUsers: new Set(),
 };
 const captureCanvas = $("#capture-canvas");
@@ -492,23 +494,52 @@ function setPhase(phase) {
 }
 
 async function startWorkout() {
+  const generation = ++state.workoutGeneration;
   state.closing = false; state.workoutId = null; $("#workout-view").hidden = false; resetWorkoutScreen();
   try { if (!document.fullscreenElement && $("#workout-view").requestFullscreen) await $("#workout-view").requestFullscreen(); } catch { showToast("브라우저 메뉴에서도 전체 화면을 켤 수 있습니다."); }
   try {
-    state.stream = await navigator.mediaDevices.getUserMedia({ video: { width: { ideal: 1280 }, height: { ideal: 720 }, frameRate: { ideal: 30, max: 60 }, facingMode: "user" }, audio: false });
+    $("#connection-state").textContent = "관절 분석 준비 중";
+    const { BrowserPose } = await import("./pose-client.js");
+    if (generation !== state.workoutGeneration) return;
+    const pose = new BrowserPose(); state.pose = pose;
+    await pose.init();
+    if (generation !== state.workoutGeneration) { pose.close(); return; }
+    const stream = await navigator.mediaDevices.getUserMedia({ video: { width: { ideal: 1280 }, height: { ideal: 720 }, frameRate: { ideal: 60, max: 60 }, facingMode: "user" }, audio: false });
+    if (generation !== state.workoutGeneration) { stream.getTracks().forEach(track => track.stop()); return; }
+    state.stream = stream;
     const video = $("#camera-source"); video.srcObject = state.stream; await video.play();
+    if (generation !== state.workoutGeneration) return;
+    state.processingTimes = []; state.cameraMediaTime = -1; state.lastAnalyzedMediaTime = -1;
+    if (video.requestVideoFrameCallback) {
+      const observeFrame = (_now, metadata) => {
+        if (generation !== state.workoutGeneration) return;
+        state.cameraMediaTime = metadata.mediaTime;
+        // The camera already caps delivery at 60 fps. A second timer clock
+        // drops frames when its phase drifts relative to video presentation.
+        if (!state.closing && !state.sending && state.socket?.readyState === WebSocket.OPEN) {
+          window.clearTimeout(state.frameTimer); sendFrame();
+        }
+        state.videoFrameCallback = video.requestVideoFrameCallback(observeFrame);
+      };
+      state.videoFrameCallback = video.requestVideoFrameCallback(observeFrame);
+    }
     const protocol = location.protocol === "https:" ? "wss" : "ws";
-    state.socket = new WebSocket(`${protocol}://${location.host}/ws/count/${state.mode}?duration=${state.duration}&countdown=${state.countdown}`);
+    state.socket = new WebSocket(`${protocol}://${location.host}/ws/count/${state.mode}?duration=${state.duration}&countdown=${state.countdown}&input=landmarks`);
     state.socket.onopen = () => { $("#connection-state").textContent = "분석 서버 연결됨"; };
     state.socket.onmessage = handleSocketMessage;
     state.socket.onclose = handleSocketClose;
     state.socket.onerror = () => showToast("분석 서버에 연결할 수 없습니다.");
-  } catch (error) { showToast(error.name === "NotAllowedError" ? "카메라 사용 권한을 허용해 주세요." : "카메라를 시작할 수 없습니다."); cleanupWorkout(); }
+  } catch (error) {
+    if (generation !== state.workoutGeneration) return;
+    showToast(error.name === "NotAllowedError" ? "카메라 사용 권한을 허용해 주세요." : "카메라 또는 관절 분석을 시작할 수 없습니다. 브라우저 하드웨어 가속을 확인하고 다시 시도해 주세요.");
+    cleanupWorkout();
+  }
 }
 
 function handleSocketClose(event) {
+  if (event.target !== state.socket) return;
   state.sending = false;
-  if (state.closing || state.resultShown) return;
+  if (state.resultShown) return;
   if (state.phase === "COUNTING" && state.workoutId) {
     // The server stores the session as interrupted; show what was measured instead of dropping the user back.
     showResult({ workoutId: state.workoutId, mode: state.mode, count: state.lastCount, duration: Math.round(state.lastElapsed), targetDuration: state.duration, status: "interrupted", reason: "disconnected" });
@@ -528,9 +559,18 @@ async function handleSocketMessage(event) {
   if (message.type === "state") {
     const roundTrip = Math.max(0, performance.now() - state.frameSentAt); state.sending = false;
     updateWorkoutState(message); drawPose(message.landmarks || []);
-    $("#connection-state").textContent = `분석 ${Math.round(message.processingMs || 0)}ms · 왕복 ${Math.round(roundTrip)}ms`;
+    const completedAt = performance.now();
+    state.processingTimes.push(completedAt);
+    state.processingTimes = state.processingTimes.filter(time => time >= completedAt - 2000);
+    const span = completedAt - state.processingTimes[0];
+    const fps = span > 0 ? (state.processingTimes.length - 1) * 1000 / span : 0;
+    $("#connection-state").textContent = `${fps.toFixed(1)}fps · 관절 ${Math.round(message.inferenceMs || 0)}ms · 계수 ${Math.round(message.processingMs || 0)}ms · 왕복 ${Math.round(roundTrip)}ms`;
     // Keep streaming until the server announces the finish; the server owns the clock.
-    if (!message.finished) scheduleFrame(Math.max(0, state.frameInterval - roundTrip));
+    if (!message.finished) {
+      if ($("#camera-source").requestVideoFrameCallback) {
+        if (state.cameraMediaTime !== state.lastAnalyzedMediaTime) scheduleFrame();
+      } else scheduleFrame(Math.max(0, state.frameInterval - (performance.now() - state.frameStartedAt)));
+    }
     return;
   }
   if (message.type === "complete") { state.closing = true; state.workoutId = message.workoutId; showResult(message); }
@@ -540,17 +580,29 @@ function scheduleFrame(delay = 0) {
   window.clearTimeout(state.frameTimer); state.frameTimer = window.setTimeout(sendFrame, delay);
 }
 
-function sendFrame() {
-  if (state.sending || !state.socket || state.socket.readyState !== WebSocket.OPEN) return;
+async function sendFrame() {
+  if (state.closing || state.sending || !state.socket || state.socket.readyState !== WebSocket.OPEN) return;
   const video = $("#camera-source"); if (!video.videoWidth) return scheduleFrame(100);
-  captureContext.drawImage(video, 0, 0, captureCanvas.width, captureCanvas.height); state.sending = true;
-  captureCanvas.toBlob((blob) => {
-    if (blob && state.socket?.readyState === WebSocket.OPEN) {
-      try { state.frameSentAt = performance.now(); state.socket.send(blob); }
-      catch { state.sending = false; scheduleFrame(state.frameInterval); }
-    }
-    else { state.sending = false; scheduleFrame(state.frameInterval); }
-  }, "image/jpeg", .62);
+  const mediaTime = video.requestVideoFrameCallback ? state.cameraMediaTime : video.currentTime;
+  if (mediaTime < 0 || mediaTime === state.lastAnalyzedMediaTime) {
+    if (!video.requestVideoFrameCallback) scheduleFrame(2);
+    return;
+  }
+  state.lastAnalyzedMediaTime = mediaTime;
+  const socket = state.socket; const pose = state.pose;
+  state.sending = true; state.frameStartedAt = performance.now();
+  try {
+    captureContext.drawImage(video, 0, 0, captureCanvas.width, captureCanvas.height);
+    const result = await pose.detect(captureCanvas, state.frameStartedAt);
+    if (state.closing || socket !== state.socket || socket.readyState !== WebSocket.OPEN) return;
+    state.frameSentAt = performance.now();
+    socket.send(JSON.stringify({ type: "pose", timestampMs: result.timestampMs, inferenceMs: result.inferenceMs, landmarks: result.landmarks }));
+  } catch (error) {
+    if (socket !== state.socket || state.closing) return;
+    state.sending = false;
+    showToast("관절 분석이 중단되었습니다. 브라우저 하드웨어 가속을 확인한 뒤 다시 측정해 주세요.");
+    socket.close();
+  }
 }
 
 function drawPose(landmarks) {
@@ -646,8 +698,11 @@ function showResult(message) {
 }
 
 function stopMedia() {
+  state.workoutGeneration += 1; state.pose?.close(); state.pose = null;
   window.clearTimeout(state.frameTimer); state.frameTimer = null; state.stream?.getTracks().forEach((track) => track.stop()); state.stream = null; state.sending = false;
-  const video = $("#camera-source"); video.srcObject = null;
+  const video = $("#camera-source");
+  if (state.videoFrameCallback !== null) video.cancelVideoFrameCallback?.(state.videoFrameCallback);
+  state.videoFrameCallback = null; video.srcObject = null;
   poseContext.clearRect(0, 0, poseCanvas.width, poseCanvas.height);
 }
 

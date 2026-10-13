@@ -1,0 +1,11 @@
+{
+  "basic": {
+    "all_code_outside_extractor_unchanged": true
+  },
+  "alternating": {
+    "all_code_outside_extractor_unchanged": true
+  },
+  "double": {
+    "all_code_outside_extractor_unchanged": true
+  }
+}

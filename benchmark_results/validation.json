@@ -1,0 +1,54 @@
+{
+  "tests": {
+    "pytest_passed": 126,
+    "ruff": "passed",
+    "javascript_syntax": "passed",
+    "git_diff_whitespace": "passed",
+    "ui_detector": "no findings"
+  },
+  "comparisons": {
+    "labelled_videos": 20,
+    "three_modes": true,
+    "counter_input_20_hz": true,
+    "renderer": "ANGLE (NVIDIA, NVIDIA GeForce RTX 3050 (0x00002584) Direct3D11 vs_5_0 ps_5_0, D3D11)",
+    "original_data_hashes_verified_after_move": true
+  },
+  "browser_checks": {
+    "desktop_and_mobile_reviewed": true,
+    "all_modes_finished_10_second_sessions": true,
+    "software_gpu_rejected": true,
+    "startup_cancel_releases_resources": true,
+    "only_pose_json_uploaded": true
+  },
+  "final_source_sha256": {
+    "app/main.py": "8b844c2738ccb1d0dbf4c182174724711d83f72b3ecb59c6937f92461e01740a",
+    "app/jump_service.py": "31750c648c57f9e13caf984809045ff2224557955c73bcb536332d93e6d0cfe7",
+    "app/pose_protocol.py": "80c57c8780b1ec9559a332fd4c98217a1305b45ac0c3e81799d2791559a08dc6",
+    "app/signal_resampler.py": "44f02b01e21f6b024ece98270bbce8d6ab1b4470e7a072be54625452edba4b2a",
+    "static/app.js": "8b76e30f4f3d89d4d8299440640de321746747f73212d0fe5cd89014ee3f30f3",
+    "static/pose-worker.js": "c02c1b280dd5e87b5837fc5282c3ae4e69be041b1f602f8b7427481f343cb985",
+    "static/pose-client.js": "e2b9e4a6e4923b6514b22778226ff7178b446f00a386993d6747282974b04e90",
+    "basic_jump/counter_engine.py": "cc0b78b68755dfb9c33955e53f5419daf6bad43eab871523c8a6a817376a2b80",
+    "alternating_jump/counter_engine.py": "360a51cf71013103168bbb527941fd30da041861b96b0d453dfbc6627c202a99",
+    "double_jump/counter_engine.py": "e6796528220b9b2cc7df74bcabd56e4a7378043cf3b3b8490d8d676cff39627b"
+  },
+  "cleanup": {
+    "status": "complete",
+    "preserved": [
+      "program source and tests",
+      "pinned browser assets",
+      "validation source videos and KVA labels",
+      "20fps and 60fps final evidence"
+    ],
+    "temporary_directories": [
+      ".bench-venv",
+      ".benchmark-node"
+    ],
+    "removed_entries": 113,
+    "removed_bytes": 718896600,
+    "temporary_directories_removed": {
+      ".bench-venv": true,
+      ".benchmark-node": true
+    }
+  }
+}

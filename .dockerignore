@@ -8,3 +8,7 @@ tests
 videos
 *.pdf
 
+
+.bench-venv
+.benchmark-node
+benchmark_results

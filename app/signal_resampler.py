@@ -23,8 +23,8 @@ class SignalResampler:
     """Feeds counting engines at the frame rate their thresholds were tuned for.
 
     The engines count airborne frames, refractory gaps and EMA steps in 30 fps units,
-    while the browser analysis stream runs at 12-20 fps. Each real pose frame is
-    expanded into the 30 Hz frames that fall between it and the previous real frame,
+    while the adapter selects counting input at 20 Hz from up to 60 fps browser
+    inference. Each selected pose frame is expanded into the 30 Hz frames that fall between it and the previous real frame,
     with landmark coordinates linearly interpolated.
     """
 

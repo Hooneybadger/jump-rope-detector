@@ -1,0 +1,28 @@
+{
+  "fps": 60,
+  "counter_input_hz": 20,
+  "size": [
+    512,
+    288
+  ],
+  "model": "pose_landmarker_full float16 version 1",
+  "warmup_excluded": 10,
+  "legacy_jpeg_quality": 62,
+  "legacy_fps": 20,
+  "reused_legacy": true,
+  "gpu_input": "lossless PNG of the same resized source frame (no JPEG in the new app)",
+  "sampling": "60Hz input clock with nearest original frame (30/24fps source frames repeat); counter samples 20Hz before signal conversion",
+  "window": "first nonempty KVA event - 0.5s through last + 0.5s; preceding frames warm up engine",
+  "gate": "readiness/countdown bypassed equally for labelled-window comparison; production tested separately",
+  "labels": "one unique nonempty KVA keyframe is one jump; multiple pencils are not multiple jumps",
+  "timing": "legacy: JPEG decode+pose+engine; GPU: worker inference+server adapter+engine. Disk/video decode/network excluded; first 10 frames per clip excluded from timing only",
+  "python": "3.11.14 | packaged by Anaconda, Inc. | (main, Oct 21 2025, 18:30:03) [MSC v.1929 64 bit (AMD64)]",
+  "platform": "Windows-10-10.0.26200-SP0",
+  "source_hashes": {
+    "static\\pose-worker.js": "c02c1b280dd5e87b5837fc5282c3ae4e69be041b1f602f8b7427481f343cb985",
+    "app\\pose_protocol.py": "80c57c8780b1ec9559a332fd4c98217a1305b45ac0c3e81799d2791559a08dc6",
+    "basic_jump\\counter_engine.py": "cc0b78b68755dfb9c33955e53f5419daf6bad43eab871523c8a6a817376a2b80",
+    "alternating_jump\\counter_engine.py": "360a51cf71013103168bbb527941fd30da041861b96b0d453dfbc6627c202a99",
+    "double_jump\\counter_engine.py": "e6796528220b9b2cc7df74bcabd56e4a7378043cf3b3b8490d8d676cff39627b"
+  }
+}

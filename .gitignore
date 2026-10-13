@@ -213,3 +213,8 @@ __marimo__/
 # big files
 *.mp4
 *.db
+
+# Local GPU comparison environments and decoded frames
+.bench-venv/
+.benchmark-node/
+benchmark_results/cache/

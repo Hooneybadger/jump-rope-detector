@@ -1,0 +1,444 @@
+{
+  "browser": "154.0.8037.98",
+  "date": "2026-10-13T09:25:45.725Z",
+  "renderer": "ANGLE (NVIDIA, NVIDIA GeForce RTX 3050 (0x00002584) Direct3D11 vs_5_0 ps_5_0, D3D11)",
+  "summaries": [
+    {
+      "mode": "basic",
+      "clips": 10,
+      "gt": 1373,
+      "cpu_count": 952,
+      "gpu_count": 947,
+      "cpu_abs_error": 425,
+      "gpu_abs_error": 434,
+      "cpu_mae": 42.5,
+      "gpu_mae": 43.4,
+      "cpu_agreement_pct": 69.04588492352512,
+      "gpu_agreement_pct": 68.39038601602331,
+      "cpu_ms": {
+        "mean": 16.42043560150009,
+        "p50": 15.70509999874048,
+        "p95": 23.75457999878563
+      },
+      "gpu_ms": {
+        "mean": 11.290605404423996,
+        "p50": 10.807200000621378,
+        "p95": 16.52509999938775
+      },
+      "gpu_inference_ms": {
+        "mean": 10.929349861777956,
+        "p50": 10.400000002235174,
+        "p95": 16.199999999254942
+      },
+      "gpu_server_ms": {
+        "mean": 0.11479161686243962,
+        "p50": 0.11180000001331791,
+        "p95": 0.16429999959655106
+      },
+      "gpu_local_http_roundtrip_ms": {
+        "mean": 2.4971194149690255,
+        "p50": 2.5,
+        "p95": 3.199999999254942
+      },
+      "payload_bytes": {
+        "mean": 2592.5119058235978,
+        "p50": 2777.0,
+        "p95": 2799.0
+      },
+      "speedup": 1.4543450074932271,
+      "timed_frames": 11213
+    },
+    {
+      "mode": "alternating",
+      "clips": 6,
+      "gt": 865,
+      "cpu_count": 452,
+      "gpu_count": 507,
+      "cpu_abs_error": 417,
+      "gpu_abs_error": 358,
+      "cpu_mae": 69.5,
+      "gpu_mae": 59.666666666666664,
+      "cpu_agreement_pct": 51.79190751445086,
+      "gpu_agreement_pct": 58.61271676300578,
+      "cpu_ms": {
+        "mean": 15.632621290039962,
+        "p50": 15.160949998971773,
+        "p95": 17.3974499986798
+      },
+      "gpu_ms": {
+        "mean": 10.694501195334002,
+        "p50": 10.450500004488276,
+        "p95": 14.916200001433026
+      },
+      "gpu_inference_ms": {
+        "mean": 10.316035182680304,
+        "p50": 10.100000001490116,
+        "p95": 14.5
+      },
+      "gpu_server_ms": {
+        "mean": 0.13369830854300196,
+        "p50": 0.13064999802736565,
+        "p95": 0.18023499978880858
+      },
+      "gpu_local_http_roundtrip_ms": {
+        "mean": 2.467050067620015,
+        "p50": 2.4000000059604645,
+        "p95": 3.0
+      },
+      "payload_bytes": {
+        "mean": 2702.02548488949,
+        "p50": 2782.0,
+        "p95": 2806.0
+      },
+      "speedup": 1.461743844290789,
+      "timed_frames": 4434
+    },
+    {
+      "mode": "double",
+      "clips": 4,
+      "gt": 342,
+      "cpu_count": 259,
+      "gpu_count": 262,
+      "cpu_abs_error": 83,
+      "gpu_abs_error": 80,
+      "cpu_mae": 20.75,
+      "gpu_mae": 20.0,
+      "cpu_agreement_pct": 75.73099415204678,
+      "gpu_agreement_pct": 76.60818713450293,
+      "cpu_ms": {
+        "mean": 15.438703093619434,
+        "p50": 15.54539999779081,
+        "p95": 17.869434998647193
+      },
+      "gpu_ms": {
+        "mean": 9.807515938196339,
+        "p50": 9.77065000118455,
+        "p95": 13.691085006154026
+      },
+      "gpu_inference_ms": {
+        "mean": 9.070208473432942,
+        "p50": 9.0,
+        "p95": 12.899999998509884
+      },
+      "gpu_server_ms": {
+        "mean": 0.5376437122099753,
+        "p50": 0.47065000399015844,
+        "p95": 1.28783000036492
+      },
+      "gpu_local_http_roundtrip_ms": {
+        "mean": 2.5583725621737163,
+        "p50": 2.4000000059604645,
+        "p95": 3.5
+      },
+      "payload_bytes": {
+        "mean": 2568.000336247478,
+        "p50": 2793.0,
+        "p95": 2817.0
+      },
+      "speedup": 1.574170584163099,
+      "timed_frames": 2974
+    }
+  ],
+  "rows": [
+    {
+      "id": "basic_01",
+      "mode": "basic",
+      "gt": 87,
+      "cpu": 69,
+      "gpu": 77,
+      "cpu_error": -18,
+      "gpu_error": -10,
+      "cpu_mean_ms": 15.91635877055338,
+      "gpu_mean_ms": 11.957545877006352,
+      "gpu_inference_ms": 11.58830584714125,
+      "gpu_server_ms": 0.11886521726022886,
+      "init_ms": 186.80000000074506,
+      "first_inference_ms": 2634
+    },
+    {
+      "id": "basic_02",
+      "mode": "basic",
+      "gt": 15,
+      "cpu": 16,
+      "gpu": 16,
+      "cpu_error": 1,
+      "gpu_error": 1,
+      "cpu_mean_ms": 15.705096371176854,
+      "gpu_mean_ms": 8.039715322298083,
+      "gpu_inference_ms": 7.689919354934847,
+      "gpu_server_ms": 0.11552177382386176,
+      "init_ms": 178.90000000223517,
+      "first_inference_ms": 324.69999999925494
+    },
+    {
+      "id": "basic_03",
+      "mode": "basic",
+      "gt": 17,
+      "cpu": 18,
+      "gpu": 18,
+      "cpu_error": 1,
+      "gpu_error": 1,
+      "cpu_mean_ms": 16.45758449199409,
+      "gpu_mean_ms": 15.987960962350805,
+      "gpu_inference_ms": 15.62245989304016,
+      "gpu_server_ms": 0.11737272719215143,
+      "init_ms": 173.60000000149012,
+      "first_inference_ms": 321.80000000074506
+    },
+    {
+      "id": "basic_04",
+      "mode": "basic",
+      "gt": 8,
+      "cpu": 8,
+      "gpu": 7,
+      "cpu_error": 0,
+      "gpu_error": -1,
+      "cpu_mean_ms": 15.60964318171252,
+      "gpu_mean_ms": 10.743767045455487,
+      "gpu_inference_ms": 10.417045454663986,
+      "gpu_server_ms": 0.11308522731600203,
+      "init_ms": 175.80000000074506,
+      "first_inference_ms": 264.5
+    },
+    {
+      "id": "basic_05",
+      "mode": "basic",
+      "gt": 198,
+      "cpu": 194,
+      "gpu": 193,
+      "cpu_error": -4,
+      "gpu_error": -5,
+      "cpu_mean_ms": 16.11298686621279,
+      "gpu_mean_ms": 12.912009346498493,
+      "gpu_inference_ms": 12.500916310307833,
+      "gpu_server_ms": 0.13528362870159194,
+      "init_ms": 221.39999999850988,
+      "first_inference_ms": 381.5
+    },
+    {
+      "id": "basic_06",
+      "mode": "basic",
+      "gt": 262,
+      "cpu": 119,
+      "gpu": 106,
+      "cpu_error": -143,
+      "gpu_error": -156,
+      "cpu_mean_ms": 17.14689709206141,
+      "gpu_mean_ms": 11.174397734044518,
+      "gpu_inference_ms": 10.815558912408372,
+      "gpu_server_ms": 0.1093675225320799,
+      "init_ms": 215.30000000074506,
+      "first_inference_ms": 359.5
+    },
+    {
+      "id": "basic_07",
+      "mode": "basic",
+      "gt": 504,
+      "cpu": 504,
+      "gpu": 506,
+      "cpu_error": 0,
+      "gpu_error": 2,
+      "cpu_mean_ms": 15.459039343476997,
+      "gpu_mean_ms": 10.883639866764215,
+      "gpu_inference_ms": 10.515699333978283,
+      "gpu_server_ms": 0.1212231208471498,
+      "init_ms": 184.70000000298023,
+      "first_inference_ms": 383.5
+    },
+    {
+      "id": "basic_08",
+      "mode": "basic",
+      "gt": 16,
+      "cpu": 13,
+      "gpu": 15,
+      "cpu_error": -3,
+      "gpu_error": -1,
+      "cpu_mean_ms": 15.740636646221912,
+      "gpu_mean_ms": 7.884015527724141,
+      "gpu_inference_ms": 7.524844720658863,
+      "gpu_server_ms": 0.11693478231311064,
+      "init_ms": 183.10000000149012,
+      "first_inference_ms": 318.30000000074506
+    },
+    {
+      "id": "basic_09",
+      "mode": "basic",
+      "gt": 132,
+      "cpu": 0,
+      "gpu": 3,
+      "cpu_error": -132,
+      "gpu_error": -129,
+      "cpu_mean_ms": 18.42079779001108,
+      "gpu_mean_ms": 10.567446132589698,
+      "gpu_inference_ms": 10.270165745781231,
+      "gpu_server_ms": 0.08747375705345335,
+      "init_ms": 179,
+      "first_inference_ms": 295.80000000074506
+    },
+    {
+      "id": "basic_10",
+      "mode": "basic",
+      "gt": 134,
+      "cpu": 11,
+      "gpu": 6,
+      "cpu_error": -123,
+      "gpu_error": -128,
+      "cpu_mean_ms": 19.28722311226493,
+      "gpu_mean_ms": 11.240495685901717,
+      "gpu_inference_ms": 10.966872110928428,
+      "gpu_server_ms": 0.06853882915088161,
+      "init_ms": 187.80000000074506,
+      "first_inference_ms": 288.5
+    },
+    {
+      "id": "alternating_01",
+      "mode": "alternating",
+      "gt": 21,
+      "cpu": 0,
+      "gpu": 1,
+      "cpu_error": -21,
+      "gpu_error": -20,
+      "cpu_mean_ms": 20.898722881827133,
+      "gpu_mean_ms": 12.242203390029934,
+      "gpu_inference_ms": 11.936440677587258,
+      "gpu_server_ms": 0.07271186454306451,
+      "init_ms": 184.20000000298023,
+      "first_inference_ms": 2581.60000000149
+    },
+    {
+      "id": "alternating_02",
+      "mode": "alternating",
+      "gt": 15,
+      "cpu": 17,
+      "gpu": 15,
+      "cpu_error": 2,
+      "gpu_error": 0,
+      "cpu_mean_ms": 14.979630597437465,
+      "gpu_mean_ms": 8.998558209092641,
+      "gpu_inference_ms": 8.602985074715829,
+      "gpu_server_ms": 0.15303582105518027,
+      "init_ms": 176.5,
+      "first_inference_ms": 300.30000000447035
+    },
+    {
+      "id": "alternating_03",
+      "mode": "alternating",
+      "gt": 137,
+      "cpu": 55,
+      "gpu": 65,
+      "cpu_error": -82,
+      "gpu_error": -72,
+      "cpu_mean_ms": 16.18879504794764,
+      "gpu_mean_ms": 9.933583226918444,
+      "gpu_inference_ms": 9.58226837048801,
+      "gpu_server_ms": 0.12847140584408437,
+      "init_ms": 177.5,
+      "first_inference_ms": 302.69999999552965
+    },
+    {
+      "id": "alternating_05",
+      "mode": "alternating",
+      "gt": 229,
+      "cpu": 175,
+      "gpu": 204,
+      "cpu_error": -54,
+      "gpu_error": -25,
+      "cpu_mean_ms": 15.338379493460392,
+      "gpu_mean_ms": 11.263113643939636,
+      "gpu_inference_ms": 10.859313725475587,
+      "gpu_server_ms": 0.1437508988221179,
+      "init_ms": 181.60000000149012,
+      "first_inference_ms": 317.29999999701977
+    },
+    {
+      "id": "alternating_06",
+      "mode": "alternating",
+      "gt": 235,
+      "cpu": 1,
+      "gpu": 1,
+      "cpu_error": -234,
+      "gpu_error": -234,
+      "cpu_mean_ms": 15.389481449694992,
+      "gpu_mean_ms": 10.844645284476039,
+      "gpu_inference_ms": 10.477552611012062,
+      "gpu_server_ms": 0.12227583790950358,
+      "init_ms": 182.59999999403954,
+      "first_inference_ms": 251.59999999403954
+    },
+    {
+      "id": "alternating_07",
+      "mode": "alternating",
+      "gt": 228,
+      "cpu": 204,
+      "gpu": 221,
+      "cpu_error": -24,
+      "gpu_error": -7,
+      "cpu_mean_ms": 15.432465300243614,
+      "gpu_mean_ms": 10.344020400241371,
+      "gpu_inference_ms": 9.959008579791387,
+      "gpu_server_ms": 0.1434484268709559,
+      "init_ms": 185.70000000298023,
+      "first_inference_ms": 276.6000000014901
+    },
+    {
+      "id": "double_1",
+      "mode": "double",
+      "gt": 103,
+      "cpu": 84,
+      "gpu": 92,
+      "cpu_error": -19,
+      "gpu_error": -11,
+      "cpu_mean_ms": 16.363349080890043,
+      "gpu_mean_ms": 9.599480763951098,
+      "gpu_inference_ms": 8.733521923538735,
+      "gpu_server_ms": 0.6376702970425997,
+      "init_ms": 185.69999999552965,
+      "first_inference_ms": 307.1000000014901
+    },
+    {
+      "id": "double_2",
+      "mode": "double",
+      "gt": 68,
+      "cpu": 63,
+      "gpu": 63,
+      "cpu_error": -5,
+      "gpu_error": -5,
+      "cpu_mean_ms": 15.942140680951379,
+      "gpu_mean_ms": 10.52810907636496,
+      "gpu_inference_ms": 9.757536466844755,
+      "gpu_server_ms": 0.5764072935279562,
+      "init_ms": 182,
+      "first_inference_ms": 292.69999999552965
+    },
+    {
+      "id": "double_3",
+      "mode": "double",
+      "gt": 66,
+      "cpu": 33,
+      "gpu": 40,
+      "cpu_error": -33,
+      "gpu_error": -26,
+      "cpu_mean_ms": 14.631860740841601,
+      "gpu_mean_ms": 9.530711957598141,
+      "gpu_inference_ms": 8.939470899491399,
+      "gpu_server_ms": 0.4001299471753925,
+      "init_ms": 177.30000000447035,
+      "first_inference_ms": 269.69999999552965
+    },
+    {
+      "id": "double_4",
+      "mode": "double",
+      "gt": 105,
+      "cpu": 79,
+      "gpu": 67,
+      "cpu_error": -26,
+      "gpu_error": -38,
+      "cpu_mean_ms": 15.152348936159752,
+      "gpu_mean_ms": 9.756529645439805,
+      "gpu_inference_ms": 8.981560283666807,
+      "gpu_server_ms": 0.5877353190295794,
+      "init_ms": 174.70000000298023,
+      "first_inference_ms": 289.30000000447035
+    }
+  ]
+}
