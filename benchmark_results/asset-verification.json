@@ -1,0 +1,9 @@
+{
+  "LICENSE": true,
+  "vision_bundle.mjs": true,
+  "wasm/vision_wasm_internal.js": true,
+  "wasm/vision_wasm_internal.wasm": true,
+  "wasm/vision_wasm_nosimd_internal.js": true,
+  "wasm/vision_wasm_nosimd_internal.wasm": true,
+  "pose_landmarker_full.task": true
+}

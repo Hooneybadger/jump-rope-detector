@@ -8,6 +8,7 @@ import cv2
 import numpy as np
 
 from .signal_resampler import SignalResampler
+from .pose_protocol import PoseSamplingClock, decode_pose
 
 
 MODES = {
@@ -16,13 +17,12 @@ MODES = {
     "double": "double_jump.counter_engine",
 }
 
-# Frames per second the browser asks for. Clips replayed at the browser's 512x288 JPEG
-# quality counted closer to the labels at 20 fps than at 12 fps in every mode; a slow
-# server still sets its own pace because only one frame is in flight at a time.
+# Browser inference/transport target. Counter inputs stay at the validated 20 Hz;
+# double-under signals are still expanded to 30 Hz by SignalResampler.
 ANALYSIS_FPS = {
-    "basic": 20,
-    "alternating": 20,
-    "double": 20,
+    "basic": 60,
+    "alternating": 60,
+    "double": 60,
 }
 
 # Engines whose 30 fps frame thresholds need the stream expanded to 30 Hz. Only the
@@ -41,18 +41,27 @@ class FrameResult:
     elapsed: float
     landmarks: list[list[float]]
     processing_ms: float
+    inference_ms: float = 0.0
 
 
 class JumpCounterSession:
     """Small adapter around the three preserved counting engines."""
 
-    def __init__(self, mode: str, countdown_seconds: float = 3.0) -> None:
+    def __init__(self, mode: str, countdown_seconds: float = 3.0, input_backend: str = "legacy") -> None:
         if mode not in MODES:
             raise ValueError("unsupported jump mode")
         module = importlib.import_module(MODES[mode])
+        if input_backend not in {"legacy", "landmarks"}:
+            raise ValueError("unsupported input backend")
+        self.input_backend = input_backend
+        self.client_timestamp_origin = None
+        self.last_client_timestamp = None
+        self.client_server_origin = None
+        self.pose_sampling_clock = PoseSamplingClock()
         self.mode = mode
         self.config = module.EngineConfig()
-        self.extractor = module.PoseSignalExtractor(self.config)
+        self.extractor = (module.PoseSignalExtractor(self.config) if input_backend == "legacy"
+                          else module.PoseSignalExtractor(self.config, initialize_pose=False))
         self.engine_type = module.RealtimeCounterEngine
         self.visible = module.core_landmarks_visible
         self.gate = module.RealtimeStartGate(
@@ -81,6 +90,8 @@ class JumpCounterSession:
 
     def process(self, payload: bytes, max_frame_bytes: int) -> FrameResult:
         processing_started_at = time.perf_counter()
+        if self.input_backend != "legacy":
+            raise ValueError("expected browser landmarks")
         if not payload or len(payload) > max_frame_bytes:
             raise ValueError("frame size is not allowed")
         data = np.frombuffer(payload, dtype=np.uint8)
@@ -93,6 +104,29 @@ class JumpCounterSession:
 
         timestamp = time.monotonic() - self.started_at
         signal, pose_result = self.extractor.process_bgr_frame(frame, self.frame_index, timestamp)
+        return self._advance(signal, pose_result, timestamp, processing_started_at)
+
+    def process_landmarks(self, message: dict) -> FrameResult:
+        processing_started_at = time.perf_counter()
+        if self.input_backend != "landmarks":
+            raise ValueError("expected legacy frame")
+        timestamp_ms, inference_ms, pose_result = decode_pose(message)
+        server_timestamp = time.monotonic() - self.started_at
+        if self.last_client_timestamp is not None and timestamp_ms <= self.last_client_timestamp:
+            raise ValueError("pose timestamps must increase")
+        if self.client_timestamp_origin is None:
+            self.client_timestamp_origin = timestamp_ms
+            self.client_server_origin = max(0.0, server_timestamp - inference_ms / 1000)
+        timestamp = self.client_server_origin + (timestamp_ms - self.client_timestamp_origin) / 1000
+        if abs(timestamp + inference_ms / 1000 - server_timestamp) > 5.0:
+            raise ValueError("pose timestamp drift too large")
+        self.last_client_timestamp = timestamp_ms
+        signal = None
+        if self.pose_sampling_clock.accept(timestamp):
+            signal, pose_result = self.extractor.process_pose_result(pose_result, self.frame_index, timestamp)
+        return self._advance(signal, pose_result, server_timestamp, processing_started_at, inference_ms)
+
+    def _advance(self, signal, pose_result, timestamp, processing_started_at, inference_ms=0.0):
         ready = self.visible(pose_result, 0.30, 0.80)
         stream_state = self.gate.update(ready, timestamp)
         phase_changed = stream_state.phase != self.last_phase
@@ -110,7 +144,7 @@ class JumpCounterSession:
                 self.count_started_at = time.monotonic()
             self.last_phase = stream_state.phase
 
-        engine_frames = [signal] if self.resampler is None else self.resampler.push(signal)
+        engine_frames = [] if signal is None else ([signal] if self.resampler is None else self.resampler.push(signal))
         if self.engine is not None:
             for engine_frame in engine_frames:
                 if stream_state.phase != "COUNTING":
@@ -126,7 +160,8 @@ class JumpCounterSession:
                 [round(point.x, 4), round(point.y, 4), round(point.visibility, 3)]
                 for point in pose_result.pose_landmarks.landmark
             ]
-        self.frame_index += 1
+        if signal is not None:
+            self.frame_index += 1
         return FrameResult(
             count=self.count,
             phase=stream_state.phase,
@@ -137,6 +172,7 @@ class JumpCounterSession:
             elapsed=self.elapsed,
             landmarks=landmarks,
             processing_ms=(time.perf_counter() - processing_started_at) * 1000,
+            inference_ms=inference_ms,
         )
 
     def close(self) -> None:

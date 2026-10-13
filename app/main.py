@@ -202,7 +202,7 @@ async def security_headers(request: Request, call_next):
     response.headers["Cross-Origin-Opener-Policy"] = "same-origin"
     response.headers["Content-Security-Policy"] = (
         "default-src 'self'; img-src 'self' blob: data:; media-src 'self' blob:; "
-        "style-src 'self'; script-src 'self'; connect-src 'self' ws: wss:; "
+        "style-src 'self'; script-src 'self' 'wasm-unsafe-eval'; worker-src 'self'; connect-src 'self' ws: wss:; "
         "font-src 'self'; frame-ancestors 'none'; base-uri 'self'; form-action 'self'"
     )
     if request.url.path.startswith("/api/"):
@@ -647,6 +647,7 @@ stream_slots = StreamSlots(settings.max_concurrent_streams)
 @app.websocket("/ws/count/{mode}")
 async def count_stream(websocket: WebSocket, mode: str):
     origin = (websocket.headers.get("origin") or "").rstrip("/")
+    input_backend = websocket.query_params.get("input", "legacy")
     try:
         target_duration = int(websocket.query_params.get("duration", "60"))
         countdown_seconds = int(websocket.query_params.get("countdown", "3"))
@@ -655,6 +656,7 @@ async def count_stream(websocket: WebSocket, mode: str):
         countdown_seconds = 0
     if (
         mode not in VALID_MODES
+        or input_backend not in {"legacy", "landmarks"}
         or origin not in settings.origins
         or not 10 <= target_duration <= 3600
         or not MIN_COUNTDOWN_SECONDS <= countdown_seconds <= MAX_COUNTDOWN_SECONDS
@@ -677,7 +679,10 @@ async def count_stream(websocket: WebSocket, mode: str):
         await websocket.accept()
         from .jump_service import ANALYSIS_FPS, JumpCounterSession
 
-        processor = await run_in_threadpool(JumpCounterSession, mode, countdown_seconds)
+        if input_backend == "legacy":
+            processor = await run_in_threadpool(JumpCounterSession, mode, countdown_seconds)
+        else:
+            processor = await run_in_threadpool(JumpCounterSession, mode, countdown_seconds, input_backend)
         workout = Workout(
             user_id=auth_session.user.id,
             mode=mode,
@@ -693,7 +698,8 @@ async def count_stream(websocket: WebSocket, mode: str):
             "workoutId": workout.id,
             "targetDuration": target_duration,
             "countdown": countdown_seconds,
-            "analysisFps": ANALYSIS_FPS[mode],
+            "analysisFps": ANALYSIS_FPS[mode] if input_backend == "landmarks" else 20,
+            "inputBackend": input_backend,
         })
 
         # The server owns the finish line: it ends the session when the target time
@@ -710,15 +716,26 @@ async def count_stream(websocket: WebSocket, mode: str):
                 break
             if message["type"] == "websocket.disconnect":
                 raise WebSocketDisconnect(message.get("code", 1000))
-            if message.get("text"):
+            if message.get("text") is not None:
+                from .pose_protocol import MAX_POSE_BYTES
+
+                if len(message["text"].encode("utf-8")) > MAX_POSE_BYTES:
+                    raise ValueError("pose message too large")
                 command = json.loads(message["text"])
+                if not isinstance(command, dict):
+                    raise ValueError("expected object")
                 if command.get("type") == "stop":
                     break
-                continue
-            payload = message.get("bytes")
-            if payload is None:
-                continue
-            result = await run_in_threadpool(processor.process, payload, settings.max_frame_bytes)
+                if input_backend != "landmarks":
+                    raise ValueError("expected JPEG frame")
+                result = await run_in_threadpool(processor.process_landmarks, command)
+            else:
+                payload = message.get("bytes")
+                if payload is None:
+                    continue
+                if input_backend != "legacy":
+                    raise ValueError("expected landmark message")
+                result = await run_in_threadpool(processor.process, payload, settings.max_frame_bytes)
             finished = result.phase == "COUNTING" and result.elapsed >= target_duration
             await websocket.send_json({
                 "type": "state",
@@ -731,7 +748,8 @@ async def count_stream(websocket: WebSocket, mode: str):
                 "elapsed": round(min(result.elapsed, target_duration), 1),
                 "finished": finished,
                 "landmarks": result.landmarks,
-                "processingMs": round(result.processing_ms, 1),
+                "processingMs": round(result.processing_ms, 2),
+                "inferenceMs": round(getattr(result, "inference_ms", 0.0), 2),
             })
             if finished:
                 end_reason = "time"

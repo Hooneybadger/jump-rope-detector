@@ -590,23 +590,26 @@ def core_landmarks_visible(
 
 
 class PoseSignalExtractor:
-    def __init__(self, config: EngineConfig):
+    def __init__(self, config: EngineConfig, *, initialize_pose: bool = True):
         self.config = config
-        self.pose = mp_pose.Pose(
-            static_image_mode=False,
-            model_complexity=1,
-            smooth_landmarks=True,
-            enable_segmentation=False,
-            min_detection_confidence=0.5,
-            min_tracking_confidence=0.5,
-        )
+        self.pose = None
+        if initialize_pose:
+            self.pose = mp_pose.Pose(
+                static_image_mode=False,
+                model_complexity=1,
+                smooth_landmarks=True,
+                enable_segmentation=False,
+                min_detection_confidence=0.5,
+                min_tracking_confidence=0.5,
+            )
         self.prev_signal: SignalFrame | None = None
         self.last_valid_signal: SignalFrame | None = None
         self.prev_valid_signal: SignalFrame | None = None
         self.missing_bridge_streak = 0
 
     def close(self) -> None:
-        self.pose.close()
+        if self.pose is not None:
+            self.pose.close()
 
     @staticmethod
     def _wrap_angle(delta: float) -> float:
@@ -849,6 +852,10 @@ class PoseSignalExtractor:
         rgb = cv2.cvtColor(pose_frame, cv2.COLOR_BGR2RGB)
         rgb.flags.writeable = False
         result = self.pose.process(rgb)
+        return self.process_pose_result(result, frame_idx, timestamp_sec)
+
+    def process_pose_result(self, result, frame_idx: int, timestamp_sec: float):
+        """Accept externally extracted landmarks; preserve all signal postprocessing."""
         signal = pose_result_to_signal(result, frame_idx, timestamp_sec, self.config)
         raw_detected = signal.detected
         if not raw_detected:

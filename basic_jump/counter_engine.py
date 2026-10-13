@@ -402,24 +402,31 @@ def core_landmarks_visible(
 
 
 class PoseSignalExtractor:
-    def __init__(self, config: EngineConfig):
+    def __init__(self, config: EngineConfig, *, initialize_pose: bool = True):
         self.config = config
-        self.pose = mp_pose.Pose(
-            static_image_mode=False,
-            model_complexity=1,
-            smooth_landmarks=True,
-            enable_segmentation=False,
-            min_detection_confidence=0.5,
-            min_tracking_confidence=0.5,
-        )
+        self.pose = None
+        if initialize_pose:
+            self.pose = mp_pose.Pose(
+                static_image_mode=False,
+                model_complexity=1,
+                smooth_landmarks=True,
+                enable_segmentation=False,
+                min_detection_confidence=0.5,
+                min_tracking_confidence=0.5,
+            )
 
     def close(self) -> None:
-        self.pose.close()
+        if self.pose is not None:
+            self.pose.close()
 
     def process_bgr_frame(self, frame, frame_idx: int, timestamp_sec: float):
         rgb = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
         rgb.flags.writeable = False
         result = self.pose.process(rgb)
+        return self.process_pose_result(result, frame_idx, timestamp_sec)
+
+    def process_pose_result(self, result, frame_idx: int, timestamp_sec: float):
+        """Accept externally extracted landmarks; preserve all signal postprocessing."""
         signal = pose_result_to_signal(result, frame_idx, timestamp_sec, self.config)
         return signal, result
 
