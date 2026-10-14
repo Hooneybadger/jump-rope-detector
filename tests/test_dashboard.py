@@ -1,3 +1,6 @@
+import re
+
+
 def test_empty_dashboard_has_stable_shape(admin_client):
     response = admin_client.get("/api/dashboard")
     assert response.status_code == 200
@@ -76,10 +79,17 @@ def test_every_mode_shares_one_result_screen(client):
     script = client.get("/app.js").text
     assert "function showResult(message)" in script
     assert "message.analysisFps" in script
-    assert "if (!message.finished) scheduleFrame" in script
+    # frames keep streaming until the server announces the finish (the block also paces by camera frame)
+    assert re.search(r"if \(!message\.finished\) \{[^}]*scheduleFrame", script)
 
 
 def test_page_and_code_are_revalidated_after_rebuild(client):
     for path in ("/", "/index.html", "/app.js", "/app.css"):
         assert client.get(path).headers["Cache-Control"] == "no-cache"
     assert "Cache-Control" not in client.get("/img/court-hero-1280.jpg").headers
+
+
+def test_every_mode_setup_shows_framing_hint(client):
+    html = client.get("/").text
+    assert '<p id="framing-hint" class="setup-hint">몸이 머리부터 발끝까지 보이도록 카메라 가까이 서 주세요</p>' in html
+    assert "framing-hint" not in client.get("/app.js").text  # never hidden per mode

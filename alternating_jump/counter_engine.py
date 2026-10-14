@@ -102,7 +102,7 @@ class EngineConfig:
     alternation_recovery_extra_count_min_interval: int = 7
     dual_air_required: bool = True
     dual_air_window_frames: int = 10
-    dual_air_min_ratio: float = 0.04
+    dual_air_min_ratio: float = 0.025
     arm_motion_required: bool = False
     arm_motion_window_frames: int = 12
     arm_motion_min_ratio: float = 0.02
@@ -127,6 +127,8 @@ class EngineConfig:
     rope_stuck_same_side_ratio: float = 0.70
     rope_stuck_min_support_ratio: float = 0.10
     rope_stuck_dual_air_recovery_ratio: float = 0.018
+    floor_reacquire_ratio: float = 0.5
+    floor_reacquire_frames: int = 30
 
     def to_dict(self) -> dict[str, float | int | bool]:
         return asdict(self)
@@ -534,6 +536,7 @@ class RealtimeCounterEngine:
         self.current_support_side: str | None = None
         self.current_support_ratio: float = 0.0
         self.current_dual_air_ratio: float = 0.0
+        self.stale_floor_frames = 0
         self.enable_realtime_compensation = enable_realtime_compensation
         self.pending_compensation: _PendingCountCompensation | None = None
 
@@ -578,6 +581,14 @@ class RealtimeCounterEngine:
             right_foot,
             self.right_floor - (self.config.floor_decay_ratio * leg_length),
         )
+        # Both feet cannot hover half a leg above their floors for a second while stepping; the
+        # floor estimates are stale (pose glitch, camera or player moved), so re-acquire them.
+        hover_ratio = min(self.left_floor - left_foot, self.right_floor - right_foot) / leg_length
+        self.stale_floor_frames = self.stale_floor_frames + 1 if hover_ratio > self.config.floor_reacquire_ratio else 0
+        if self.stale_floor_frames > self.config.floor_reacquire_frames:
+            self.left_floor = left_foot
+            self.right_floor = right_foot
+            self.stale_floor_frames = 0
 
         self.hip_baseline = self._ema(self.config.baseline_alpha_hip, mean_hip, self.hip_baseline)
         hip_motion = mean_hip - self.hip_baseline

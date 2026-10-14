@@ -40,6 +40,36 @@ def decode_pose(message: dict):
     return timestamp_ms, inference_ms, result
 
 
+LEFT_SHOULDER, RIGHT_SHOULDER, LEFT_HIP, RIGHT_HIP, LEFT_ANKLE, RIGHT_ANKLE = 11, 12, 23, 24, 27, 28
+# Vertical share of the shoulder->hip vector (cosine of the torso's lean from vertical, normalised image
+# units). Skipping keeps the torso upright (lowest 0.67 over all labelled jumping, benchmark and external);
+# push-ups and floor exercise lie flat (at most 0.51), so frames below this are treated as no pose.
+UPRIGHT_MIN_COS = 0.55
+
+
+def plausible_pose(result):
+    """Drop poses with an ankle above the hips (image y grows downward) or a body that is not upright.
+
+    MediaPipe occasionally returns such a flipped skeleton on the first frames or on
+    overlays; a single one seeds the engines' floor/airborne state with an impossible
+    height that does not recover for seconds. High-knee steps stay valid.
+    A torso leaning more than about 57 degrees from vertical (UPRIGHT_MIN_COS) is also dropped, so floor
+    exercises and deep bends between sets (push-ups, stretching, picking up the rope) are not counted as
+    jumps. No frame inside a labelled jumping window (20 benchmark and 43 external clips) is dropped.
+    """
+    if not result.pose_landmarks:
+        return result
+    points = result.pose_landmarks.landmark
+    hip_y = (points[LEFT_HIP].y + points[RIGHT_HIP].y) / 2
+    if min(points[LEFT_ANKLE].y, points[RIGHT_ANKLE].y) <= hip_y:
+        return SimpleNamespace(pose_landmarks=None)
+    lean_dx = (points[LEFT_HIP].x + points[RIGHT_HIP].x - points[LEFT_SHOULDER].x - points[RIGHT_SHOULDER].x) / 2
+    lean_dy = hip_y - (points[LEFT_SHOULDER].y + points[RIGHT_SHOULDER].y) / 2
+    if lean_dy < UPRIGHT_MIN_COS * math.hypot(lean_dx, lean_dy):
+        return SimpleNamespace(pose_landmarks=None)
+    return result
+
+
 class PoseSamplingClock:
     """Keep the counting input at its validated rate while inference runs faster."""
 

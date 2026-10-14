@@ -580,6 +580,14 @@ function scheduleFrame(delay = 0) {
   window.clearTimeout(state.frameTimer); state.frameTimer = window.setTimeout(sendFrame, delay);
 }
 
+// Long side 512 px with the camera's own aspect ratio: a fixed 512x288 canvas squeezed portrait
+// (phone) and 4:3 cameras, which distorted the skeleton the counters rely on.
+function fitCaptureCanvas(video) {
+  const scale = 512 / Math.max(video.videoWidth, video.videoHeight);
+  const width = Math.round(video.videoWidth * scale), height = Math.round(video.videoHeight * scale);
+  if (captureCanvas.width !== width || captureCanvas.height !== height) { captureCanvas.width = width; captureCanvas.height = height; }
+}
+
 async function sendFrame() {
   if (state.closing || state.sending || !state.socket || state.socket.readyState !== WebSocket.OPEN) return;
   const video = $("#camera-source"); if (!video.videoWidth) return scheduleFrame(100);
@@ -592,11 +600,12 @@ async function sendFrame() {
   const socket = state.socket; const pose = state.pose;
   state.sending = true; state.frameStartedAt = performance.now();
   try {
+    fitCaptureCanvas(video);
     captureContext.drawImage(video, 0, 0, captureCanvas.width, captureCanvas.height);
     const result = await pose.detect(captureCanvas, state.frameStartedAt);
     if (state.closing || socket !== state.socket || socket.readyState !== WebSocket.OPEN) return;
     state.frameSentAt = performance.now();
-    socket.send(JSON.stringify({ type: "pose", timestampMs: result.timestampMs, inferenceMs: result.inferenceMs, landmarks: result.landmarks }));
+    socket.send(JSON.stringify({ type: "pose", timestampMs: result.timestampMs, inferenceMs: result.inferenceMs, landmarks: result.landmarks, frameHeight: captureCanvas.height }));
   } catch (error) {
     if (socket !== state.socket || state.closing) return;
     state.sending = false;
