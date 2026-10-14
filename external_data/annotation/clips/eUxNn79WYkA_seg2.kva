@@ -1,0 +1,2579 @@
+<?xml version="1.0" encoding="utf-8"?>
+<KinoveaVideoAnalysis>
+  <FormatVersion>2.0</FormatVersion>
+  <Producer>Kinovea.2025.1.1</Producer>
+  <OriginalFilename>eUxNn79WYkA_seg2</OriginalFilename>
+  <FullPath>eUxNn79WYkA_seg2.mp4</FullPath>
+  <ImageSize>640;360</ImageSize>
+  <Aspect>Auto</Aspect>
+  <Rotation>Rotate0</Rotation>
+  <Mirror>false</Mirror>
+  <Demosaicing>None</Demosaicing>
+  <Deinterlacing>false</Deinterlacing>
+  <StabilizationTrack>00000000-0000-0000-0000-000000000000</StabilizationTrack>
+  <BackgroundColor>0;255;255;255</BackgroundColor>
+  <AverageTimeStampsPerFrame>33</AverageTimeStampsPerFrame>
+  <CaptureFramerate>29.97</CaptureFramerate>
+  <UserFramerate>29.97</UserFramerate>
+  <FirstTimeStamp>0</FirstTimeStamp>
+  <SelectionStart>0</SelectionStart>
+  <SelectionEnd>25992</SelectionEnd>
+  <TimeOrigin>0</TimeOrigin>
+  <Calibration>
+    <CalibrationLine>
+      <Length>100</Length>
+      <Segment>
+        <A>320;180</A>
+        <B>420;180</B>
+      </Segment>
+      <Origin>0;100</Origin>
+      <Offset>0;0</Offset>
+      <Axis>LineHorizontal</Axis>
+    </CalibrationLine>
+    <CalibrationDrawingId>00000000-0000-0000-0000-000000000000</CalibrationDrawingId>
+    <Unit Abbreviation="px">Pixels</Unit>
+  </Calibration>
+  <Keyframes>
+    <Keyframe id="8363dec3-f025-43c2-8ba5-11dd06c00980">
+      <Timestamp>467</Timestamp>
+      <Name>first</Name>
+      <Color>255;140;0</Color>
+      <Drawings>
+        <Pencil id="5d2a33be-ac95-45d1-89e6-9796c43eab8f" name="first">
+          <PointList Count="2">
+            <Point>369;314</Point>
+            <Point>370;314</Point>
+          </PointList>
+          <DrawingStyle>
+            <Color Key="color">
+              <Value>255;255;140;0</Value>
+            </Color>
+            <PenSize Key="pen size">
+              <Value>10</Value>
+            </PenSize>
+            <PenShape Key="pen shape">
+              <Value>Solid</Value>
+            </PenShape>
+          </DrawingStyle>
+          <InfosFading>
+            <Enabled>true</Enabled>
+            <UseDefault>true</UseDefault>
+            <AlwaysVisible>false</AlwaysVisible>
+            <MasterFactor>1</MasterFactor>
+            <OpaqueFrames>1</OpaqueFrames>
+            <Frames>20</Frames>
+          </InfosFading>
+        </Pencil>
+        <Pencil id="2dad7176-b8f9-41e8-9ef6-0414c7c75f6f" name="first">
+          <PointList Count="2">
+            <Point>341;310</Point>
+            <Point>342;310</Point>
+          </PointList>
+          <DrawingStyle>
+            <Color Key="color">
+              <Value>255;255;140;0</Value>
+            </Color>
+            <PenSize Key="pen size">
+              <Value>10</Value>
+            </PenSize>
+            <PenShape Key="pen shape">
+              <Value>Solid</Value>
+            </PenShape>
+          </DrawingStyle>
+          <InfosFading>
+            <Enabled>true</Enabled>
+            <UseDefault>true</UseDefault>
+            <AlwaysVisible>false</AlwaysVisible>
+            <MasterFactor>1</MasterFactor>
+            <OpaqueFrames>1</OpaqueFrames>
+            <Frames>20</Frames>
+          </InfosFading>
+        </Pencil>
+      </Drawings>
+    </Keyframe>
+    <Keyframe id="5396b952-cfb0-41e4-bfad-e37687f0add9">
+      <Timestamp>901</Timestamp>
+      <Name>single?</Name>
+      <Color>241;196;15</Color>
+      <Drawings>
+        <Pencil id="5d6b17a1-f6ec-439e-85e5-dfa628b9741d" name="single?">
+          <PointList Count="2">
+            <Point>368;314</Point>
+            <Point>369;314</Point>
+          </PointList>
+          <DrawingStyle>
+            <Color Key="color">
+              <Value>255;241;196;15</Value>
+            </Color>
+            <PenSize Key="pen size">
+              <Value>10</Value>
+            </PenSize>
+            <PenShape Key="pen shape">
+              <Value>Solid</Value>
+            </PenShape>
+          </DrawingStyle>
+          <InfosFading>
+            <Enabled>true</Enabled>
+            <UseDefault>true</UseDefault>
+            <AlwaysVisible>false</AlwaysVisible>
+            <MasterFactor>1</MasterFactor>
+            <OpaqueFrames>1</OpaqueFrames>
+            <Frames>20</Frames>
+          </InfosFading>
+        </Pencil>
+        <Pencil id="bde9e299-a605-4ed5-8e77-19d706d36a9d" name="single?">
+          <PointList Count="2">
+            <Point>353;310</Point>
+            <Point>354;310</Point>
+          </PointList>
+          <DrawingStyle>
+            <Color Key="color">
+              <Value>255;241;196;15</Value>
+            </Color>
+            <PenSize Key="pen size">
+              <Value>10</Value>
+            </PenSize>
+            <PenShape Key="pen shape">
+              <Value>Solid</Value>
+            </PenShape>
+          </DrawingStyle>
+          <InfosFading>
+            <Enabled>true</Enabled>
+            <UseDefault>true</UseDefault>
+            <AlwaysVisible>false</AlwaysVisible>
+            <MasterFactor>1</MasterFactor>
+            <OpaqueFrames>1</OpaqueFrames>
+            <Frames>20</Frames>
+          </InfosFading>
+        </Pencil>
+      </Drawings>
+    </Keyframe>
+    <Keyframe id="3b351b6f-62e3-4625-a5c0-01e43b4e9d59">
+      <Timestamp>1735</Timestamp>
+      <Name>single?</Name>
+      <Color>241;196;15</Color>
+      <Drawings>
+        <Pencil id="c9b7606f-1475-451f-be2e-c0b9fd0b8989" name="single?">
+          <PointList Count="2">
+            <Point>369;314</Point>
+            <Point>370;314</Point>
+          </PointList>
+          <DrawingStyle>
+            <Color Key="color">
+              <Value>255;241;196;15</Value>
+            </Color>
+            <PenSize Key="pen size">
+              <Value>10</Value>
+            </PenSize>
+            <PenShape Key="pen shape">
+              <Value>Solid</Value>
+            </PenShape>
+          </DrawingStyle>
+          <InfosFading>
+            <Enabled>true</Enabled>
+            <UseDefault>true</UseDefault>
+            <AlwaysVisible>false</AlwaysVisible>
+            <MasterFactor>1</MasterFactor>
+            <OpaqueFrames>1</OpaqueFrames>
+            <Frames>20</Frames>
+          </InfosFading>
+        </Pencil>
+        <Pencil id="561a7162-9c55-451d-9ea2-5e0dbc5b1747" name="single?">
+          <PointList Count="2">
+            <Point>359;310</Point>
+            <Point>360;310</Point>
+          </PointList>
+          <DrawingStyle>
+            <Color Key="color">
+              <Value>255;241;196;15</Value>
+            </Color>
+            <PenSize Key="pen size">
+              <Value>10</Value>
+            </PenSize>
+            <PenShape Key="pen shape">
+              <Value>Solid</Value>
+            </PenShape>
+          </DrawingStyle>
+          <InfosFading>
+            <Enabled>true</Enabled>
+            <UseDefault>true</UseDefault>
+            <AlwaysVisible>false</AlwaysVisible>
+            <MasterFactor>1</MasterFactor>
+            <OpaqueFrames>1</OpaqueFrames>
+            <Frames>20</Frames>
+          </InfosFading>
+        </Pencil>
+      </Drawings>
+    </Keyframe>
+    <Keyframe id="fd7cab12-c7bf-4895-b1f4-5bbd9570225e">
+      <Timestamp>2336</Timestamp>
+      <Name>single?</Name>
+      <Color>241;196;15</Color>
+      <Drawings>
+        <Pencil id="06ac8919-91e7-493f-af94-d00d14d660de" name="single?">
+          <PointList Count="2">
+            <Point>368;312</Point>
+            <Point>369;312</Point>
+          </PointList>
+          <DrawingStyle>
+            <Color Key="color">
+              <Value>255;241;196;15</Value>
+            </Color>
+            <PenSize Key="pen size">
+              <Value>10</Value>
+            </PenSize>
+            <PenShape Key="pen shape">
+              <Value>Solid</Value>
+            </PenShape>
+          </DrawingStyle>
+          <InfosFading>
+            <Enabled>true</Enabled>
+            <UseDefault>true</UseDefault>
+            <AlwaysVisible>false</AlwaysVisible>
+            <MasterFactor>1</MasterFactor>
+            <OpaqueFrames>1</OpaqueFrames>
+            <Frames>20</Frames>
+          </InfosFading>
+        </Pencil>
+        <Pencil id="986b7289-1115-4e79-b9c7-eb20d7562e66" name="single?">
+          <PointList Count="2">
+            <Point>354;312</Point>
+            <Point>355;312</Point>
+          </PointList>
+          <DrawingStyle>
+            <Color Key="color">
+              <Value>255;241;196;15</Value>
+            </Color>
+            <PenSize Key="pen size">
+              <Value>10</Value>
+            </PenSize>
+            <PenShape Key="pen shape">
+              <Value>Solid</Value>
+            </PenShape>
+          </DrawingStyle>
+          <InfosFading>
+            <Enabled>true</Enabled>
+            <UseDefault>true</UseDefault>
+            <AlwaysVisible>false</AlwaysVisible>
+            <MasterFactor>1</MasterFactor>
+            <OpaqueFrames>1</OpaqueFrames>
+            <Frames>20</Frames>
+          </InfosFading>
+        </Pencil>
+      </Drawings>
+    </Keyframe>
+    <Keyframe id="59a7ac5f-0cbc-4f2d-b94a-712615965ea0">
+      <Timestamp>2870</Timestamp>
+      <Name>double?</Name>
+      <Color>46;204;113</Color>
+      <Drawings>
+        <Pencil id="4ea6e209-b673-4e77-8c83-5a59729498af" name="double?">
+          <PointList Count="2">
+            <Point>368;313</Point>
+            <Point>369;313</Point>
+          </PointList>
+          <DrawingStyle>
+            <Color Key="color">
+              <Value>255;46;204;113</Value>
+            </Color>
+            <PenSize Key="pen size">
+              <Value>10</Value>
+            </PenSize>
+            <PenShape Key="pen shape">
+              <Value>Solid</Value>
+            </PenShape>
+          </DrawingStyle>
+          <InfosFading>
+            <Enabled>true</Enabled>
+            <UseDefault>true</UseDefault>
+            <AlwaysVisible>false</AlwaysVisible>
+            <MasterFactor>1</MasterFactor>
+            <OpaqueFrames>1</OpaqueFrames>
+            <Frames>20</Frames>
+          </InfosFading>
+        </Pencil>
+        <Pencil id="e3ac8bbe-0775-4d19-8224-78afd51dd208" name="double?">
+          <PointList Count="2">
+            <Point>353;313</Point>
+            <Point>354;313</Point>
+          </PointList>
+          <DrawingStyle>
+            <Color Key="color">
+              <Value>255;46;204;113</Value>
+            </Color>
+            <PenSize Key="pen size">
+              <Value>10</Value>
+            </PenSize>
+            <PenShape Key="pen shape">
+              <Value>Solid</Value>
+            </PenShape>
+          </DrawingStyle>
+          <InfosFading>
+            <Enabled>true</Enabled>
+            <UseDefault>true</UseDefault>
+            <AlwaysVisible>false</AlwaysVisible>
+            <MasterFactor>1</MasterFactor>
+            <OpaqueFrames>1</OpaqueFrames>
+            <Frames>20</Frames>
+          </InfosFading>
+        </Pencil>
+      </Drawings>
+    </Keyframe>
+    <Keyframe id="1bc2c21e-1323-40ef-a5c6-fd18246b7628">
+      <Timestamp>3437</Timestamp>
+      <Name>double?</Name>
+      <Color>46;204;113</Color>
+      <Drawings>
+        <Pencil id="e4eb7e8e-3cff-47ee-8d12-8619894174cc" name="double?">
+          <PointList Count="2">
+            <Point>368;315</Point>
+            <Point>369;315</Point>
+          </PointList>
+          <DrawingStyle>
+            <Color Key="color">
+              <Value>255;46;204;113</Value>
+            </Color>
+            <PenSize Key="pen size">
+              <Value>10</Value>
+            </PenSize>
+            <PenShape Key="pen shape">
+              <Value>Solid</Value>
+            </PenShape>
+          </DrawingStyle>
+          <InfosFading>
+            <Enabled>true</Enabled>
+            <UseDefault>true</UseDefault>
+            <AlwaysVisible>false</AlwaysVisible>
+            <MasterFactor>1</MasterFactor>
+            <OpaqueFrames>1</OpaqueFrames>
+            <Frames>20</Frames>
+          </InfosFading>
+        </Pencil>
+        <Pencil id="3ce9bea5-7382-4095-b195-ff4106abfed3" name="double?">
+          <PointList Count="2">
+            <Point>351;315</Point>
+            <Point>352;315</Point>
+          </PointList>
+          <DrawingStyle>
+            <Color Key="color">
+              <Value>255;46;204;113</Value>
+            </Color>
+            <PenSize Key="pen size">
+              <Value>10</Value>
+            </PenSize>
+            <PenShape Key="pen shape">
+              <Value>Solid</Value>
+            </PenShape>
+          </DrawingStyle>
+          <InfosFading>
+            <Enabled>true</Enabled>
+            <UseDefault>true</UseDefault>
+            <AlwaysVisible>false</AlwaysVisible>
+            <MasterFactor>1</MasterFactor>
+            <OpaqueFrames>1</OpaqueFrames>
+            <Frames>20</Frames>
+          </InfosFading>
+        </Pencil>
+      </Drawings>
+    </Keyframe>
+    <Keyframe id="0876842f-01a7-400e-976b-f47cbaa411d5">
+      <Timestamp>4004</Timestamp>
+      <Name>double?</Name>
+      <Color>46;204;113</Color>
+      <Drawings>
+        <Pencil id="1ead7166-9868-4e22-a018-2ced7e5c01de" name="double?">
+          <PointList Count="2">
+            <Point>370;317</Point>
+            <Point>371;317</Point>
+          </PointList>
+          <DrawingStyle>
+            <Color Key="color">
+              <Value>255;46;204;113</Value>
+            </Color>
+            <PenSize Key="pen size">
+              <Value>10</Value>
+            </PenSize>
+            <PenShape Key="pen shape">
+              <Value>Solid</Value>
+            </PenShape>
+          </DrawingStyle>
+          <InfosFading>
+            <Enabled>true</Enabled>
+            <UseDefault>true</UseDefault>
+            <AlwaysVisible>false</AlwaysVisible>
+            <MasterFactor>1</MasterFactor>
+            <OpaqueFrames>1</OpaqueFrames>
+            <Frames>20</Frames>
+          </InfosFading>
+        </Pencil>
+        <Pencil id="368d03b6-d7f3-41a0-bb2c-9aea21908def" name="double?">
+          <PointList Count="2">
+            <Point>353;314</Point>
+            <Point>354;314</Point>
+          </PointList>
+          <DrawingStyle>
+            <Color Key="color">
+              <Value>255;46;204;113</Value>
+            </Color>
+            <PenSize Key="pen size">
+              <Value>10</Value>
+            </PenSize>
+            <PenShape Key="pen shape">
+              <Value>Solid</Value>
+            </PenShape>
+          </DrawingStyle>
+          <InfosFading>
+            <Enabled>true</Enabled>
+            <UseDefault>true</UseDefault>
+            <AlwaysVisible>false</AlwaysVisible>
+            <MasterFactor>1</MasterFactor>
+            <OpaqueFrames>1</OpaqueFrames>
+            <Frames>20</Frames>
+          </InfosFading>
+        </Pencil>
+      </Drawings>
+    </Keyframe>
+    <Keyframe id="240786ba-3c54-46e0-aed7-b488caf711d4">
+      <Timestamp>4571</Timestamp>
+      <Name>double?</Name>
+      <Color>46;204;113</Color>
+      <Drawings>
+        <Pencil id="af313bb6-278e-4c51-864a-61ff23439999" name="double?">
+          <PointList Count="2">
+            <Point>362;316</Point>
+            <Point>363;316</Point>
+          </PointList>
+          <DrawingStyle>
+            <Color Key="color">
+              <Value>255;46;204;113</Value>
+            </Color>
+            <PenSize Key="pen size">
+              <Value>10</Value>
+            </PenSize>
+            <PenShape Key="pen shape">
+              <Value>Solid</Value>
+            </PenShape>
+          </DrawingStyle>
+          <InfosFading>
+            <Enabled>true</Enabled>
+            <UseDefault>true</UseDefault>
+            <AlwaysVisible>false</AlwaysVisible>
+            <MasterFactor>1</MasterFactor>
+            <OpaqueFrames>1</OpaqueFrames>
+            <Frames>20</Frames>
+          </InfosFading>
+        </Pencil>
+        <Pencil id="83211db2-c294-447c-a0b9-999be84be6f1" name="double?">
+          <PointList Count="2">
+            <Point>344;316</Point>
+            <Point>345;316</Point>
+          </PointList>
+          <DrawingStyle>
+            <Color Key="color">
+              <Value>255;46;204;113</Value>
+            </Color>
+            <PenSize Key="pen size">
+              <Value>10</Value>
+            </PenSize>
+            <PenShape Key="pen shape">
+              <Value>Solid</Value>
+            </PenShape>
+          </DrawingStyle>
+          <InfosFading>
+            <Enabled>true</Enabled>
+            <UseDefault>true</UseDefault>
+            <AlwaysVisible>false</AlwaysVisible>
+            <MasterFactor>1</MasterFactor>
+            <OpaqueFrames>1</OpaqueFrames>
+            <Frames>20</Frames>
+          </InfosFading>
+        </Pencil>
+      </Drawings>
+    </Keyframe>
+    <Keyframe id="4c11c084-aaef-4577-a15b-85cb9237927d">
+      <Timestamp>5105</Timestamp>
+      <Name>double?</Name>
+      <Color>46;204;113</Color>
+      <Drawings>
+        <Pencil id="0244355a-0e0b-4757-b0cb-44eb6ffde7ca" name="double?">
+          <PointList Count="2">
+            <Point>361;316</Point>
+            <Point>362;316</Point>
+          </PointList>
+          <DrawingStyle>
+            <Color Key="color">
+              <Value>255;46;204;113</Value>
+            </Color>
+            <PenSize Key="pen size">
+              <Value>10</Value>
+            </PenSize>
+            <PenShape Key="pen shape">
+              <Value>Solid</Value>
+            </PenShape>
+          </DrawingStyle>
+          <InfosFading>
+            <Enabled>true</Enabled>
+            <UseDefault>true</UseDefault>
+            <AlwaysVisible>false</AlwaysVisible>
+            <MasterFactor>1</MasterFactor>
+            <OpaqueFrames>1</OpaqueFrames>
+            <Frames>20</Frames>
+          </InfosFading>
+        </Pencil>
+        <Pencil id="d66c2aae-7d31-40e9-a068-3ef2b97ef8e6" name="double?">
+          <PointList Count="2">
+            <Point>350;313</Point>
+            <Point>351;313</Point>
+          </PointList>
+          <DrawingStyle>
+            <Color Key="color">
+              <Value>255;46;204;113</Value>
+            </Color>
+            <PenSize Key="pen size">
+              <Value>10</Value>
+            </PenSize>
+            <PenShape Key="pen shape">
+              <Value>Solid</Value>
+            </PenShape>
+          </DrawingStyle>
+          <InfosFading>
+            <Enabled>true</Enabled>
+            <UseDefault>true</UseDefault>
+            <AlwaysVisible>false</AlwaysVisible>
+            <MasterFactor>1</MasterFactor>
+            <OpaqueFrames>1</OpaqueFrames>
+            <Frames>20</Frames>
+          </InfosFading>
+        </Pencil>
+      </Drawings>
+    </Keyframe>
+    <Keyframe id="f3a227f3-6587-4cdf-9637-696cc18ad4e2">
+      <Timestamp>5672</Timestamp>
+      <Name>double?</Name>
+      <Color>46;204;113</Color>
+      <Drawings>
+        <Pencil id="309a98fc-d82d-49f3-8534-6f86cb0f6bc1" name="double?">
+          <PointList Count="2">
+            <Point>359;319</Point>
+            <Point>360;319</Point>
+          </PointList>
+          <DrawingStyle>
+            <Color Key="color">
+              <Value>255;46;204;113</Value>
+            </Color>
+            <PenSize Key="pen size">
+              <Value>10</Value>
+            </PenSize>
+            <PenShape Key="pen shape">
+              <Value>Solid</Value>
+            </PenShape>
+          </DrawingStyle>
+          <InfosFading>
+            <Enabled>true</Enabled>
+            <UseDefault>true</UseDefault>
+            <AlwaysVisible>false</AlwaysVisible>
+            <MasterFactor>1</MasterFactor>
+            <OpaqueFrames>1</OpaqueFrames>
+            <Frames>20</Frames>
+          </InfosFading>
+        </Pencil>
+        <Pencil id="7b68ceb4-6525-4dc4-ada1-691c82258e71" name="double?">
+          <PointList Count="2">
+            <Point>344;317</Point>
+            <Point>345;317</Point>
+          </PointList>
+          <DrawingStyle>
+            <Color Key="color">
+              <Value>255;46;204;113</Value>
+            </Color>
+            <PenSize Key="pen size">
+              <Value>10</Value>
+            </PenSize>
+            <PenShape Key="pen shape">
+              <Value>Solid</Value>
+            </PenShape>
+          </DrawingStyle>
+          <InfosFading>
+            <Enabled>true</Enabled>
+            <UseDefault>true</UseDefault>
+            <AlwaysVisible>false</AlwaysVisible>
+            <MasterFactor>1</MasterFactor>
+            <OpaqueFrames>1</OpaqueFrames>
+            <Frames>20</Frames>
+          </InfosFading>
+        </Pencil>
+      </Drawings>
+    </Keyframe>
+    <Keyframe id="30153ac2-38f2-403d-849c-2d6fe2f9d938">
+      <Timestamp>6273</Timestamp>
+      <Name>double?</Name>
+      <Color>46;204;113</Color>
+      <Drawings>
+        <Pencil id="317da0db-eb76-46f8-82be-3f538aaaad02" name="double?">
+          <PointList Count="2">
+            <Point>365;319</Point>
+            <Point>366;319</Point>
+          </PointList>
+          <DrawingStyle>
+            <Color Key="color">
+              <Value>255;46;204;113</Value>
+            </Color>
+            <PenSize Key="pen size">
+              <Value>10</Value>
+            </PenSize>
+            <PenShape Key="pen shape">
+              <Value>Solid</Value>
+            </PenShape>
+          </DrawingStyle>
+          <InfosFading>
+            <Enabled>true</Enabled>
+            <UseDefault>true</UseDefault>
+            <AlwaysVisible>false</AlwaysVisible>
+            <MasterFactor>1</MasterFactor>
+            <OpaqueFrames>1</OpaqueFrames>
+            <Frames>20</Frames>
+          </InfosFading>
+        </Pencil>
+        <Pencil id="f587cd78-3aed-4e9d-910b-4c760f2f508f" name="double?">
+          <PointList Count="2">
+            <Point>346;318</Point>
+            <Point>347;318</Point>
+          </PointList>
+          <DrawingStyle>
+            <Color Key="color">
+              <Value>255;46;204;113</Value>
+            </Color>
+            <PenSize Key="pen size">
+              <Value>10</Value>
+            </PenSize>
+            <PenShape Key="pen shape">
+              <Value>Solid</Value>
+            </PenShape>
+          </DrawingStyle>
+          <InfosFading>
+            <Enabled>true</Enabled>
+            <UseDefault>true</UseDefault>
+            <AlwaysVisible>false</AlwaysVisible>
+            <MasterFactor>1</MasterFactor>
+            <OpaqueFrames>1</OpaqueFrames>
+            <Frames>20</Frames>
+          </InfosFading>
+        </Pencil>
+      </Drawings>
+    </Keyframe>
+    <Keyframe id="ddd82cf8-7c86-4259-ba45-25fc5fd0f883">
+      <Timestamp>6807</Timestamp>
+      <Name>double?</Name>
+      <Color>46;204;113</Color>
+      <Drawings>
+        <Pencil id="0b97d93a-1d9f-41ab-b1af-27bbc1936bd6" name="double?">
+          <PointList Count="2">
+            <Point>355;319</Point>
+            <Point>356;319</Point>
+          </PointList>
+          <DrawingStyle>
+            <Color Key="color">
+              <Value>255;46;204;113</Value>
+            </Color>
+            <PenSize Key="pen size">
+              <Value>10</Value>
+            </PenSize>
+            <PenShape Key="pen shape">
+              <Value>Solid</Value>
+            </PenShape>
+          </DrawingStyle>
+          <InfosFading>
+            <Enabled>true</Enabled>
+            <UseDefault>true</UseDefault>
+            <AlwaysVisible>false</AlwaysVisible>
+            <MasterFactor>1</MasterFactor>
+            <OpaqueFrames>1</OpaqueFrames>
+            <Frames>20</Frames>
+          </InfosFading>
+        </Pencil>
+        <Pencil id="d4d2856f-51b8-4814-ae44-802515b3fb44" name="double?">
+          <PointList Count="2">
+            <Point>337;317</Point>
+            <Point>338;317</Point>
+          </PointList>
+          <DrawingStyle>
+            <Color Key="color">
+              <Value>255;46;204;113</Value>
+            </Color>
+            <PenSize Key="pen size">
+              <Value>10</Value>
+            </PenSize>
+            <PenShape Key="pen shape">
+              <Value>Solid</Value>
+            </PenShape>
+          </DrawingStyle>
+          <InfosFading>
+            <Enabled>true</Enabled>
+            <UseDefault>true</UseDefault>
+            <AlwaysVisible>false</AlwaysVisible>
+            <MasterFactor>1</MasterFactor>
+            <OpaqueFrames>1</OpaqueFrames>
+            <Frames>20</Frames>
+          </InfosFading>
+        </Pencil>
+      </Drawings>
+    </Keyframe>
+    <Keyframe id="d05cdf82-0eb9-47a5-837d-99ae7adb795d">
+      <Timestamp>7407</Timestamp>
+      <Name>double?</Name>
+      <Color>46;204;113</Color>
+      <Drawings>
+        <Pencil id="8eb7b92b-46a8-4d5d-a1f8-e1df739709b2" name="double?">
+          <PointList Count="2">
+            <Point>353;320</Point>
+            <Point>354;320</Point>
+          </PointList>
+          <DrawingStyle>
+            <Color Key="color">
+              <Value>255;46;204;113</Value>
+            </Color>
+            <PenSize Key="pen size">
+              <Value>10</Value>
+            </PenSize>
+            <PenShape Key="pen shape">
+              <Value>Solid</Value>
+            </PenShape>
+          </DrawingStyle>
+          <InfosFading>
+            <Enabled>true</Enabled>
+            <UseDefault>true</UseDefault>
+            <AlwaysVisible>false</AlwaysVisible>
+            <MasterFactor>1</MasterFactor>
+            <OpaqueFrames>1</OpaqueFrames>
+            <Frames>20</Frames>
+          </InfosFading>
+        </Pencil>
+        <Pencil id="4924a963-59f9-4c19-bd37-ef6cc7d4d490" name="double?">
+          <PointList Count="2">
+            <Point>336;318</Point>
+            <Point>337;318</Point>
+          </PointList>
+          <DrawingStyle>
+            <Color Key="color">
+              <Value>255;46;204;113</Value>
+            </Color>
+            <PenSize Key="pen size">
+              <Value>10</Value>
+            </PenSize>
+            <PenShape Key="pen shape">
+              <Value>Solid</Value>
+            </PenShape>
+          </DrawingStyle>
+          <InfosFading>
+            <Enabled>true</Enabled>
+            <UseDefault>true</UseDefault>
+            <AlwaysVisible>false</AlwaysVisible>
+            <MasterFactor>1</MasterFactor>
+            <OpaqueFrames>1</OpaqueFrames>
+            <Frames>20</Frames>
+          </InfosFading>
+        </Pencil>
+      </Drawings>
+    </Keyframe>
+    <Keyframe id="a06a1b96-e969-4e6c-ad60-e6ffa6505448">
+      <Timestamp>7975</Timestamp>
+      <Name>double?</Name>
+      <Color>46;204;113</Color>
+      <Drawings>
+        <Pencil id="6d950db3-0cac-4f0d-bd8a-5d22119a0b71" name="double?">
+          <PointList Count="2">
+            <Point>345;319</Point>
+            <Point>346;319</Point>
+          </PointList>
+          <DrawingStyle>
+            <Color Key="color">
+              <Value>255;46;204;113</Value>
+            </Color>
+            <PenSize Key="pen size">
+              <Value>10</Value>
+            </PenSize>
+            <PenShape Key="pen shape">
+              <Value>Solid</Value>
+            </PenShape>
+          </DrawingStyle>
+          <InfosFading>
+            <Enabled>true</Enabled>
+            <UseDefault>true</UseDefault>
+            <AlwaysVisible>false</AlwaysVisible>
+            <MasterFactor>1</MasterFactor>
+            <OpaqueFrames>1</OpaqueFrames>
+            <Frames>20</Frames>
+          </InfosFading>
+        </Pencil>
+        <Pencil id="fd5ab884-2b30-4eaa-a0bf-f9dd477f6be6" name="double?">
+          <PointList Count="2">
+            <Point>331;315</Point>
+            <Point>332;315</Point>
+          </PointList>
+          <DrawingStyle>
+            <Color Key="color">
+              <Value>255;46;204;113</Value>
+            </Color>
+            <PenSize Key="pen size">
+              <Value>10</Value>
+            </PenSize>
+            <PenShape Key="pen shape">
+              <Value>Solid</Value>
+            </PenShape>
+          </DrawingStyle>
+          <InfosFading>
+            <Enabled>true</Enabled>
+            <UseDefault>true</UseDefault>
+            <AlwaysVisible>false</AlwaysVisible>
+            <MasterFactor>1</MasterFactor>
+            <OpaqueFrames>1</OpaqueFrames>
+            <Frames>20</Frames>
+          </InfosFading>
+        </Pencil>
+      </Drawings>
+    </Keyframe>
+    <Keyframe id="3062b05c-83e3-4448-9194-0bd8c5ec7e5c">
+      <Timestamp>8542</Timestamp>
+      <Name>double?</Name>
+      <Color>46;204;113</Color>
+      <Drawings>
+        <Pencil id="f8a1ecc4-db23-41fb-8b5c-5935bdb63d1e" name="double?">
+          <PointList Count="2">
+            <Point>355;315</Point>
+            <Point>356;315</Point>
+          </PointList>
+          <DrawingStyle>
+            <Color Key="color">
+              <Value>255;46;204;113</Value>
+            </Color>
+            <PenSize Key="pen size">
+              <Value>10</Value>
+            </PenSize>
+            <PenShape Key="pen shape">
+              <Value>Solid</Value>
+            </PenShape>
+          </DrawingStyle>
+          <InfosFading>
+            <Enabled>true</Enabled>
+            <UseDefault>true</UseDefault>
+            <AlwaysVisible>false</AlwaysVisible>
+            <MasterFactor>1</MasterFactor>
+            <OpaqueFrames>1</OpaqueFrames>
+            <Frames>20</Frames>
+          </InfosFading>
+        </Pencil>
+        <Pencil id="830bd9c1-4ea4-4d1c-93c6-c1905d511b2f" name="double?">
+          <PointList Count="2">
+            <Point>340;312</Point>
+            <Point>341;312</Point>
+          </PointList>
+          <DrawingStyle>
+            <Color Key="color">
+              <Value>255;46;204;113</Value>
+            </Color>
+            <PenSize Key="pen size">
+              <Value>10</Value>
+            </PenSize>
+            <PenShape Key="pen shape">
+              <Value>Solid</Value>
+            </PenShape>
+          </DrawingStyle>
+          <InfosFading>
+            <Enabled>true</Enabled>
+            <UseDefault>true</UseDefault>
+            <AlwaysVisible>false</AlwaysVisible>
+            <MasterFactor>1</MasterFactor>
+            <OpaqueFrames>1</OpaqueFrames>
+            <Frames>20</Frames>
+          </InfosFading>
+        </Pencil>
+      </Drawings>
+    </Keyframe>
+    <Keyframe id="d1e22555-7a7f-4676-8a27-ab5807cafe07">
+      <Timestamp>9076</Timestamp>
+      <Name>double?</Name>
+      <Color>46;204;113</Color>
+      <Drawings>
+        <Pencil id="2923f39d-a7da-401b-91dd-91073f6f856b" name="double?">
+          <PointList Count="2">
+            <Point>360;316</Point>
+            <Point>361;316</Point>
+          </PointList>
+          <DrawingStyle>
+            <Color Key="color">
+              <Value>255;46;204;113</Value>
+            </Color>
+            <PenSize Key="pen size">
+              <Value>10</Value>
+            </PenSize>
+            <PenShape Key="pen shape">
+              <Value>Solid</Value>
+            </PenShape>
+          </DrawingStyle>
+          <InfosFading>
+            <Enabled>true</Enabled>
+            <UseDefault>true</UseDefault>
+            <AlwaysVisible>false</AlwaysVisible>
+            <MasterFactor>1</MasterFactor>
+            <OpaqueFrames>1</OpaqueFrames>
+            <Frames>20</Frames>
+          </InfosFading>
+        </Pencil>
+        <Pencil id="9bcfa020-9ed3-44e6-bbbd-78aee9d52391" name="double?">
+          <PointList Count="2">
+            <Point>344;314</Point>
+            <Point>345;314</Point>
+          </PointList>
+          <DrawingStyle>
+            <Color Key="color">
+              <Value>255;46;204;113</Value>
+            </Color>
+            <PenSize Key="pen size">
+              <Value>10</Value>
+            </PenSize>
+            <PenShape Key="pen shape">
+              <Value>Solid</Value>
+            </PenShape>
+          </DrawingStyle>
+          <InfosFading>
+            <Enabled>true</Enabled>
+            <UseDefault>true</UseDefault>
+            <AlwaysVisible>false</AlwaysVisible>
+            <MasterFactor>1</MasterFactor>
+            <OpaqueFrames>1</OpaqueFrames>
+            <Frames>20</Frames>
+          </InfosFading>
+        </Pencil>
+      </Drawings>
+    </Keyframe>
+    <Keyframe id="eb52553f-34bb-4a3d-9440-740f5d014673">
+      <Timestamp>9676</Timestamp>
+      <Name>double?</Name>
+      <Color>46;204;113</Color>
+      <Drawings>
+        <Pencil id="faffca05-ec17-41cf-97c3-12b54e68eca9" name="double?">
+          <PointList Count="2">
+            <Point>357;315</Point>
+            <Point>358;315</Point>
+          </PointList>
+          <DrawingStyle>
+            <Color Key="color">
+              <Value>255;46;204;113</Value>
+            </Color>
+            <PenSize Key="pen size">
+              <Value>10</Value>
+            </PenSize>
+            <PenShape Key="pen shape">
+              <Value>Solid</Value>
+            </PenShape>
+          </DrawingStyle>
+          <InfosFading>
+            <Enabled>true</Enabled>
+            <UseDefault>true</UseDefault>
+            <AlwaysVisible>false</AlwaysVisible>
+            <MasterFactor>1</MasterFactor>
+            <OpaqueFrames>1</OpaqueFrames>
+            <Frames>20</Frames>
+          </InfosFading>
+        </Pencil>
+        <Pencil id="34387e44-e5c8-4d30-8f4f-f7c595edc117" name="double?">
+          <PointList Count="2">
+            <Point>341;315</Point>
+            <Point>342;315</Point>
+          </PointList>
+          <DrawingStyle>
+            <Color Key="color">
+              <Value>255;46;204;113</Value>
+            </Color>
+            <PenSize Key="pen size">
+              <Value>10</Value>
+            </PenSize>
+            <PenShape Key="pen shape">
+              <Value>Solid</Value>
+            </PenShape>
+          </DrawingStyle>
+          <InfosFading>
+            <Enabled>true</Enabled>
+            <UseDefault>true</UseDefault>
+            <AlwaysVisible>false</AlwaysVisible>
+            <MasterFactor>1</MasterFactor>
+            <OpaqueFrames>1</OpaqueFrames>
+            <Frames>20</Frames>
+          </InfosFading>
+        </Pencil>
+      </Drawings>
+    </Keyframe>
+    <Keyframe id="95db0db4-8ad2-4c8b-9ce0-2085e7788076">
+      <Timestamp>10244</Timestamp>
+      <Name>double?</Name>
+      <Color>46;204;113</Color>
+      <Drawings>
+        <Pencil id="88f99a40-723e-4ed5-bd21-6552f6ef74ae" name="double?">
+          <PointList Count="2">
+            <Point>369;317</Point>
+            <Point>370;317</Point>
+          </PointList>
+          <DrawingStyle>
+            <Color Key="color">
+              <Value>255;46;204;113</Value>
+            </Color>
+            <PenSize Key="pen size">
+              <Value>10</Value>
+            </PenSize>
+            <PenShape Key="pen shape">
+              <Value>Solid</Value>
+            </PenShape>
+          </DrawingStyle>
+          <InfosFading>
+            <Enabled>true</Enabled>
+            <UseDefault>true</UseDefault>
+            <AlwaysVisible>false</AlwaysVisible>
+            <MasterFactor>1</MasterFactor>
+            <OpaqueFrames>1</OpaqueFrames>
+            <Frames>20</Frames>
+          </InfosFading>
+        </Pencil>
+        <Pencil id="a09e0ec6-ecc6-4b8e-8f91-677daf7867f3" name="double?">
+          <PointList Count="2">
+            <Point>353;314</Point>
+            <Point>354;314</Point>
+          </PointList>
+          <DrawingStyle>
+            <Color Key="color">
+              <Value>255;46;204;113</Value>
+            </Color>
+            <PenSize Key="pen size">
+              <Value>10</Value>
+            </PenSize>
+            <PenShape Key="pen shape">
+              <Value>Solid</Value>
+            </PenShape>
+          </DrawingStyle>
+          <InfosFading>
+            <Enabled>true</Enabled>
+            <UseDefault>true</UseDefault>
+            <AlwaysVisible>false</AlwaysVisible>
+            <MasterFactor>1</MasterFactor>
+            <OpaqueFrames>1</OpaqueFrames>
+            <Frames>20</Frames>
+          </InfosFading>
+        </Pencil>
+      </Drawings>
+    </Keyframe>
+    <Keyframe id="fd327bcf-96f9-4ea4-a9d4-4914afbbbf70">
+      <Timestamp>10811</Timestamp>
+      <Name>double?</Name>
+      <Color>46;204;113</Color>
+      <Drawings>
+        <Pencil id="432ca0e3-f02a-462b-a0c4-dfbb6f8c2659" name="double?">
+          <PointList Count="2">
+            <Point>373;318</Point>
+            <Point>374;318</Point>
+          </PointList>
+          <DrawingStyle>
+            <Color Key="color">
+              <Value>255;46;204;113</Value>
+            </Color>
+            <PenSize Key="pen size">
+              <Value>10</Value>
+            </PenSize>
+            <PenShape Key="pen shape">
+              <Value>Solid</Value>
+            </PenShape>
+          </DrawingStyle>
+          <InfosFading>
+            <Enabled>true</Enabled>
+            <UseDefault>true</UseDefault>
+            <AlwaysVisible>false</AlwaysVisible>
+            <MasterFactor>1</MasterFactor>
+            <OpaqueFrames>1</OpaqueFrames>
+            <Frames>20</Frames>
+          </InfosFading>
+        </Pencil>
+        <Pencil id="b8061288-2e92-43e3-af23-a07ad1b7f574" name="double?">
+          <PointList Count="2">
+            <Point>358;313</Point>
+            <Point>359;313</Point>
+          </PointList>
+          <DrawingStyle>
+            <Color Key="color">
+              <Value>255;46;204;113</Value>
+            </Color>
+            <PenSize Key="pen size">
+              <Value>10</Value>
+            </PenSize>
+            <PenShape Key="pen shape">
+              <Value>Solid</Value>
+            </PenShape>
+          </DrawingStyle>
+          <InfosFading>
+            <Enabled>true</Enabled>
+            <UseDefault>true</UseDefault>
+            <AlwaysVisible>false</AlwaysVisible>
+            <MasterFactor>1</MasterFactor>
+            <OpaqueFrames>1</OpaqueFrames>
+            <Frames>20</Frames>
+          </InfosFading>
+        </Pencil>
+      </Drawings>
+    </Keyframe>
+    <Keyframe id="ea8d166e-0980-4cf8-bfad-f22ae7f61552">
+      <Timestamp>11411</Timestamp>
+      <Name>double?</Name>
+      <Color>46;204;113</Color>
+      <Drawings>
+        <Pencil id="d3b1a4bd-7b90-458e-bf4f-aad70fce739c" name="double?">
+          <PointList Count="2">
+            <Point>365;314</Point>
+            <Point>366;314</Point>
+          </PointList>
+          <DrawingStyle>
+            <Color Key="color">
+              <Value>255;46;204;113</Value>
+            </Color>
+            <PenSize Key="pen size">
+              <Value>10</Value>
+            </PenSize>
+            <PenShape Key="pen shape">
+              <Value>Solid</Value>
+            </PenShape>
+          </DrawingStyle>
+          <InfosFading>
+            <Enabled>true</Enabled>
+            <UseDefault>true</UseDefault>
+            <AlwaysVisible>false</AlwaysVisible>
+            <MasterFactor>1</MasterFactor>
+            <OpaqueFrames>1</OpaqueFrames>
+            <Frames>20</Frames>
+          </InfosFading>
+        </Pencil>
+        <Pencil id="e01a1db1-f2e3-4fe8-9c10-2d7e4be14554" name="double?">
+          <PointList Count="2">
+            <Point>350;313</Point>
+            <Point>351;313</Point>
+          </PointList>
+          <DrawingStyle>
+            <Color Key="color">
+              <Value>255;46;204;113</Value>
+            </Color>
+            <PenSize Key="pen size">
+              <Value>10</Value>
+            </PenSize>
+            <PenShape Key="pen shape">
+              <Value>Solid</Value>
+            </PenShape>
+          </DrawingStyle>
+          <InfosFading>
+            <Enabled>true</Enabled>
+            <UseDefault>true</UseDefault>
+            <AlwaysVisible>false</AlwaysVisible>
+            <MasterFactor>1</MasterFactor>
+            <OpaqueFrames>1</OpaqueFrames>
+            <Frames>20</Frames>
+          </InfosFading>
+        </Pencil>
+      </Drawings>
+    </Keyframe>
+    <Keyframe id="67a0b7ae-0936-471c-82b0-3502d9de6f17">
+      <Timestamp>11979</Timestamp>
+      <Name>double?</Name>
+      <Color>46;204;113</Color>
+      <Drawings>
+        <Pencil id="43d2d66f-e017-4ddf-9bd7-b48bb9e4fdcd" name="double?">
+          <PointList Count="2">
+            <Point>364;312</Point>
+            <Point>365;312</Point>
+          </PointList>
+          <DrawingStyle>
+            <Color Key="color">
+              <Value>255;46;204;113</Value>
+            </Color>
+            <PenSize Key="pen size">
+              <Value>10</Value>
+            </PenSize>
+            <PenShape Key="pen shape">
+              <Value>Solid</Value>
+            </PenShape>
+          </DrawingStyle>
+          <InfosFading>
+            <Enabled>true</Enabled>
+            <UseDefault>true</UseDefault>
+            <AlwaysVisible>false</AlwaysVisible>
+            <MasterFactor>1</MasterFactor>
+            <OpaqueFrames>1</OpaqueFrames>
+            <Frames>20</Frames>
+          </InfosFading>
+        </Pencil>
+        <Pencil id="3e027602-a8c1-41ac-affc-bfc439f566e4" name="double?">
+          <PointList Count="2">
+            <Point>350;310</Point>
+            <Point>351;310</Point>
+          </PointList>
+          <DrawingStyle>
+            <Color Key="color">
+              <Value>255;46;204;113</Value>
+            </Color>
+            <PenSize Key="pen size">
+              <Value>10</Value>
+            </PenSize>
+            <PenShape Key="pen shape">
+              <Value>Solid</Value>
+            </PenShape>
+          </DrawingStyle>
+          <InfosFading>
+            <Enabled>true</Enabled>
+            <UseDefault>true</UseDefault>
+            <AlwaysVisible>false</AlwaysVisible>
+            <MasterFactor>1</MasterFactor>
+            <OpaqueFrames>1</OpaqueFrames>
+            <Frames>20</Frames>
+          </InfosFading>
+        </Pencil>
+      </Drawings>
+    </Keyframe>
+    <Keyframe id="25db4b23-46ed-4913-bd0c-9a1cd3168367">
+      <Timestamp>12546</Timestamp>
+      <Name>double?</Name>
+      <Color>46;204;113</Color>
+      <Drawings>
+        <Pencil id="73679367-72d4-45d6-bb96-5f17cfea664c" name="double?">
+          <PointList Count="2">
+            <Point>361;311</Point>
+            <Point>362;311</Point>
+          </PointList>
+          <DrawingStyle>
+            <Color Key="color">
+              <Value>255;46;204;113</Value>
+            </Color>
+            <PenSize Key="pen size">
+              <Value>10</Value>
+            </PenSize>
+            <PenShape Key="pen shape">
+              <Value>Solid</Value>
+            </PenShape>
+          </DrawingStyle>
+          <InfosFading>
+            <Enabled>true</Enabled>
+            <UseDefault>true</UseDefault>
+            <AlwaysVisible>false</AlwaysVisible>
+            <MasterFactor>1</MasterFactor>
+            <OpaqueFrames>1</OpaqueFrames>
+            <Frames>20</Frames>
+          </InfosFading>
+        </Pencil>
+        <Pencil id="f9cd434f-b49c-44d2-8b58-a2a28e80fcc2" name="double?">
+          <PointList Count="2">
+            <Point>349;309</Point>
+            <Point>350;309</Point>
+          </PointList>
+          <DrawingStyle>
+            <Color Key="color">
+              <Value>255;46;204;113</Value>
+            </Color>
+            <PenSize Key="pen size">
+              <Value>10</Value>
+            </PenSize>
+            <PenShape Key="pen shape">
+              <Value>Solid</Value>
+            </PenShape>
+          </DrawingStyle>
+          <InfosFading>
+            <Enabled>true</Enabled>
+            <UseDefault>true</UseDefault>
+            <AlwaysVisible>false</AlwaysVisible>
+            <MasterFactor>1</MasterFactor>
+            <OpaqueFrames>1</OpaqueFrames>
+            <Frames>20</Frames>
+          </InfosFading>
+        </Pencil>
+      </Drawings>
+    </Keyframe>
+    <Keyframe id="b00b7abf-d9cd-4ef9-bc66-adb8987a7b37">
+      <Timestamp>13113</Timestamp>
+      <Name>double?</Name>
+      <Color>46;204;113</Color>
+      <Drawings>
+        <Pencil id="9c4fdd27-7f24-492f-afdb-0194a4579596" name="double?">
+          <PointList Count="2">
+            <Point>368;315</Point>
+            <Point>369;315</Point>
+          </PointList>
+          <DrawingStyle>
+            <Color Key="color">
+              <Value>255;46;204;113</Value>
+            </Color>
+            <PenSize Key="pen size">
+              <Value>10</Value>
+            </PenSize>
+            <PenShape Key="pen shape">
+              <Value>Solid</Value>
+            </PenShape>
+          </DrawingStyle>
+          <InfosFading>
+            <Enabled>true</Enabled>
+            <UseDefault>true</UseDefault>
+            <AlwaysVisible>false</AlwaysVisible>
+            <MasterFactor>1</MasterFactor>
+            <OpaqueFrames>1</OpaqueFrames>
+            <Frames>20</Frames>
+          </InfosFading>
+        </Pencil>
+        <Pencil id="d460efdc-561a-4614-8390-13c0934b1838" name="double?">
+          <PointList Count="2">
+            <Point>352;313</Point>
+            <Point>353;313</Point>
+          </PointList>
+          <DrawingStyle>
+            <Color Key="color">
+              <Value>255;46;204;113</Value>
+            </Color>
+            <PenSize Key="pen size">
+              <Value>10</Value>
+            </PenSize>
+            <PenShape Key="pen shape">
+              <Value>Solid</Value>
+            </PenShape>
+          </DrawingStyle>
+          <InfosFading>
+            <Enabled>true</Enabled>
+            <UseDefault>true</UseDefault>
+            <AlwaysVisible>false</AlwaysVisible>
+            <MasterFactor>1</MasterFactor>
+            <OpaqueFrames>1</OpaqueFrames>
+            <Frames>20</Frames>
+          </InfosFading>
+        </Pencil>
+      </Drawings>
+    </Keyframe>
+    <Keyframe id="18265ced-6493-4bba-b4b9-8d2e50da0b6d">
+      <Timestamp>13714</Timestamp>
+      <Name>double?</Name>
+      <Color>46;204;113</Color>
+      <Drawings>
+        <Pencil id="8f7b7e12-7a66-4524-b051-a1eb3893c9bb" name="double?">
+          <PointList Count="2">
+            <Point>363;316</Point>
+            <Point>364;316</Point>
+          </PointList>
+          <DrawingStyle>
+            <Color Key="color">
+              <Value>255;46;204;113</Value>
+            </Color>
+            <PenSize Key="pen size">
+              <Value>10</Value>
+            </PenSize>
+            <PenShape Key="pen shape">
+              <Value>Solid</Value>
+            </PenShape>
+          </DrawingStyle>
+          <InfosFading>
+            <Enabled>true</Enabled>
+            <UseDefault>true</UseDefault>
+            <AlwaysVisible>false</AlwaysVisible>
+            <MasterFactor>1</MasterFactor>
+            <OpaqueFrames>1</OpaqueFrames>
+            <Frames>20</Frames>
+          </InfosFading>
+        </Pencil>
+        <Pencil id="d53b90e5-ebc1-40f9-b818-1642856deaa8" name="double?">
+          <PointList Count="2">
+            <Point>349;313</Point>
+            <Point>350;313</Point>
+          </PointList>
+          <DrawingStyle>
+            <Color Key="color">
+              <Value>255;46;204;113</Value>
+            </Color>
+            <PenSize Key="pen size">
+              <Value>10</Value>
+            </PenSize>
+            <PenShape Key="pen shape">
+              <Value>Solid</Value>
+            </PenShape>
+          </DrawingStyle>
+          <InfosFading>
+            <Enabled>true</Enabled>
+            <UseDefault>true</UseDefault>
+            <AlwaysVisible>false</AlwaysVisible>
+            <MasterFactor>1</MasterFactor>
+            <OpaqueFrames>1</OpaqueFrames>
+            <Frames>20</Frames>
+          </InfosFading>
+        </Pencil>
+      </Drawings>
+    </Keyframe>
+    <Keyframe id="a77fcdbf-9758-4453-a490-36ba64e671ff">
+      <Timestamp>14314</Timestamp>
+      <Name>double?</Name>
+      <Color>46;204;113</Color>
+      <Drawings>
+        <Pencil id="e3ea8cd1-c544-45df-b651-9d384ef1bfbc" name="double?">
+          <PointList Count="2">
+            <Point>360;317</Point>
+            <Point>361;317</Point>
+          </PointList>
+          <DrawingStyle>
+            <Color Key="color">
+              <Value>255;46;204;113</Value>
+            </Color>
+            <PenSize Key="pen size">
+              <Value>10</Value>
+            </PenSize>
+            <PenShape Key="pen shape">
+              <Value>Solid</Value>
+            </PenShape>
+          </DrawingStyle>
+          <InfosFading>
+            <Enabled>true</Enabled>
+            <UseDefault>true</UseDefault>
+            <AlwaysVisible>false</AlwaysVisible>
+            <MasterFactor>1</MasterFactor>
+            <OpaqueFrames>1</OpaqueFrames>
+            <Frames>20</Frames>
+          </InfosFading>
+        </Pencil>
+        <Pencil id="80f3b464-3273-42a6-b523-37d64aeb7cc6" name="double?">
+          <PointList Count="2">
+            <Point>343;315</Point>
+            <Point>344;315</Point>
+          </PointList>
+          <DrawingStyle>
+            <Color Key="color">
+              <Value>255;46;204;113</Value>
+            </Color>
+            <PenSize Key="pen size">
+              <Value>10</Value>
+            </PenSize>
+            <PenShape Key="pen shape">
+              <Value>Solid</Value>
+            </PenShape>
+          </DrawingStyle>
+          <InfosFading>
+            <Enabled>true</Enabled>
+            <UseDefault>true</UseDefault>
+            <AlwaysVisible>false</AlwaysVisible>
+            <MasterFactor>1</MasterFactor>
+            <OpaqueFrames>1</OpaqueFrames>
+            <Frames>20</Frames>
+          </InfosFading>
+        </Pencil>
+      </Drawings>
+    </Keyframe>
+    <Keyframe id="785feac9-baf0-4dd1-8d4c-aeded45d6b49">
+      <Timestamp>14882</Timestamp>
+      <Name>double?</Name>
+      <Color>46;204;113</Color>
+      <Drawings>
+        <Pencil id="4133a49a-dde0-4105-b27b-eb3773267166" name="double?">
+          <PointList Count="2">
+            <Point>360;318</Point>
+            <Point>361;318</Point>
+          </PointList>
+          <DrawingStyle>
+            <Color Key="color">
+              <Value>255;46;204;113</Value>
+            </Color>
+            <PenSize Key="pen size">
+              <Value>10</Value>
+            </PenSize>
+            <PenShape Key="pen shape">
+              <Value>Solid</Value>
+            </PenShape>
+          </DrawingStyle>
+          <InfosFading>
+            <Enabled>true</Enabled>
+            <UseDefault>true</UseDefault>
+            <AlwaysVisible>false</AlwaysVisible>
+            <MasterFactor>1</MasterFactor>
+            <OpaqueFrames>1</OpaqueFrames>
+            <Frames>20</Frames>
+          </InfosFading>
+        </Pencil>
+        <Pencil id="8e5efb5f-2c5c-438b-b50f-c2e862c60ddc" name="double?">
+          <PointList Count="2">
+            <Point>339;316</Point>
+            <Point>340;316</Point>
+          </PointList>
+          <DrawingStyle>
+            <Color Key="color">
+              <Value>255;46;204;113</Value>
+            </Color>
+            <PenSize Key="pen size">
+              <Value>10</Value>
+            </PenSize>
+            <PenShape Key="pen shape">
+              <Value>Solid</Value>
+            </PenShape>
+          </DrawingStyle>
+          <InfosFading>
+            <Enabled>true</Enabled>
+            <UseDefault>true</UseDefault>
+            <AlwaysVisible>false</AlwaysVisible>
+            <MasterFactor>1</MasterFactor>
+            <OpaqueFrames>1</OpaqueFrames>
+            <Frames>20</Frames>
+          </InfosFading>
+        </Pencil>
+      </Drawings>
+    </Keyframe>
+    <Keyframe id="a0ec6f5a-ea8a-4827-8a37-527113dae61a">
+      <Timestamp>15482</Timestamp>
+      <Name>double?</Name>
+      <Color>46;204;113</Color>
+      <Drawings>
+        <Pencil id="d3df1ad1-126d-4690-a344-08fea6ec01e1" name="double?">
+          <PointList Count="2">
+            <Point>356;319</Point>
+            <Point>357;319</Point>
+          </PointList>
+          <DrawingStyle>
+            <Color Key="color">
+              <Value>255;46;204;113</Value>
+            </Color>
+            <PenSize Key="pen size">
+              <Value>10</Value>
+            </PenSize>
+            <PenShape Key="pen shape">
+              <Value>Solid</Value>
+            </PenShape>
+          </DrawingStyle>
+          <InfosFading>
+            <Enabled>true</Enabled>
+            <UseDefault>true</UseDefault>
+            <AlwaysVisible>false</AlwaysVisible>
+            <MasterFactor>1</MasterFactor>
+            <OpaqueFrames>1</OpaqueFrames>
+            <Frames>20</Frames>
+          </InfosFading>
+        </Pencil>
+        <Pencil id="5d98b4bc-dc84-4d53-893c-dd9956dc9fc2" name="double?">
+          <PointList Count="2">
+            <Point>338;320</Point>
+            <Point>339;320</Point>
+          </PointList>
+          <DrawingStyle>
+            <Color Key="color">
+              <Value>255;46;204;113</Value>
+            </Color>
+            <PenSize Key="pen size">
+              <Value>10</Value>
+            </PenSize>
+            <PenShape Key="pen shape">
+              <Value>Solid</Value>
+            </PenShape>
+          </DrawingStyle>
+          <InfosFading>
+            <Enabled>true</Enabled>
+            <UseDefault>true</UseDefault>
+            <AlwaysVisible>false</AlwaysVisible>
+            <MasterFactor>1</MasterFactor>
+            <OpaqueFrames>1</OpaqueFrames>
+            <Frames>20</Frames>
+          </InfosFading>
+        </Pencil>
+      </Drawings>
+    </Keyframe>
+    <Keyframe id="95ed267a-a31b-4eb4-b846-f5a57e24c732">
+      <Timestamp>16049</Timestamp>
+      <Name>double?</Name>
+      <Color>46;204;113</Color>
+      <Drawings>
+        <Pencil id="e07fbd84-baed-4b10-8da7-325cc9776d4d" name="double?">
+          <PointList Count="2">
+            <Point>350;319</Point>
+            <Point>351;319</Point>
+          </PointList>
+          <DrawingStyle>
+            <Color Key="color">
+              <Value>255;46;204;113</Value>
+            </Color>
+            <PenSize Key="pen size">
+              <Value>10</Value>
+            </PenSize>
+            <PenShape Key="pen shape">
+              <Value>Solid</Value>
+            </PenShape>
+          </DrawingStyle>
+          <InfosFading>
+            <Enabled>true</Enabled>
+            <UseDefault>true</UseDefault>
+            <AlwaysVisible>false</AlwaysVisible>
+            <MasterFactor>1</MasterFactor>
+            <OpaqueFrames>1</OpaqueFrames>
+            <Frames>20</Frames>
+          </InfosFading>
+        </Pencil>
+        <Pencil id="05b74fa2-0e60-475e-b1e9-99961c626a8c" name="double?">
+          <PointList Count="2">
+            <Point>342;313</Point>
+            <Point>343;313</Point>
+          </PointList>
+          <DrawingStyle>
+            <Color Key="color">
+              <Value>255;46;204;113</Value>
+            </Color>
+            <PenSize Key="pen size">
+              <Value>10</Value>
+            </PenSize>
+            <PenShape Key="pen shape">
+              <Value>Solid</Value>
+            </PenShape>
+          </DrawingStyle>
+          <InfosFading>
+            <Enabled>true</Enabled>
+            <UseDefault>true</UseDefault>
+            <AlwaysVisible>false</AlwaysVisible>
+            <MasterFactor>1</MasterFactor>
+            <OpaqueFrames>1</OpaqueFrames>
+            <Frames>20</Frames>
+          </InfosFading>
+        </Pencil>
+      </Drawings>
+    </Keyframe>
+    <Keyframe id="0f1a79d1-d9c2-466d-9ac4-ead683b00d8e">
+      <Timestamp>16650</Timestamp>
+      <Name>double?</Name>
+      <Color>46;204;113</Color>
+      <Drawings>
+        <Pencil id="499bb9c6-4da9-458c-9012-b686655c583c" name="double?">
+          <PointList Count="2">
+            <Point>357;320</Point>
+            <Point>358;320</Point>
+          </PointList>
+          <DrawingStyle>
+            <Color Key="color">
+              <Value>255;46;204;113</Value>
+            </Color>
+            <PenSize Key="pen size">
+              <Value>10</Value>
+            </PenSize>
+            <PenShape Key="pen shape">
+              <Value>Solid</Value>
+            </PenShape>
+          </DrawingStyle>
+          <InfosFading>
+            <Enabled>true</Enabled>
+            <UseDefault>true</UseDefault>
+            <AlwaysVisible>false</AlwaysVisible>
+            <MasterFactor>1</MasterFactor>
+            <OpaqueFrames>1</OpaqueFrames>
+            <Frames>20</Frames>
+          </InfosFading>
+        </Pencil>
+        <Pencil id="2cc3823b-4c53-41ac-aa1d-709ac6f4065d" name="double?">
+          <PointList Count="2">
+            <Point>341;318</Point>
+            <Point>342;318</Point>
+          </PointList>
+          <DrawingStyle>
+            <Color Key="color">
+              <Value>255;46;204;113</Value>
+            </Color>
+            <PenSize Key="pen size">
+              <Value>10</Value>
+            </PenSize>
+            <PenShape Key="pen shape">
+              <Value>Solid</Value>
+            </PenShape>
+          </DrawingStyle>
+          <InfosFading>
+            <Enabled>true</Enabled>
+            <UseDefault>true</UseDefault>
+            <AlwaysVisible>false</AlwaysVisible>
+            <MasterFactor>1</MasterFactor>
+            <OpaqueFrames>1</OpaqueFrames>
+            <Frames>20</Frames>
+          </InfosFading>
+        </Pencil>
+      </Drawings>
+    </Keyframe>
+    <Keyframe id="63ea449d-22da-490e-8c33-5bbe50d9827d">
+      <Timestamp>17251</Timestamp>
+      <Name>double?</Name>
+      <Color>46;204;113</Color>
+      <Drawings>
+        <Pencil id="72719cf2-ecd1-4030-ace0-93bbf2ca2a12" name="double?">
+          <PointList Count="2">
+            <Point>358;317</Point>
+            <Point>359;317</Point>
+          </PointList>
+          <DrawingStyle>
+            <Color Key="color">
+              <Value>255;46;204;113</Value>
+            </Color>
+            <PenSize Key="pen size">
+              <Value>10</Value>
+            </PenSize>
+            <PenShape Key="pen shape">
+              <Value>Solid</Value>
+            </PenShape>
+          </DrawingStyle>
+          <InfosFading>
+            <Enabled>true</Enabled>
+            <UseDefault>true</UseDefault>
+            <AlwaysVisible>false</AlwaysVisible>
+            <MasterFactor>1</MasterFactor>
+            <OpaqueFrames>1</OpaqueFrames>
+            <Frames>20</Frames>
+          </InfosFading>
+        </Pencil>
+        <Pencil id="77653b6c-0e62-47dd-ad35-9679bea90580" name="double?">
+          <PointList Count="2">
+            <Point>336;318</Point>
+            <Point>337;318</Point>
+          </PointList>
+          <DrawingStyle>
+            <Color Key="color">
+              <Value>255;46;204;113</Value>
+            </Color>
+            <PenSize Key="pen size">
+              <Value>10</Value>
+            </PenSize>
+            <PenShape Key="pen shape">
+              <Value>Solid</Value>
+            </PenShape>
+          </DrawingStyle>
+          <InfosFading>
+            <Enabled>true</Enabled>
+            <UseDefault>true</UseDefault>
+            <AlwaysVisible>false</AlwaysVisible>
+            <MasterFactor>1</MasterFactor>
+            <OpaqueFrames>1</OpaqueFrames>
+            <Frames>20</Frames>
+          </InfosFading>
+        </Pencil>
+      </Drawings>
+    </Keyframe>
+    <Keyframe id="26c9d7d9-765d-4032-8100-a8735c4d7289">
+      <Timestamp>17818</Timestamp>
+      <Name>double?</Name>
+      <Color>46;204;113</Color>
+      <Drawings>
+        <Pencil id="7b23a343-f84d-4dc7-9cb9-301fbb499a23" name="double?">
+          <PointList Count="2">
+            <Point>366;323</Point>
+            <Point>367;323</Point>
+          </PointList>
+          <DrawingStyle>
+            <Color Key="color">
+              <Value>255;46;204;113</Value>
+            </Color>
+            <PenSize Key="pen size">
+              <Value>10</Value>
+            </PenSize>
+            <PenShape Key="pen shape">
+              <Value>Solid</Value>
+            </PenShape>
+          </DrawingStyle>
+          <InfosFading>
+            <Enabled>true</Enabled>
+            <UseDefault>true</UseDefault>
+            <AlwaysVisible>false</AlwaysVisible>
+            <MasterFactor>1</MasterFactor>
+            <OpaqueFrames>1</OpaqueFrames>
+            <Frames>20</Frames>
+          </InfosFading>
+        </Pencil>
+        <Pencil id="0c80e1d9-eafc-46a4-a394-5ae17212d49e" name="double?">
+          <PointList Count="2">
+            <Point>352;315</Point>
+            <Point>353;315</Point>
+          </PointList>
+          <DrawingStyle>
+            <Color Key="color">
+              <Value>255;46;204;113</Value>
+            </Color>
+            <PenSize Key="pen size">
+              <Value>10</Value>
+            </PenSize>
+            <PenShape Key="pen shape">
+              <Value>Solid</Value>
+            </PenShape>
+          </DrawingStyle>
+          <InfosFading>
+            <Enabled>true</Enabled>
+            <UseDefault>true</UseDefault>
+            <AlwaysVisible>false</AlwaysVisible>
+            <MasterFactor>1</MasterFactor>
+            <OpaqueFrames>1</OpaqueFrames>
+            <Frames>20</Frames>
+          </InfosFading>
+        </Pencil>
+      </Drawings>
+    </Keyframe>
+    <Keyframe id="9433d2d8-e95f-424b-b20f-ba2da7043be0">
+      <Timestamp>18385</Timestamp>
+      <Name>double?</Name>
+      <Color>46;204;113</Color>
+      <Drawings>
+        <Pencil id="64a1872a-9bd5-4993-b676-35677da02c0b" name="double?">
+          <PointList Count="2">
+            <Point>365;322</Point>
+            <Point>366;322</Point>
+          </PointList>
+          <DrawingStyle>
+            <Color Key="color">
+              <Value>255;46;204;113</Value>
+            </Color>
+            <PenSize Key="pen size">
+              <Value>10</Value>
+            </PenSize>
+            <PenShape Key="pen shape">
+              <Value>Solid</Value>
+            </PenShape>
+          </DrawingStyle>
+          <InfosFading>
+            <Enabled>true</Enabled>
+            <UseDefault>true</UseDefault>
+            <AlwaysVisible>false</AlwaysVisible>
+            <MasterFactor>1</MasterFactor>
+            <OpaqueFrames>1</OpaqueFrames>
+            <Frames>20</Frames>
+          </InfosFading>
+        </Pencil>
+        <Pencil id="76ca2017-f0d8-4dfa-8ced-f9b4e76a9198" name="double?">
+          <PointList Count="2">
+            <Point>349;321</Point>
+            <Point>350;321</Point>
+          </PointList>
+          <DrawingStyle>
+            <Color Key="color">
+              <Value>255;46;204;113</Value>
+            </Color>
+            <PenSize Key="pen size">
+              <Value>10</Value>
+            </PenSize>
+            <PenShape Key="pen shape">
+              <Value>Solid</Value>
+            </PenShape>
+          </DrawingStyle>
+          <InfosFading>
+            <Enabled>true</Enabled>
+            <UseDefault>true</UseDefault>
+            <AlwaysVisible>false</AlwaysVisible>
+            <MasterFactor>1</MasterFactor>
+            <OpaqueFrames>1</OpaqueFrames>
+            <Frames>20</Frames>
+          </InfosFading>
+        </Pencil>
+      </Drawings>
+    </Keyframe>
+    <Keyframe id="0db74119-5ac8-4905-b1c5-8d84adfdd717">
+      <Timestamp>18986</Timestamp>
+      <Name>double?</Name>
+      <Color>46;204;113</Color>
+      <Drawings>
+        <Pencil id="caad5737-d164-4904-be1f-0e3796d64e2d" name="double?">
+          <PointList Count="2">
+            <Point>364;326</Point>
+            <Point>365;326</Point>
+          </PointList>
+          <DrawingStyle>
+            <Color Key="color">
+              <Value>255;46;204;113</Value>
+            </Color>
+            <PenSize Key="pen size">
+              <Value>10</Value>
+            </PenSize>
+            <PenShape Key="pen shape">
+              <Value>Solid</Value>
+            </PenShape>
+          </DrawingStyle>
+          <InfosFading>
+            <Enabled>true</Enabled>
+            <UseDefault>true</UseDefault>
+            <AlwaysVisible>false</AlwaysVisible>
+            <MasterFactor>1</MasterFactor>
+            <OpaqueFrames>1</OpaqueFrames>
+            <Frames>20</Frames>
+          </InfosFading>
+        </Pencil>
+        <Pencil id="ba8f6d27-138c-448c-bab0-b093bd62d8ff" name="double?">
+          <PointList Count="2">
+            <Point>346;324</Point>
+            <Point>347;324</Point>
+          </PointList>
+          <DrawingStyle>
+            <Color Key="color">
+              <Value>255;46;204;113</Value>
+            </Color>
+            <PenSize Key="pen size">
+              <Value>10</Value>
+            </PenSize>
+            <PenShape Key="pen shape">
+              <Value>Solid</Value>
+            </PenShape>
+          </DrawingStyle>
+          <InfosFading>
+            <Enabled>true</Enabled>
+            <UseDefault>true</UseDefault>
+            <AlwaysVisible>false</AlwaysVisible>
+            <MasterFactor>1</MasterFactor>
+            <OpaqueFrames>1</OpaqueFrames>
+            <Frames>20</Frames>
+          </InfosFading>
+        </Pencil>
+      </Drawings>
+    </Keyframe>
+    <Keyframe id="a72129a3-55b4-4758-beb6-4bfda5a5f4ab">
+      <Timestamp>19586</Timestamp>
+      <Name>double?</Name>
+      <Color>46;204;113</Color>
+      <Drawings>
+        <Pencil id="969ce81c-0eb0-4a74-ad78-3c74a1f838fe" name="double?">
+          <PointList Count="2">
+            <Point>354;330</Point>
+            <Point>355;330</Point>
+          </PointList>
+          <DrawingStyle>
+            <Color Key="color">
+              <Value>255;46;204;113</Value>
+            </Color>
+            <PenSize Key="pen size">
+              <Value>10</Value>
+            </PenSize>
+            <PenShape Key="pen shape">
+              <Value>Solid</Value>
+            </PenShape>
+          </DrawingStyle>
+          <InfosFading>
+            <Enabled>true</Enabled>
+            <UseDefault>true</UseDefault>
+            <AlwaysVisible>false</AlwaysVisible>
+            <MasterFactor>1</MasterFactor>
+            <OpaqueFrames>1</OpaqueFrames>
+            <Frames>20</Frames>
+          </InfosFading>
+        </Pencil>
+        <Pencil id="12cce70f-8045-47fa-852c-5333e7b8dbc8" name="double?">
+          <PointList Count="2">
+            <Point>337;329</Point>
+            <Point>338;329</Point>
+          </PointList>
+          <DrawingStyle>
+            <Color Key="color">
+              <Value>255;46;204;113</Value>
+            </Color>
+            <PenSize Key="pen size">
+              <Value>10</Value>
+            </PenSize>
+            <PenShape Key="pen shape">
+              <Value>Solid</Value>
+            </PenShape>
+          </DrawingStyle>
+          <InfosFading>
+            <Enabled>true</Enabled>
+            <UseDefault>true</UseDefault>
+            <AlwaysVisible>false</AlwaysVisible>
+            <MasterFactor>1</MasterFactor>
+            <OpaqueFrames>1</OpaqueFrames>
+            <Frames>20</Frames>
+          </InfosFading>
+        </Pencil>
+      </Drawings>
+    </Keyframe>
+    <Keyframe id="f53baf0a-5342-49ce-9dbe-d7254d35e49c">
+      <Timestamp>20187</Timestamp>
+      <Name>double?</Name>
+      <Color>46;204;113</Color>
+      <Drawings>
+        <Pencil id="7cf2c960-92b3-4ade-a2cb-71f5ac3a67e3" name="double?">
+          <PointList Count="2">
+            <Point>344;328</Point>
+            <Point>345;328</Point>
+          </PointList>
+          <DrawingStyle>
+            <Color Key="color">
+              <Value>255;46;204;113</Value>
+            </Color>
+            <PenSize Key="pen size">
+              <Value>10</Value>
+            </PenSize>
+            <PenShape Key="pen shape">
+              <Value>Solid</Value>
+            </PenShape>
+          </DrawingStyle>
+          <InfosFading>
+            <Enabled>true</Enabled>
+            <UseDefault>true</UseDefault>
+            <AlwaysVisible>false</AlwaysVisible>
+            <MasterFactor>1</MasterFactor>
+            <OpaqueFrames>1</OpaqueFrames>
+            <Frames>20</Frames>
+          </InfosFading>
+        </Pencil>
+        <Pencil id="8d8ce5f4-2c3e-4775-ad50-46c15c85af2e" name="double?">
+          <PointList Count="2">
+            <Point>328;325</Point>
+            <Point>329;325</Point>
+          </PointList>
+          <DrawingStyle>
+            <Color Key="color">
+              <Value>255;46;204;113</Value>
+            </Color>
+            <PenSize Key="pen size">
+              <Value>10</Value>
+            </PenSize>
+            <PenShape Key="pen shape">
+              <Value>Solid</Value>
+            </PenShape>
+          </DrawingStyle>
+          <InfosFading>
+            <Enabled>true</Enabled>
+            <UseDefault>true</UseDefault>
+            <AlwaysVisible>false</AlwaysVisible>
+            <MasterFactor>1</MasterFactor>
+            <OpaqueFrames>1</OpaqueFrames>
+            <Frames>20</Frames>
+          </InfosFading>
+        </Pencil>
+      </Drawings>
+    </Keyframe>
+    <Keyframe id="e64271fb-69b6-4f25-9597-8012d0421c70">
+      <Timestamp>20787</Timestamp>
+      <Name>double?</Name>
+      <Color>46;204;113</Color>
+      <Drawings>
+        <Pencil id="ad43e5f3-9a59-4f80-8834-c9f0ddcb551f" name="double?">
+          <PointList Count="2">
+            <Point>341;324</Point>
+            <Point>342;324</Point>
+          </PointList>
+          <DrawingStyle>
+            <Color Key="color">
+              <Value>255;46;204;113</Value>
+            </Color>
+            <PenSize Key="pen size">
+              <Value>10</Value>
+            </PenSize>
+            <PenShape Key="pen shape">
+              <Value>Solid</Value>
+            </PenShape>
+          </DrawingStyle>
+          <InfosFading>
+            <Enabled>true</Enabled>
+            <UseDefault>true</UseDefault>
+            <AlwaysVisible>false</AlwaysVisible>
+            <MasterFactor>1</MasterFactor>
+            <OpaqueFrames>1</OpaqueFrames>
+            <Frames>20</Frames>
+          </InfosFading>
+        </Pencil>
+        <Pencil id="52d2bc6a-a9a4-49c1-acc8-56e8ec086f08" name="double?">
+          <PointList Count="2">
+            <Point>333;316</Point>
+            <Point>334;316</Point>
+          </PointList>
+          <DrawingStyle>
+            <Color Key="color">
+              <Value>255;46;204;113</Value>
+            </Color>
+            <PenSize Key="pen size">
+              <Value>10</Value>
+            </PenSize>
+            <PenShape Key="pen shape">
+              <Value>Solid</Value>
+            </PenShape>
+          </DrawingStyle>
+          <InfosFading>
+            <Enabled>true</Enabled>
+            <UseDefault>true</UseDefault>
+            <AlwaysVisible>false</AlwaysVisible>
+            <MasterFactor>1</MasterFactor>
+            <OpaqueFrames>1</OpaqueFrames>
+            <Frames>20</Frames>
+          </InfosFading>
+        </Pencil>
+      </Drawings>
+    </Keyframe>
+    <Keyframe id="6833b1f5-e4b6-43b4-8d77-0ca1253a42b4">
+      <Timestamp>21355</Timestamp>
+      <Name>double?</Name>
+      <Color>46;204;113</Color>
+      <Drawings>
+        <Pencil id="dfe312b2-52a2-4bdb-a873-60be20bab044" name="double?">
+          <PointList Count="2">
+            <Point>361;317</Point>
+            <Point>362;317</Point>
+          </PointList>
+          <DrawingStyle>
+            <Color Key="color">
+              <Value>255;46;204;113</Value>
+            </Color>
+            <PenSize Key="pen size">
+              <Value>10</Value>
+            </PenSize>
+            <PenShape Key="pen shape">
+              <Value>Solid</Value>
+            </PenShape>
+          </DrawingStyle>
+          <InfosFading>
+            <Enabled>true</Enabled>
+            <UseDefault>true</UseDefault>
+            <AlwaysVisible>false</AlwaysVisible>
+            <MasterFactor>1</MasterFactor>
+            <OpaqueFrames>1</OpaqueFrames>
+            <Frames>20</Frames>
+          </InfosFading>
+        </Pencil>
+        <Pencil id="031bc78e-c244-46c2-85da-629a0efafb8d" name="double?">
+          <PointList Count="2">
+            <Point>343;315</Point>
+            <Point>344;315</Point>
+          </PointList>
+          <DrawingStyle>
+            <Color Key="color">
+              <Value>255;46;204;113</Value>
+            </Color>
+            <PenSize Key="pen size">
+              <Value>10</Value>
+            </PenSize>
+            <PenShape Key="pen shape">
+              <Value>Solid</Value>
+            </PenShape>
+          </DrawingStyle>
+          <InfosFading>
+            <Enabled>true</Enabled>
+            <UseDefault>true</UseDefault>
+            <AlwaysVisible>false</AlwaysVisible>
+            <MasterFactor>1</MasterFactor>
+            <OpaqueFrames>1</OpaqueFrames>
+            <Frames>20</Frames>
+          </InfosFading>
+        </Pencil>
+      </Drawings>
+    </Keyframe>
+    <Keyframe id="21239ab7-d065-4f1c-80c2-16e1609e4284">
+      <Timestamp>21922</Timestamp>
+      <Name>double?</Name>
+      <Color>46;204;113</Color>
+      <Drawings>
+        <Pencil id="a11aa055-14e5-4c76-9c95-330accb6a049" name="double?">
+          <PointList Count="2">
+            <Point>361;314</Point>
+            <Point>362;314</Point>
+          </PointList>
+          <DrawingStyle>
+            <Color Key="color">
+              <Value>255;46;204;113</Value>
+            </Color>
+            <PenSize Key="pen size">
+              <Value>10</Value>
+            </PenSize>
+            <PenShape Key="pen shape">
+              <Value>Solid</Value>
+            </PenShape>
+          </DrawingStyle>
+          <InfosFading>
+            <Enabled>true</Enabled>
+            <UseDefault>true</UseDefault>
+            <AlwaysVisible>false</AlwaysVisible>
+            <MasterFactor>1</MasterFactor>
+            <OpaqueFrames>1</OpaqueFrames>
+            <Frames>20</Frames>
+          </InfosFading>
+        </Pencil>
+        <Pencil id="e09c194e-11be-44bb-9935-8e7784d56104" name="double?">
+          <PointList Count="2">
+            <Point>347;312</Point>
+            <Point>348;312</Point>
+          </PointList>
+          <DrawingStyle>
+            <Color Key="color">
+              <Value>255;46;204;113</Value>
+            </Color>
+            <PenSize Key="pen size">
+              <Value>10</Value>
+            </PenSize>
+            <PenShape Key="pen shape">
+              <Value>Solid</Value>
+            </PenShape>
+          </DrawingStyle>
+          <InfosFading>
+            <Enabled>true</Enabled>
+            <UseDefault>true</UseDefault>
+            <AlwaysVisible>false</AlwaysVisible>
+            <MasterFactor>1</MasterFactor>
+            <OpaqueFrames>1</OpaqueFrames>
+            <Frames>20</Frames>
+          </InfosFading>
+        </Pencil>
+      </Drawings>
+    </Keyframe>
+    <Keyframe id="01e113e8-903b-41cc-93c9-ae2469003de5">
+      <Timestamp>22522</Timestamp>
+      <Name>double?</Name>
+      <Color>46;204;113</Color>
+      <Drawings>
+        <Pencil id="99c3c53a-161f-4b2a-802c-a56044f59f6a" name="double?">
+          <PointList Count="2">
+            <Point>372;312</Point>
+            <Point>373;312</Point>
+          </PointList>
+          <DrawingStyle>
+            <Color Key="color">
+              <Value>255;46;204;113</Value>
+            </Color>
+            <PenSize Key="pen size">
+              <Value>10</Value>
+            </PenSize>
+            <PenShape Key="pen shape">
+              <Value>Solid</Value>
+            </PenShape>
+          </DrawingStyle>
+          <InfosFading>
+            <Enabled>true</Enabled>
+            <UseDefault>true</UseDefault>
+            <AlwaysVisible>false</AlwaysVisible>
+            <MasterFactor>1</MasterFactor>
+            <OpaqueFrames>1</OpaqueFrames>
+            <Frames>20</Frames>
+          </InfosFading>
+        </Pencil>
+        <Pencil id="c24369b0-af34-4669-ad6c-dfec27caa8ce" name="double?">
+          <PointList Count="2">
+            <Point>354;311</Point>
+            <Point>355;311</Point>
+          </PointList>
+          <DrawingStyle>
+            <Color Key="color">
+              <Value>255;46;204;113</Value>
+            </Color>
+            <PenSize Key="pen size">
+              <Value>10</Value>
+            </PenSize>
+            <PenShape Key="pen shape">
+              <Value>Solid</Value>
+            </PenShape>
+          </DrawingStyle>
+          <InfosFading>
+            <Enabled>true</Enabled>
+            <UseDefault>true</UseDefault>
+            <AlwaysVisible>false</AlwaysVisible>
+            <MasterFactor>1</MasterFactor>
+            <OpaqueFrames>1</OpaqueFrames>
+            <Frames>20</Frames>
+          </InfosFading>
+        </Pencil>
+      </Drawings>
+    </Keyframe>
+    <Keyframe id="133bf362-d1f1-4d8d-ae0b-14a1ab9d6b80">
+      <Timestamp>23090</Timestamp>
+      <Name>double?</Name>
+      <Color>46;204;113</Color>
+      <Drawings>
+        <Pencil id="00a48084-d116-4da1-91ee-01c124998a7f" name="double?">
+          <PointList Count="2">
+            <Point>372;316</Point>
+            <Point>373;316</Point>
+          </PointList>
+          <DrawingStyle>
+            <Color Key="color">
+              <Value>255;46;204;113</Value>
+            </Color>
+            <PenSize Key="pen size">
+              <Value>10</Value>
+            </PenSize>
+            <PenShape Key="pen shape">
+              <Value>Solid</Value>
+            </PenShape>
+          </DrawingStyle>
+          <InfosFading>
+            <Enabled>true</Enabled>
+            <UseDefault>true</UseDefault>
+            <AlwaysVisible>false</AlwaysVisible>
+            <MasterFactor>1</MasterFactor>
+            <OpaqueFrames>1</OpaqueFrames>
+            <Frames>20</Frames>
+          </InfosFading>
+        </Pencil>
+        <Pencil id="7d9741ca-0825-49c7-a082-8e74243a83b0" name="double?">
+          <PointList Count="2">
+            <Point>356;313</Point>
+            <Point>357;313</Point>
+          </PointList>
+          <DrawingStyle>
+            <Color Key="color">
+              <Value>255;46;204;113</Value>
+            </Color>
+            <PenSize Key="pen size">
+              <Value>10</Value>
+            </PenSize>
+            <PenShape Key="pen shape">
+              <Value>Solid</Value>
+            </PenShape>
+          </DrawingStyle>
+          <InfosFading>
+            <Enabled>true</Enabled>
+            <UseDefault>true</UseDefault>
+            <AlwaysVisible>false</AlwaysVisible>
+            <MasterFactor>1</MasterFactor>
+            <OpaqueFrames>1</OpaqueFrames>
+            <Frames>20</Frames>
+          </InfosFading>
+        </Pencil>
+      </Drawings>
+    </Keyframe>
+    <Keyframe id="8aaa159a-00d5-4889-a543-36918b10cc8e">
+      <Timestamp>23690</Timestamp>
+      <Name>double?</Name>
+      <Color>46;204;113</Color>
+      <Drawings>
+        <Pencil id="b291bb33-f3bd-455b-8802-0fa9fbf7c10b" name="double?">
+          <PointList Count="2">
+            <Point>368;314</Point>
+            <Point>369;314</Point>
+          </PointList>
+          <DrawingStyle>
+            <Color Key="color">
+              <Value>255;46;204;113</Value>
+            </Color>
+            <PenSize Key="pen size">
+              <Value>10</Value>
+            </PenSize>
+            <PenShape Key="pen shape">
+              <Value>Solid</Value>
+            </PenShape>
+          </DrawingStyle>
+          <InfosFading>
+            <Enabled>true</Enabled>
+            <UseDefault>true</UseDefault>
+            <AlwaysVisible>false</AlwaysVisible>
+            <MasterFactor>1</MasterFactor>
+            <OpaqueFrames>1</OpaqueFrames>
+            <Frames>20</Frames>
+          </InfosFading>
+        </Pencil>
+        <Pencil id="de9a0bf1-2c11-41c6-9026-ebdb96859038" name="double?">
+          <PointList Count="2">
+            <Point>353;312</Point>
+            <Point>354;312</Point>
+          </PointList>
+          <DrawingStyle>
+            <Color Key="color">
+              <Value>255;46;204;113</Value>
+            </Color>
+            <PenSize Key="pen size">
+              <Value>10</Value>
+            </PenSize>
+            <PenShape Key="pen shape">
+              <Value>Solid</Value>
+            </PenShape>
+          </DrawingStyle>
+          <InfosFading>
+            <Enabled>true</Enabled>
+            <UseDefault>true</UseDefault>
+            <AlwaysVisible>false</AlwaysVisible>
+            <MasterFactor>1</MasterFactor>
+            <OpaqueFrames>1</OpaqueFrames>
+            <Frames>20</Frames>
+          </InfosFading>
+        </Pencil>
+      </Drawings>
+    </Keyframe>
+    <Keyframe id="c84de3c5-84d9-43cb-b23b-c57657cf8c4b">
+      <Timestamp>24324</Timestamp>
+      <Name>double?</Name>
+      <Color>46;204;113</Color>
+      <Drawings>
+        <Pencil id="88e8e981-8d13-4d22-b074-f185720ec124" name="double?">
+          <PointList Count="2">
+            <Point>369;317</Point>
+            <Point>370;317</Point>
+          </PointList>
+          <DrawingStyle>
+            <Color Key="color">
+              <Value>255;46;204;113</Value>
+            </Color>
+            <PenSize Key="pen size">
+              <Value>10</Value>
+            </PenSize>
+            <PenShape Key="pen shape">
+              <Value>Solid</Value>
+            </PenShape>
+          </DrawingStyle>
+          <InfosFading>
+            <Enabled>true</Enabled>
+            <UseDefault>true</UseDefault>
+            <AlwaysVisible>false</AlwaysVisible>
+            <MasterFactor>1</MasterFactor>
+            <OpaqueFrames>1</OpaqueFrames>
+            <Frames>20</Frames>
+          </InfosFading>
+        </Pencil>
+        <Pencil id="48964cbd-abe4-4fda-9646-7e90fcd830cf" name="double?">
+          <PointList Count="2">
+            <Point>353;314</Point>
+            <Point>354;314</Point>
+          </PointList>
+          <DrawingStyle>
+            <Color Key="color">
+              <Value>255;46;204;113</Value>
+            </Color>
+            <PenSize Key="pen size">
+              <Value>10</Value>
+            </PenSize>
+            <PenShape Key="pen shape">
+              <Value>Solid</Value>
+            </PenShape>
+          </DrawingStyle>
+          <InfosFading>
+            <Enabled>true</Enabled>
+            <UseDefault>true</UseDefault>
+            <AlwaysVisible>false</AlwaysVisible>
+            <MasterFactor>1</MasterFactor>
+            <OpaqueFrames>1</OpaqueFrames>
+            <Frames>20</Frames>
+          </InfosFading>
+        </Pencil>
+      </Drawings>
+    </Keyframe>
+    <Keyframe id="59c0e41c-e8ee-44ac-960d-1d7eb922ca7e">
+      <Timestamp>24925</Timestamp>
+      <Name>double?</Name>
+      <Color>46;204;113</Color>
+      <Drawings>
+        <Pencil id="9952b4be-59f4-4f87-a62a-782baffc4497" name="double?">
+          <PointList Count="2">
+            <Point>380;311</Point>
+            <Point>381;311</Point>
+          </PointList>
+          <DrawingStyle>
+            <Color Key="color">
+              <Value>255;46;204;113</Value>
+            </Color>
+            <PenSize Key="pen size">
+              <Value>10</Value>
+            </PenSize>
+            <PenShape Key="pen shape">
+              <Value>Solid</Value>
+            </PenShape>
+          </DrawingStyle>
+          <InfosFading>
+            <Enabled>true</Enabled>
+            <UseDefault>true</UseDefault>
+            <AlwaysVisible>false</AlwaysVisible>
+            <MasterFactor>1</MasterFactor>
+            <OpaqueFrames>1</OpaqueFrames>
+            <Frames>20</Frames>
+          </InfosFading>
+        </Pencil>
+        <Pencil id="48fc92d4-82c6-4cf4-a13f-83ca5e330a2a" name="double?">
+          <PointList Count="2">
+            <Point>349;315</Point>
+            <Point>350;315</Point>
+          </PointList>
+          <DrawingStyle>
+            <Color Key="color">
+              <Value>255;46;204;113</Value>
+            </Color>
+            <PenSize Key="pen size">
+              <Value>10</Value>
+            </PenSize>
+            <PenShape Key="pen shape">
+              <Value>Solid</Value>
+            </PenShape>
+          </DrawingStyle>
+          <InfosFading>
+            <Enabled>true</Enabled>
+            <UseDefault>true</UseDefault>
+            <AlwaysVisible>false</AlwaysVisible>
+            <MasterFactor>1</MasterFactor>
+            <OpaqueFrames>1</OpaqueFrames>
+            <Frames>20</Frames>
+          </InfosFading>
+        </Pencil>
+      </Drawings>
+    </Keyframe>
+    <Keyframe id="2c6615bd-ccf8-42c9-9f69-5d1080147aba">
+      <Timestamp>25893</Timestamp>
+      <Name>check</Name>
+      <Color>231;76;60</Color>
+      <Drawings>
+        <Pencil id="eda4d03c-e187-49c7-9bc0-7792f57b6008" name="check">
+          <PointList Count="2">
+            <Point>370;329</Point>
+            <Point>371;329</Point>
+          </PointList>
+          <DrawingStyle>
+            <Color Key="color">
+              <Value>255;231;76;60</Value>
+            </Color>
+            <PenSize Key="pen size">
+              <Value>10</Value>
+            </PenSize>
+            <PenShape Key="pen shape">
+              <Value>Solid</Value>
+            </PenShape>
+          </DrawingStyle>
+          <InfosFading>
+            <Enabled>true</Enabled>
+            <UseDefault>true</UseDefault>
+            <AlwaysVisible>false</AlwaysVisible>
+            <MasterFactor>1</MasterFactor>
+            <OpaqueFrames>1</OpaqueFrames>
+            <Frames>20</Frames>
+          </InfosFading>
+        </Pencil>
+        <Pencil id="aec2537e-5649-4a07-b98a-317f4f5d8ff2" name="check">
+          <PointList Count="2">
+            <Point>325;352</Point>
+            <Point>326;352</Point>
+          </PointList>
+          <DrawingStyle>
+            <Color Key="color">
+              <Value>255;231;76;60</Value>
+            </Color>
+            <PenSize Key="pen size">
+              <Value>10</Value>
+            </PenSize>
+            <PenShape Key="pen shape">
+              <Value>Solid</Value>
+            </PenShape>
+          </DrawingStyle>
+          <InfosFading>
+            <Enabled>true</Enabled>
+            <UseDefault>true</UseDefault>
+            <AlwaysVisible>false</AlwaysVisible>
+            <MasterFactor>1</MasterFactor>
+            <OpaqueFrames>1</OpaqueFrames>
+            <Frames>20</Frames>
+          </InfosFading>
+        </Pencil>
+      </Drawings>
+    </Keyframe>
+  </Keyframes>
+  <CoordinateSystem id="50c67d6f-4f87-48f9-b662-8757622613c4" name="좌표계 1">
+    <Position>640;360</Position>
+    <ReferenceTimestamp>0</ReferenceTimestamp>
+    <Visible>false</Visible>
+    <ShowGrid>true</ShowGrid>
+    <ShowGraduations>true</ShowGraduations>
+    <DrawingStyle>
+      <Color Key="line color">
+        <Value>255;255;0;0</Value>
+      </Color>
+    </DrawingStyle>
+  </CoordinateSystem>
+  <TestGrid id="0be837f4-00fa-466c-8394-e508dec7c6ea" name="카메라 테스트 격자 1">
+    <Visible>false</Visible>
+    <ShowHorizontalAxis>true</ShowHorizontalAxis>
+    <ShowVerticalAxis>true</ShowVerticalAxis>
+    <ShowFraming>true</ShowFraming>
+    <ShowThirds>false</ShowThirds>
+    <DrawingStyle>
+      <Color Key="color">
+        <Value>255;255;0;0</Value>
+      </Color>
+    </DrawingStyle>
+  </TestGrid>
+  <Trackability>
+    <TrackableDrawing id="50c67d6f-4f87-48f9-b662-8757622613c4" name="좌표계 1">
+      <TrackablePoint key="0">
+        <ReferenceTimestamp>0</ReferenceTimestamp>
+        <ReferenceValue>640;360</ReferenceValue>
+      </TrackablePoint>
+    </TrackableDrawing>
+  </Trackability>
+  <VideoFilters />
+</KinoveaVideoAnalysis>

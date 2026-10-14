@@ -12,3 +12,11 @@ videos
 .bench-venv
 .benchmark-node
 benchmark_results
+
+# Verification-only data and tools (annotation tags, external clips, evaluation scripts); never part of the app
+external_data
+tools/eval
+tools/external_data
+.data-venv
+.test-venv
+validation_video

@@ -7,8 +7,9 @@ from dataclasses import dataclass
 import cv2
 import numpy as np
 
+from .rope_trip import RopeTripPolicy
 from .signal_resampler import SignalResampler
-from .pose_protocol import PoseSamplingClock, decode_pose
+from .pose_protocol import PoseSamplingClock, decode_pose, finite_number, plausible_pose
 
 
 MODES = {
@@ -17,12 +18,21 @@ MODES = {
     "double": "double_jump.counter_engine",
 }
 
-# Browser inference/transport target. Counter inputs stay at the validated 20 Hz;
-# double-under signals are still expanded to 30 Hz by SignalResampler.
+# Browser inference/transport target.
 ANALYSIS_FPS = {
     "basic": 60,
     "alternating": 60,
     "double": 60,
+}
+
+# Counter input rate per engine (None = every frame the browser sends). Measured offline on the
+# 20 labelled clips with landmarks cached at native fps (tools/eval/evaluate_engines.py):
+# the old 20 Hz input lost alternate-foot steps (67.9% -> 98.4% at native 60 fps, 90.5% at 30 Hz)
+# and double-unders (85.1% -> 89.5% at 30 Hz); two-foot jumps were unaffected (90.2% vs 90.0%).
+COUNTER_INPUT_HZ = {
+    "basic": 30.0,
+    "alternating": None,
+    "double": 30.0,
 }
 
 # Engines whose 30 fps frame thresholds need the stream expanded to 30 Hz. Only the
@@ -57,7 +67,9 @@ class JumpCounterSession:
         self.client_timestamp_origin = None
         self.last_client_timestamp = None
         self.client_server_origin = None
-        self.pose_sampling_clock = PoseSamplingClock()
+        rate = COUNTER_INPUT_HZ[mode]
+        self.pose_sampling_clock = None if rate is None else PoseSamplingClock(rate)
+        self.trip_policy = RopeTripPolicy()
         self.mode = mode
         self.config = module.EngineConfig()
         self.extractor = (module.PoseSignalExtractor(self.config) if input_backend == "legacy"
@@ -111,6 +123,9 @@ class JumpCounterSession:
         if self.input_backend != "landmarks":
             raise ValueError("expected legacy frame")
         timestamp_ms, inference_ms, pose_result = decode_pose(message)
+        frame_height = message.get("frameHeight")  # height of the image the pose model saw (optional)
+        if frame_height is not None:
+            frame_height = finite_number(frame_height, 16, 4320)
         server_timestamp = time.monotonic() - self.started_at
         if self.last_client_timestamp is not None and timestamp_ms <= self.last_client_timestamp:
             raise ValueError("pose timestamps must increase")
@@ -122,8 +137,10 @@ class JumpCounterSession:
             raise ValueError("pose timestamp drift too large")
         self.last_client_timestamp = timestamp_ms
         signal = None
-        if self.pose_sampling_clock.accept(timestamp):
-            signal, pose_result = self.extractor.process_pose_result(pose_result, self.frame_index, timestamp)
+        if self.pose_sampling_clock is None or self.pose_sampling_clock.accept(timestamp):
+            signal, _ = self.extractor.process_pose_result(plausible_pose(pose_result), self.frame_index, timestamp)
+        if frame_height is not None and self.engine is not None and hasattr(self.engine, "frame_height_px"):
+            self.engine.frame_height_px = frame_height
         return self._advance(signal, pose_result, server_timestamp, processing_started_at, inference_ms)
 
     def _advance(self, signal, pose_result, timestamp, processing_started_at, inference_ms=0.0):
@@ -141,6 +158,7 @@ class JumpCounterSession:
                 if self.engine is not None and self.phase_hook:
                     getattr(self.engine, self.phase_hook)()
                 self.count = 0
+                self.trip_policy.reset()
                 self.count_started_at = time.monotonic()
             self.last_phase = stream_state.phase
 
@@ -150,9 +168,10 @@ class JumpCounterSession:
                 if stream_state.phase != "COUNTING":
                     self.engine.warmup(engine_frame)
                     continue
+                self.trip_policy.expire(engine_frame.time_sec)
                 event = self.engine.step(engine_frame)
                 if event is not None:
-                    self.count = int(event.running_count)
+                    self.count = self.trip_policy.observe(event, engine_frame.time_sec)
 
         landmarks = []
         if pose_result.pose_landmarks:

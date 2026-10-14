@@ -1,0 +1,2695 @@
+<?xml version="1.0" encoding="utf-8"?>
+<KinoveaVideoAnalysis>
+  <FormatVersion>2.0</FormatVersion>
+  <Producer>Kinovea.2025.1.1</Producer>
+  <OriginalFilename>e2lMOfAv4Q8_seg3</OriginalFilename>
+  <FullPath>e2lMOfAv4Q8_seg3.mp4</FullPath>
+  <ImageSize>640;360</ImageSize>
+  <Aspect>Auto</Aspect>
+  <Rotation>Rotate0</Rotation>
+  <Mirror>false</Mirror>
+  <Demosaicing>None</Demosaicing>
+  <Deinterlacing>false</Deinterlacing>
+  <StabilizationTrack>00000000-0000-0000-0000-000000000000</StabilizationTrack>
+  <BackgroundColor>0;255;255;255</BackgroundColor>
+  <AverageTimeStampsPerFrame>42</AverageTimeStampsPerFrame>
+  <CaptureFramerate>23.98</CaptureFramerate>
+  <UserFramerate>23.98</UserFramerate>
+  <FirstTimeStamp>0</FirstTimeStamp>
+  <SelectionStart>0</SelectionStart>
+  <SelectionEnd>30000</SelectionEnd>
+  <TimeOrigin>0</TimeOrigin>
+  <Calibration>
+    <CalibrationLine>
+      <Length>100</Length>
+      <Segment>
+        <A>320;180</A>
+        <B>420;180</B>
+      </Segment>
+      <Origin>0;100</Origin>
+      <Offset>0;0</Offset>
+      <Axis>LineHorizontal</Axis>
+    </CalibrationLine>
+    <CalibrationDrawingId>00000000-0000-0000-0000-000000000000</CalibrationDrawingId>
+    <Unit Abbreviation="px">Pixels</Unit>
+  </Calibration>
+  <Keyframes>
+    <Keyframe id="d6a7096e-97a8-4b52-89c6-26f41ed5a018">
+      <Timestamp>84</Timestamp>
+      <Name>first 오른발</Name>
+      <Color>255;140;0</Color>
+      <Drawings>
+        <Pencil id="6b2ce55f-e2d3-4bda-a082-b0f9d01ebaca" name="first 오른발">
+          <PointList Count="2">
+            <Point>367;325</Point>
+            <Point>368;325</Point>
+          </PointList>
+          <DrawingStyle>
+            <Color Key="color">
+              <Value>255;255;140;0</Value>
+            </Color>
+            <PenSize Key="pen size">
+              <Value>10</Value>
+            </PenSize>
+            <PenShape Key="pen shape">
+              <Value>Solid</Value>
+            </PenShape>
+          </DrawingStyle>
+          <InfosFading>
+            <Enabled>true</Enabled>
+            <UseDefault>true</UseDefault>
+            <AlwaysVisible>false</AlwaysVisible>
+            <MasterFactor>1</MasterFactor>
+            <OpaqueFrames>1</OpaqueFrames>
+            <Frames>20</Frames>
+          </InfosFading>
+        </Pencil>
+      </Drawings>
+    </Keyframe>
+    <Keyframe id="86002b15-e8a5-42c4-a17e-ae703c3714f3">
+      <Timestamp>459</Timestamp>
+      <Name>ok 왼발</Name>
+      <Color>46;204;113</Color>
+      <Drawings>
+        <Pencil id="4d7e9274-487b-49a6-934b-a58a7cad18e7" name="ok 왼발">
+          <PointList Count="2">
+            <Point>345;329</Point>
+            <Point>346;329</Point>
+          </PointList>
+          <DrawingStyle>
+            <Color Key="color">
+              <Value>255;46;204;113</Value>
+            </Color>
+            <PenSize Key="pen size">
+              <Value>10</Value>
+            </PenSize>
+            <PenShape Key="pen shape">
+              <Value>Solid</Value>
+            </PenShape>
+          </DrawingStyle>
+          <InfosFading>
+            <Enabled>true</Enabled>
+            <UseDefault>true</UseDefault>
+            <AlwaysVisible>false</AlwaysVisible>
+            <MasterFactor>1</MasterFactor>
+            <OpaqueFrames>1</OpaqueFrames>
+            <Frames>20</Frames>
+          </InfosFading>
+        </Pencil>
+      </Drawings>
+    </Keyframe>
+    <Keyframe id="53b7b4e9-7322-4b33-90f5-0c61831b7fd8">
+      <Timestamp>835</Timestamp>
+      <Name>ok 오른발</Name>
+      <Color>46;204;113</Color>
+      <Drawings>
+        <Pencil id="a3b42ab0-384e-4bbb-92e1-105a4a51c21c" name="ok 오른발">
+          <PointList Count="2">
+            <Point>346;326</Point>
+            <Point>347;326</Point>
+          </PointList>
+          <DrawingStyle>
+            <Color Key="color">
+              <Value>255;46;204;113</Value>
+            </Color>
+            <PenSize Key="pen size">
+              <Value>10</Value>
+            </PenSize>
+            <PenShape Key="pen shape">
+              <Value>Solid</Value>
+            </PenShape>
+          </DrawingStyle>
+          <InfosFading>
+            <Enabled>true</Enabled>
+            <UseDefault>true</UseDefault>
+            <AlwaysVisible>false</AlwaysVisible>
+            <MasterFactor>1</MasterFactor>
+            <OpaqueFrames>1</OpaqueFrames>
+            <Frames>20</Frames>
+          </InfosFading>
+        </Pencil>
+      </Drawings>
+    </Keyframe>
+    <Keyframe id="d13f795f-c537-4c6d-9104-171baa06cca0">
+      <Timestamp>1210</Timestamp>
+      <Name>ok 왼발</Name>
+      <Color>46;204;113</Color>
+      <Drawings>
+        <Pencil id="657138ad-d371-4297-9bd5-2a01dca381e1" name="ok 왼발">
+          <PointList Count="2">
+            <Point>351;327</Point>
+            <Point>352;327</Point>
+          </PointList>
+          <DrawingStyle>
+            <Color Key="color">
+              <Value>255;46;204;113</Value>
+            </Color>
+            <PenSize Key="pen size">
+              <Value>10</Value>
+            </PenSize>
+            <PenShape Key="pen shape">
+              <Value>Solid</Value>
+            </PenShape>
+          </DrawingStyle>
+          <InfosFading>
+            <Enabled>true</Enabled>
+            <UseDefault>true</UseDefault>
+            <AlwaysVisible>false</AlwaysVisible>
+            <MasterFactor>1</MasterFactor>
+            <OpaqueFrames>1</OpaqueFrames>
+            <Frames>20</Frames>
+          </InfosFading>
+        </Pencil>
+      </Drawings>
+    </Keyframe>
+    <Keyframe id="57daf96a-e8b9-476c-9b5a-1f5735bc6340">
+      <Timestamp>1544</Timestamp>
+      <Name>ok 오른발</Name>
+      <Color>46;204;113</Color>
+      <Drawings>
+        <Pencil id="d58a9e96-06d7-4988-9cd9-a3585a2245d8" name="ok 오른발">
+          <PointList Count="2">
+            <Point>354;326</Point>
+            <Point>355;326</Point>
+          </PointList>
+          <DrawingStyle>
+            <Color Key="color">
+              <Value>255;46;204;113</Value>
+            </Color>
+            <PenSize Key="pen size">
+              <Value>10</Value>
+            </PenSize>
+            <PenShape Key="pen shape">
+              <Value>Solid</Value>
+            </PenShape>
+          </DrawingStyle>
+          <InfosFading>
+            <Enabled>true</Enabled>
+            <UseDefault>true</UseDefault>
+            <AlwaysVisible>false</AlwaysVisible>
+            <MasterFactor>1</MasterFactor>
+            <OpaqueFrames>1</OpaqueFrames>
+            <Frames>20</Frames>
+          </InfosFading>
+        </Pencil>
+      </Drawings>
+    </Keyframe>
+    <Keyframe id="cc6a3ffb-5890-4217-b1fb-a3b3c8db657f">
+      <Timestamp>1919</Timestamp>
+      <Name>ok 왼발</Name>
+      <Color>46;204;113</Color>
+      <Drawings>
+        <Pencil id="4ed17196-ccf7-44d0-9c87-111859947633" name="ok 왼발">
+          <PointList Count="2">
+            <Point>360;326</Point>
+            <Point>361;326</Point>
+          </PointList>
+          <DrawingStyle>
+            <Color Key="color">
+              <Value>255;46;204;113</Value>
+            </Color>
+            <PenSize Key="pen size">
+              <Value>10</Value>
+            </PenSize>
+            <PenShape Key="pen shape">
+              <Value>Solid</Value>
+            </PenShape>
+          </DrawingStyle>
+          <InfosFading>
+            <Enabled>true</Enabled>
+            <UseDefault>true</UseDefault>
+            <AlwaysVisible>false</AlwaysVisible>
+            <MasterFactor>1</MasterFactor>
+            <OpaqueFrames>1</OpaqueFrames>
+            <Frames>20</Frames>
+          </InfosFading>
+        </Pencil>
+      </Drawings>
+    </Keyframe>
+    <Keyframe id="e893aa74-4306-4a34-b0e6-9e5b5983b5d2">
+      <Timestamp>2294</Timestamp>
+      <Name>ok 오른발</Name>
+      <Color>46;204;113</Color>
+      <Drawings>
+        <Pencil id="ae0426e6-e7b4-4039-a469-3c61ed757a7b" name="ok 오른발">
+          <PointList Count="2">
+            <Point>358;323</Point>
+            <Point>359;323</Point>
+          </PointList>
+          <DrawingStyle>
+            <Color Key="color">
+              <Value>255;46;204;113</Value>
+            </Color>
+            <PenSize Key="pen size">
+              <Value>10</Value>
+            </PenSize>
+            <PenShape Key="pen shape">
+              <Value>Solid</Value>
+            </PenShape>
+          </DrawingStyle>
+          <InfosFading>
+            <Enabled>true</Enabled>
+            <UseDefault>true</UseDefault>
+            <AlwaysVisible>false</AlwaysVisible>
+            <MasterFactor>1</MasterFactor>
+            <OpaqueFrames>1</OpaqueFrames>
+            <Frames>20</Frames>
+          </InfosFading>
+        </Pencil>
+      </Drawings>
+    </Keyframe>
+    <Keyframe id="e7e341ac-6d70-41c7-8fa5-9f678beea7b1">
+      <Timestamp>2628</Timestamp>
+      <Name>ok 왼발</Name>
+      <Color>46;204;113</Color>
+      <Drawings>
+        <Pencil id="11443ca8-4f26-43e8-a5e6-6d2bb489b22f" name="ok 왼발">
+          <PointList Count="2">
+            <Point>369;323</Point>
+            <Point>370;323</Point>
+          </PointList>
+          <DrawingStyle>
+            <Color Key="color">
+              <Value>255;46;204;113</Value>
+            </Color>
+            <PenSize Key="pen size">
+              <Value>10</Value>
+            </PenSize>
+            <PenShape Key="pen shape">
+              <Value>Solid</Value>
+            </PenShape>
+          </DrawingStyle>
+          <InfosFading>
+            <Enabled>true</Enabled>
+            <UseDefault>true</UseDefault>
+            <AlwaysVisible>false</AlwaysVisible>
+            <MasterFactor>1</MasterFactor>
+            <OpaqueFrames>1</OpaqueFrames>
+            <Frames>20</Frames>
+          </InfosFading>
+        </Pencil>
+      </Drawings>
+    </Keyframe>
+    <Keyframe id="789f62fb-2d39-4c98-93c7-895d4b497cce">
+      <Timestamp>3003</Timestamp>
+      <Name>ok 오른발</Name>
+      <Color>46;204;113</Color>
+      <Drawings>
+        <Pencil id="92e1ec8b-9680-4cdf-a5b0-f4cf3775c27a" name="ok 오른발">
+          <PointList Count="2">
+            <Point>367;322</Point>
+            <Point>368;322</Point>
+          </PointList>
+          <DrawingStyle>
+            <Color Key="color">
+              <Value>255;46;204;113</Value>
+            </Color>
+            <PenSize Key="pen size">
+              <Value>10</Value>
+            </PenSize>
+            <PenShape Key="pen shape">
+              <Value>Solid</Value>
+            </PenShape>
+          </DrawingStyle>
+          <InfosFading>
+            <Enabled>true</Enabled>
+            <UseDefault>true</UseDefault>
+            <AlwaysVisible>false</AlwaysVisible>
+            <MasterFactor>1</MasterFactor>
+            <OpaqueFrames>1</OpaqueFrames>
+            <Frames>20</Frames>
+          </InfosFading>
+        </Pencil>
+      </Drawings>
+    </Keyframe>
+    <Keyframe id="bc736abf-0399-4bc2-b00d-7c89ec444d36">
+      <Timestamp>3379</Timestamp>
+      <Name>ok 왼발</Name>
+      <Color>46;204;113</Color>
+      <Drawings>
+        <Pencil id="b0236931-7ed1-46c0-8293-ceb7c6358c12" name="ok 왼발">
+          <PointList Count="2">
+            <Point>364;322</Point>
+            <Point>365;322</Point>
+          </PointList>
+          <DrawingStyle>
+            <Color Key="color">
+              <Value>255;46;204;113</Value>
+            </Color>
+            <PenSize Key="pen size">
+              <Value>10</Value>
+            </PenSize>
+            <PenShape Key="pen shape">
+              <Value>Solid</Value>
+            </PenShape>
+          </DrawingStyle>
+          <InfosFading>
+            <Enabled>true</Enabled>
+            <UseDefault>true</UseDefault>
+            <AlwaysVisible>false</AlwaysVisible>
+            <MasterFactor>1</MasterFactor>
+            <OpaqueFrames>1</OpaqueFrames>
+            <Frames>20</Frames>
+          </InfosFading>
+        </Pencil>
+      </Drawings>
+    </Keyframe>
+    <Keyframe id="8056f89b-64af-47e3-80e4-0dad6e10d9a3">
+      <Timestamp>3713</Timestamp>
+      <Name>ok 오른발</Name>
+      <Color>46;204;113</Color>
+      <Drawings>
+        <Pencil id="db771d6f-a642-44dd-aea7-7163d5060f56" name="ok 오른발">
+          <PointList Count="2">
+            <Point>351;324</Point>
+            <Point>352;324</Point>
+          </PointList>
+          <DrawingStyle>
+            <Color Key="color">
+              <Value>255;46;204;113</Value>
+            </Color>
+            <PenSize Key="pen size">
+              <Value>10</Value>
+            </PenSize>
+            <PenShape Key="pen shape">
+              <Value>Solid</Value>
+            </PenShape>
+          </DrawingStyle>
+          <InfosFading>
+            <Enabled>true</Enabled>
+            <UseDefault>true</UseDefault>
+            <AlwaysVisible>false</AlwaysVisible>
+            <MasterFactor>1</MasterFactor>
+            <OpaqueFrames>1</OpaqueFrames>
+            <Frames>20</Frames>
+          </InfosFading>
+        </Pencil>
+      </Drawings>
+    </Keyframe>
+    <Keyframe id="660620cf-9df2-4cfb-9aa7-371491d9d20e">
+      <Timestamp>4088</Timestamp>
+      <Name>ok 왼발</Name>
+      <Color>46;204;113</Color>
+      <Drawings>
+        <Pencil id="663cc46b-29ad-4c19-b5d0-be8541ad55a8" name="ok 왼발">
+          <PointList Count="2">
+            <Point>361;322</Point>
+            <Point>362;322</Point>
+          </PointList>
+          <DrawingStyle>
+            <Color Key="color">
+              <Value>255;46;204;113</Value>
+            </Color>
+            <PenSize Key="pen size">
+              <Value>10</Value>
+            </PenSize>
+            <PenShape Key="pen shape">
+              <Value>Solid</Value>
+            </PenShape>
+          </DrawingStyle>
+          <InfosFading>
+            <Enabled>true</Enabled>
+            <UseDefault>true</UseDefault>
+            <AlwaysVisible>false</AlwaysVisible>
+            <MasterFactor>1</MasterFactor>
+            <OpaqueFrames>1</OpaqueFrames>
+            <Frames>20</Frames>
+          </InfosFading>
+        </Pencil>
+      </Drawings>
+    </Keyframe>
+    <Keyframe id="2a748d3e-59e3-4e20-b04e-83f4332451c8">
+      <Timestamp>4463</Timestamp>
+      <Name>ok 오른발</Name>
+      <Color>46;204;113</Color>
+      <Drawings>
+        <Pencil id="b54afeb4-3ba9-497c-836a-ae71b633977b" name="ok 오른발">
+          <PointList Count="2">
+            <Point>362;321</Point>
+            <Point>363;321</Point>
+          </PointList>
+          <DrawingStyle>
+            <Color Key="color">
+              <Value>255;46;204;113</Value>
+            </Color>
+            <PenSize Key="pen size">
+              <Value>10</Value>
+            </PenSize>
+            <PenShape Key="pen shape">
+              <Value>Solid</Value>
+            </PenShape>
+          </DrawingStyle>
+          <InfosFading>
+            <Enabled>true</Enabled>
+            <UseDefault>true</UseDefault>
+            <AlwaysVisible>false</AlwaysVisible>
+            <MasterFactor>1</MasterFactor>
+            <OpaqueFrames>1</OpaqueFrames>
+            <Frames>20</Frames>
+          </InfosFading>
+        </Pencil>
+      </Drawings>
+    </Keyframe>
+    <Keyframe id="e4f7f61b-50a3-4978-a34f-db172c83006f">
+      <Timestamp>4839</Timestamp>
+      <Name>ok 왼발</Name>
+      <Color>46;204;113</Color>
+      <Drawings>
+        <Pencil id="13ce6977-b692-4bde-b4ce-23c45335326d" name="ok 왼발">
+          <PointList Count="2">
+            <Point>362;324</Point>
+            <Point>363;324</Point>
+          </PointList>
+          <DrawingStyle>
+            <Color Key="color">
+              <Value>255;46;204;113</Value>
+            </Color>
+            <PenSize Key="pen size">
+              <Value>10</Value>
+            </PenSize>
+            <PenShape Key="pen shape">
+              <Value>Solid</Value>
+            </PenShape>
+          </DrawingStyle>
+          <InfosFading>
+            <Enabled>true</Enabled>
+            <UseDefault>true</UseDefault>
+            <AlwaysVisible>false</AlwaysVisible>
+            <MasterFactor>1</MasterFactor>
+            <OpaqueFrames>1</OpaqueFrames>
+            <Frames>20</Frames>
+          </InfosFading>
+        </Pencil>
+      </Drawings>
+    </Keyframe>
+    <Keyframe id="4c7eb390-9180-4871-a96a-339549024c6a">
+      <Timestamp>5172</Timestamp>
+      <Name>ok 오른발</Name>
+      <Color>46;204;113</Color>
+      <Drawings>
+        <Pencil id="5908a5f8-a2eb-48df-b44f-2942f9c5120d" name="ok 오른발">
+          <PointList Count="2">
+            <Point>357;325</Point>
+            <Point>358;325</Point>
+          </PointList>
+          <DrawingStyle>
+            <Color Key="color">
+              <Value>255;46;204;113</Value>
+            </Color>
+            <PenSize Key="pen size">
+              <Value>10</Value>
+            </PenSize>
+            <PenShape Key="pen shape">
+              <Value>Solid</Value>
+            </PenShape>
+          </DrawingStyle>
+          <InfosFading>
+            <Enabled>true</Enabled>
+            <UseDefault>true</UseDefault>
+            <AlwaysVisible>false</AlwaysVisible>
+            <MasterFactor>1</MasterFactor>
+            <OpaqueFrames>1</OpaqueFrames>
+            <Frames>20</Frames>
+          </InfosFading>
+        </Pencil>
+      </Drawings>
+    </Keyframe>
+    <Keyframe id="42b02228-32a8-41fe-801e-dd5dae422720">
+      <Timestamp>5548</Timestamp>
+      <Name>ok 왼발</Name>
+      <Color>46;204;113</Color>
+      <Drawings>
+        <Pencil id="60a08a1b-2a42-436f-9883-7172acff63f9" name="ok 왼발">
+          <PointList Count="2">
+            <Point>367;325</Point>
+            <Point>368;325</Point>
+          </PointList>
+          <DrawingStyle>
+            <Color Key="color">
+              <Value>255;46;204;113</Value>
+            </Color>
+            <PenSize Key="pen size">
+              <Value>10</Value>
+            </PenSize>
+            <PenShape Key="pen shape">
+              <Value>Solid</Value>
+            </PenShape>
+          </DrawingStyle>
+          <InfosFading>
+            <Enabled>true</Enabled>
+            <UseDefault>true</UseDefault>
+            <AlwaysVisible>false</AlwaysVisible>
+            <MasterFactor>1</MasterFactor>
+            <OpaqueFrames>1</OpaqueFrames>
+            <Frames>20</Frames>
+          </InfosFading>
+        </Pencil>
+      </Drawings>
+    </Keyframe>
+    <Keyframe id="c74670db-3862-4986-8b95-b67bf5c24aea">
+      <Timestamp>5923</Timestamp>
+      <Name>ok 오른발</Name>
+      <Color>46;204;113</Color>
+      <Drawings>
+        <Pencil id="9df390a1-0615-40d4-bef5-ff6a21020a19" name="ok 오른발">
+          <PointList Count="2">
+            <Point>360;327</Point>
+            <Point>361;327</Point>
+          </PointList>
+          <DrawingStyle>
+            <Color Key="color">
+              <Value>255;46;204;113</Value>
+            </Color>
+            <PenSize Key="pen size">
+              <Value>10</Value>
+            </PenSize>
+            <PenShape Key="pen shape">
+              <Value>Solid</Value>
+            </PenShape>
+          </DrawingStyle>
+          <InfosFading>
+            <Enabled>true</Enabled>
+            <UseDefault>true</UseDefault>
+            <AlwaysVisible>false</AlwaysVisible>
+            <MasterFactor>1</MasterFactor>
+            <OpaqueFrames>1</OpaqueFrames>
+            <Frames>20</Frames>
+          </InfosFading>
+        </Pencil>
+      </Drawings>
+    </Keyframe>
+    <Keyframe id="46c147d6-5722-4c1b-ba3c-ed4a0002a143">
+      <Timestamp>6298</Timestamp>
+      <Name>ok 왼발</Name>
+      <Color>46;204;113</Color>
+      <Drawings>
+        <Pencil id="d89ec64c-de6c-4a39-a8c1-3c2104695909" name="ok 왼발">
+          <PointList Count="2">
+            <Point>358;325</Point>
+            <Point>359;325</Point>
+          </PointList>
+          <DrawingStyle>
+            <Color Key="color">
+              <Value>255;46;204;113</Value>
+            </Color>
+            <PenSize Key="pen size">
+              <Value>10</Value>
+            </PenSize>
+            <PenShape Key="pen shape">
+              <Value>Solid</Value>
+            </PenShape>
+          </DrawingStyle>
+          <InfosFading>
+            <Enabled>true</Enabled>
+            <UseDefault>true</UseDefault>
+            <AlwaysVisible>false</AlwaysVisible>
+            <MasterFactor>1</MasterFactor>
+            <OpaqueFrames>1</OpaqueFrames>
+            <Frames>20</Frames>
+          </InfosFading>
+        </Pencil>
+      </Drawings>
+    </Keyframe>
+    <Keyframe id="3f23249a-df2b-475f-b507-92f40788c9e1">
+      <Timestamp>6674</Timestamp>
+      <Name>ok 오른발</Name>
+      <Color>46;204;113</Color>
+      <Drawings>
+        <Pencil id="027b78e2-bdbd-4104-a293-b9c413ed87ff" name="ok 오른발">
+          <PointList Count="2">
+            <Point>353;327</Point>
+            <Point>354;327</Point>
+          </PointList>
+          <DrawingStyle>
+            <Color Key="color">
+              <Value>255;46;204;113</Value>
+            </Color>
+            <PenSize Key="pen size">
+              <Value>10</Value>
+            </PenSize>
+            <PenShape Key="pen shape">
+              <Value>Solid</Value>
+            </PenShape>
+          </DrawingStyle>
+          <InfosFading>
+            <Enabled>true</Enabled>
+            <UseDefault>true</UseDefault>
+            <AlwaysVisible>false</AlwaysVisible>
+            <MasterFactor>1</MasterFactor>
+            <OpaqueFrames>1</OpaqueFrames>
+            <Frames>20</Frames>
+          </InfosFading>
+        </Pencil>
+      </Drawings>
+    </Keyframe>
+    <Keyframe id="bb64c6ad-a80a-4673-bbc1-163cd4000f62">
+      <Timestamp>7049</Timestamp>
+      <Name>ok 왼발</Name>
+      <Color>46;204;113</Color>
+      <Drawings>
+        <Pencil id="7449025c-917b-4b31-93ba-0ee671b5626c" name="ok 왼발">
+          <PointList Count="2">
+            <Point>357;327</Point>
+            <Point>358;327</Point>
+          </PointList>
+          <DrawingStyle>
+            <Color Key="color">
+              <Value>255;46;204;113</Value>
+            </Color>
+            <PenSize Key="pen size">
+              <Value>10</Value>
+            </PenSize>
+            <PenShape Key="pen shape">
+              <Value>Solid</Value>
+            </PenShape>
+          </DrawingStyle>
+          <InfosFading>
+            <Enabled>true</Enabled>
+            <UseDefault>true</UseDefault>
+            <AlwaysVisible>false</AlwaysVisible>
+            <MasterFactor>1</MasterFactor>
+            <OpaqueFrames>1</OpaqueFrames>
+            <Frames>20</Frames>
+          </InfosFading>
+        </Pencil>
+      </Drawings>
+    </Keyframe>
+    <Keyframe id="a665abcf-dddb-413c-8c85-c1c4e73f815c">
+      <Timestamp>7425</Timestamp>
+      <Name>ok 오른발</Name>
+      <Color>46;204;113</Color>
+      <Drawings>
+        <Pencil id="a7eaf704-2f95-4119-8df9-36b491169a96" name="ok 오른발">
+          <PointList Count="2">
+            <Point>349;327</Point>
+            <Point>350;327</Point>
+          </PointList>
+          <DrawingStyle>
+            <Color Key="color">
+              <Value>255;46;204;113</Value>
+            </Color>
+            <PenSize Key="pen size">
+              <Value>10</Value>
+            </PenSize>
+            <PenShape Key="pen shape">
+              <Value>Solid</Value>
+            </PenShape>
+          </DrawingStyle>
+          <InfosFading>
+            <Enabled>true</Enabled>
+            <UseDefault>true</UseDefault>
+            <AlwaysVisible>false</AlwaysVisible>
+            <MasterFactor>1</MasterFactor>
+            <OpaqueFrames>1</OpaqueFrames>
+            <Frames>20</Frames>
+          </InfosFading>
+        </Pencil>
+      </Drawings>
+    </Keyframe>
+    <Keyframe id="50c3e2d9-4e30-4e1e-8775-6faddb107e7c">
+      <Timestamp>7800</Timestamp>
+      <Name>ok 왼발</Name>
+      <Color>46;204;113</Color>
+      <Drawings>
+        <Pencil id="a9a34017-d040-4f1a-9769-7d80d36b3340" name="ok 왼발">
+          <PointList Count="2">
+            <Point>360;325</Point>
+            <Point>361;325</Point>
+          </PointList>
+          <DrawingStyle>
+            <Color Key="color">
+              <Value>255;46;204;113</Value>
+            </Color>
+            <PenSize Key="pen size">
+              <Value>10</Value>
+            </PenSize>
+            <PenShape Key="pen shape">
+              <Value>Solid</Value>
+            </PenShape>
+          </DrawingStyle>
+          <InfosFading>
+            <Enabled>true</Enabled>
+            <UseDefault>true</UseDefault>
+            <AlwaysVisible>false</AlwaysVisible>
+            <MasterFactor>1</MasterFactor>
+            <OpaqueFrames>1</OpaqueFrames>
+            <Frames>20</Frames>
+          </InfosFading>
+        </Pencil>
+      </Drawings>
+    </Keyframe>
+    <Keyframe id="89ea4425-5aa6-4343-9ee1-4b665d12d78c">
+      <Timestamp>8175</Timestamp>
+      <Name>ok 오른발</Name>
+      <Color>46;204;113</Color>
+      <Drawings>
+        <Pencil id="bc68f9f8-ef4f-4623-9954-6942b2baa026" name="ok 오른발">
+          <PointList Count="2">
+            <Point>357;325</Point>
+            <Point>358;325</Point>
+          </PointList>
+          <DrawingStyle>
+            <Color Key="color">
+              <Value>255;46;204;113</Value>
+            </Color>
+            <PenSize Key="pen size">
+              <Value>10</Value>
+            </PenSize>
+            <PenShape Key="pen shape">
+              <Value>Solid</Value>
+            </PenShape>
+          </DrawingStyle>
+          <InfosFading>
+            <Enabled>true</Enabled>
+            <UseDefault>true</UseDefault>
+            <AlwaysVisible>false</AlwaysVisible>
+            <MasterFactor>1</MasterFactor>
+            <OpaqueFrames>1</OpaqueFrames>
+            <Frames>20</Frames>
+          </InfosFading>
+        </Pencil>
+      </Drawings>
+    </Keyframe>
+    <Keyframe id="36497426-8b49-45af-ac18-bf53bc5c9643">
+      <Timestamp>8551</Timestamp>
+      <Name>ok 왼발</Name>
+      <Color>46;204;113</Color>
+      <Drawings>
+        <Pencil id="08cf1d60-af2f-4bd4-b74d-0ae0d76632af" name="ok 왼발">
+          <PointList Count="2">
+            <Point>365;323</Point>
+            <Point>366;323</Point>
+          </PointList>
+          <DrawingStyle>
+            <Color Key="color">
+              <Value>255;46;204;113</Value>
+            </Color>
+            <PenSize Key="pen size">
+              <Value>10</Value>
+            </PenSize>
+            <PenShape Key="pen shape">
+              <Value>Solid</Value>
+            </PenShape>
+          </DrawingStyle>
+          <InfosFading>
+            <Enabled>true</Enabled>
+            <UseDefault>true</UseDefault>
+            <AlwaysVisible>false</AlwaysVisible>
+            <MasterFactor>1</MasterFactor>
+            <OpaqueFrames>1</OpaqueFrames>
+            <Frames>20</Frames>
+          </InfosFading>
+        </Pencil>
+      </Drawings>
+    </Keyframe>
+    <Keyframe id="7b22d990-54a9-440f-9714-5219f05d719c">
+      <Timestamp>8926</Timestamp>
+      <Name>ok 오른발</Name>
+      <Color>46;204;113</Color>
+      <Drawings>
+        <Pencil id="5737021b-b1da-44ff-9cd9-82c634a20505" name="ok 오른발">
+          <PointList Count="2">
+            <Point>359;325</Point>
+            <Point>360;325</Point>
+          </PointList>
+          <DrawingStyle>
+            <Color Key="color">
+              <Value>255;46;204;113</Value>
+            </Color>
+            <PenSize Key="pen size">
+              <Value>10</Value>
+            </PenSize>
+            <PenShape Key="pen shape">
+              <Value>Solid</Value>
+            </PenShape>
+          </DrawingStyle>
+          <InfosFading>
+            <Enabled>true</Enabled>
+            <UseDefault>true</UseDefault>
+            <AlwaysVisible>false</AlwaysVisible>
+            <MasterFactor>1</MasterFactor>
+            <OpaqueFrames>1</OpaqueFrames>
+            <Frames>20</Frames>
+          </InfosFading>
+        </Pencil>
+      </Drawings>
+    </Keyframe>
+    <Keyframe id="6f379133-7ad0-4409-b25b-ce4aa6c696f6">
+      <Timestamp>9301</Timestamp>
+      <Name>ok 왼발</Name>
+      <Color>46;204;113</Color>
+      <Drawings>
+        <Pencil id="b443dd48-95c7-4293-aac9-3a260c03ae29" name="ok 왼발">
+          <PointList Count="2">
+            <Point>360;324</Point>
+            <Point>361;324</Point>
+          </PointList>
+          <DrawingStyle>
+            <Color Key="color">
+              <Value>255;46;204;113</Value>
+            </Color>
+            <PenSize Key="pen size">
+              <Value>10</Value>
+            </PenSize>
+            <PenShape Key="pen shape">
+              <Value>Solid</Value>
+            </PenShape>
+          </DrawingStyle>
+          <InfosFading>
+            <Enabled>true</Enabled>
+            <UseDefault>true</UseDefault>
+            <AlwaysVisible>false</AlwaysVisible>
+            <MasterFactor>1</MasterFactor>
+            <OpaqueFrames>1</OpaqueFrames>
+            <Frames>20</Frames>
+          </InfosFading>
+        </Pencil>
+      </Drawings>
+    </Keyframe>
+    <Keyframe id="65d11a1a-cfd8-45c4-9df6-87f8fb844be5">
+      <Timestamp>9635</Timestamp>
+      <Name>ok 오른발</Name>
+      <Color>46;204;113</Color>
+      <Drawings>
+        <Pencil id="b361b844-2e61-483a-8b60-272e07813435" name="ok 오른발">
+          <PointList Count="2">
+            <Point>358;326</Point>
+            <Point>359;326</Point>
+          </PointList>
+          <DrawingStyle>
+            <Color Key="color">
+              <Value>255;46;204;113</Value>
+            </Color>
+            <PenSize Key="pen size">
+              <Value>10</Value>
+            </PenSize>
+            <PenShape Key="pen shape">
+              <Value>Solid</Value>
+            </PenShape>
+          </DrawingStyle>
+          <InfosFading>
+            <Enabled>true</Enabled>
+            <UseDefault>true</UseDefault>
+            <AlwaysVisible>false</AlwaysVisible>
+            <MasterFactor>1</MasterFactor>
+            <OpaqueFrames>1</OpaqueFrames>
+            <Frames>20</Frames>
+          </InfosFading>
+        </Pencil>
+      </Drawings>
+    </Keyframe>
+    <Keyframe id="51bedacd-cfff-4327-aaa0-5ea5c816e773">
+      <Timestamp>10011</Timestamp>
+      <Name>ok 왼발</Name>
+      <Color>46;204;113</Color>
+      <Drawings>
+        <Pencil id="041df37a-c771-4265-b706-cbe5cac3d79e" name="ok 왼발">
+          <PointList Count="2">
+            <Point>357;326</Point>
+            <Point>358;326</Point>
+          </PointList>
+          <DrawingStyle>
+            <Color Key="color">
+              <Value>255;46;204;113</Value>
+            </Color>
+            <PenSize Key="pen size">
+              <Value>10</Value>
+            </PenSize>
+            <PenShape Key="pen shape">
+              <Value>Solid</Value>
+            </PenShape>
+          </DrawingStyle>
+          <InfosFading>
+            <Enabled>true</Enabled>
+            <UseDefault>true</UseDefault>
+            <AlwaysVisible>false</AlwaysVisible>
+            <MasterFactor>1</MasterFactor>
+            <OpaqueFrames>1</OpaqueFrames>
+            <Frames>20</Frames>
+          </InfosFading>
+        </Pencil>
+      </Drawings>
+    </Keyframe>
+    <Keyframe id="19230f36-6095-4e03-ada6-83aa5710521e">
+      <Timestamp>10386</Timestamp>
+      <Name>ok 오른발</Name>
+      <Color>46;204;113</Color>
+      <Drawings>
+        <Pencil id="facf1bb7-4b77-4eb5-9806-765157451a9d" name="ok 오른발">
+          <PointList Count="2">
+            <Point>348;326</Point>
+            <Point>349;326</Point>
+          </PointList>
+          <DrawingStyle>
+            <Color Key="color">
+              <Value>255;46;204;113</Value>
+            </Color>
+            <PenSize Key="pen size">
+              <Value>10</Value>
+            </PenSize>
+            <PenShape Key="pen shape">
+              <Value>Solid</Value>
+            </PenShape>
+          </DrawingStyle>
+          <InfosFading>
+            <Enabled>true</Enabled>
+            <UseDefault>true</UseDefault>
+            <AlwaysVisible>false</AlwaysVisible>
+            <MasterFactor>1</MasterFactor>
+            <OpaqueFrames>1</OpaqueFrames>
+            <Frames>20</Frames>
+          </InfosFading>
+        </Pencil>
+      </Drawings>
+    </Keyframe>
+    <Keyframe id="2672d735-244a-4124-8359-fc2c4ebbaefe">
+      <Timestamp>10761</Timestamp>
+      <Name>ok 왼발</Name>
+      <Color>46;204;113</Color>
+      <Drawings>
+        <Pencil id="1c5ef79c-0379-4e82-93c3-96f8d060fc17" name="ok 왼발">
+          <PointList Count="2">
+            <Point>354;326</Point>
+            <Point>355;326</Point>
+          </PointList>
+          <DrawingStyle>
+            <Color Key="color">
+              <Value>255;46;204;113</Value>
+            </Color>
+            <PenSize Key="pen size">
+              <Value>10</Value>
+            </PenSize>
+            <PenShape Key="pen shape">
+              <Value>Solid</Value>
+            </PenShape>
+          </DrawingStyle>
+          <InfosFading>
+            <Enabled>true</Enabled>
+            <UseDefault>true</UseDefault>
+            <AlwaysVisible>false</AlwaysVisible>
+            <MasterFactor>1</MasterFactor>
+            <OpaqueFrames>1</OpaqueFrames>
+            <Frames>20</Frames>
+          </InfosFading>
+        </Pencil>
+      </Drawings>
+    </Keyframe>
+    <Keyframe id="2cd2024b-d4ee-4e0e-89c1-39336c0d9e29">
+      <Timestamp>11137</Timestamp>
+      <Name>ok 오른발</Name>
+      <Color>46;204;113</Color>
+      <Drawings>
+        <Pencil id="78a0fe99-2350-4bd9-a85c-dc612a247274" name="ok 오른발">
+          <PointList Count="2">
+            <Point>354;325</Point>
+            <Point>355;325</Point>
+          </PointList>
+          <DrawingStyle>
+            <Color Key="color">
+              <Value>255;46;204;113</Value>
+            </Color>
+            <PenSize Key="pen size">
+              <Value>10</Value>
+            </PenSize>
+            <PenShape Key="pen shape">
+              <Value>Solid</Value>
+            </PenShape>
+          </DrawingStyle>
+          <InfosFading>
+            <Enabled>true</Enabled>
+            <UseDefault>true</UseDefault>
+            <AlwaysVisible>false</AlwaysVisible>
+            <MasterFactor>1</MasterFactor>
+            <OpaqueFrames>1</OpaqueFrames>
+            <Frames>20</Frames>
+          </InfosFading>
+        </Pencil>
+      </Drawings>
+    </Keyframe>
+    <Keyframe id="10289e8f-141c-451e-973a-de9469550973">
+      <Timestamp>11512</Timestamp>
+      <Name>ok 왼발</Name>
+      <Color>46;204;113</Color>
+      <Drawings>
+        <Pencil id="597668f9-11fb-49d8-acee-fb1bd9277155" name="ok 왼발">
+          <PointList Count="2">
+            <Point>362;324</Point>
+            <Point>363;324</Point>
+          </PointList>
+          <DrawingStyle>
+            <Color Key="color">
+              <Value>255;46;204;113</Value>
+            </Color>
+            <PenSize Key="pen size">
+              <Value>10</Value>
+            </PenSize>
+            <PenShape Key="pen shape">
+              <Value>Solid</Value>
+            </PenShape>
+          </DrawingStyle>
+          <InfosFading>
+            <Enabled>true</Enabled>
+            <UseDefault>true</UseDefault>
+            <AlwaysVisible>false</AlwaysVisible>
+            <MasterFactor>1</MasterFactor>
+            <OpaqueFrames>1</OpaqueFrames>
+            <Frames>20</Frames>
+          </InfosFading>
+        </Pencil>
+      </Drawings>
+    </Keyframe>
+    <Keyframe id="1d4fec8d-38f8-4e67-928c-93423735a91d">
+      <Timestamp>11846</Timestamp>
+      <Name>ok 오른발</Name>
+      <Color>46;204;113</Color>
+      <Drawings>
+        <Pencil id="478d95e9-d038-4cbe-9d24-2c68934d8676" name="ok 오른발">
+          <PointList Count="2">
+            <Point>364;322</Point>
+            <Point>365;322</Point>
+          </PointList>
+          <DrawingStyle>
+            <Color Key="color">
+              <Value>255;46;204;113</Value>
+            </Color>
+            <PenSize Key="pen size">
+              <Value>10</Value>
+            </PenSize>
+            <PenShape Key="pen shape">
+              <Value>Solid</Value>
+            </PenShape>
+          </DrawingStyle>
+          <InfosFading>
+            <Enabled>true</Enabled>
+            <UseDefault>true</UseDefault>
+            <AlwaysVisible>false</AlwaysVisible>
+            <MasterFactor>1</MasterFactor>
+            <OpaqueFrames>1</OpaqueFrames>
+            <Frames>20</Frames>
+          </InfosFading>
+        </Pencil>
+      </Drawings>
+    </Keyframe>
+    <Keyframe id="52b83381-4b6e-43f9-8e35-2fc85e5d5c4a">
+      <Timestamp>12221</Timestamp>
+      <Name>ok 왼발</Name>
+      <Color>46;204;113</Color>
+      <Drawings>
+        <Pencil id="d63f93e0-15a0-487e-8874-ecd3064d86a7" name="ok 왼발">
+          <PointList Count="2">
+            <Point>358;322</Point>
+            <Point>359;322</Point>
+          </PointList>
+          <DrawingStyle>
+            <Color Key="color">
+              <Value>255;46;204;113</Value>
+            </Color>
+            <PenSize Key="pen size">
+              <Value>10</Value>
+            </PenSize>
+            <PenShape Key="pen shape">
+              <Value>Solid</Value>
+            </PenShape>
+          </DrawingStyle>
+          <InfosFading>
+            <Enabled>true</Enabled>
+            <UseDefault>true</UseDefault>
+            <AlwaysVisible>false</AlwaysVisible>
+            <MasterFactor>1</MasterFactor>
+            <OpaqueFrames>1</OpaqueFrames>
+            <Frames>20</Frames>
+          </InfosFading>
+        </Pencil>
+      </Drawings>
+    </Keyframe>
+    <Keyframe id="1985ab2a-b92e-403c-b380-5226a9670f93">
+      <Timestamp>12596</Timestamp>
+      <Name>ok 오른발</Name>
+      <Color>46;204;113</Color>
+      <Drawings>
+        <Pencil id="7c836a1f-7d64-4e9b-bb50-73fc35f87cb4" name="ok 오른발">
+          <PointList Count="2">
+            <Point>354;323</Point>
+            <Point>355;323</Point>
+          </PointList>
+          <DrawingStyle>
+            <Color Key="color">
+              <Value>255;46;204;113</Value>
+            </Color>
+            <PenSize Key="pen size">
+              <Value>10</Value>
+            </PenSize>
+            <PenShape Key="pen shape">
+              <Value>Solid</Value>
+            </PenShape>
+          </DrawingStyle>
+          <InfosFading>
+            <Enabled>true</Enabled>
+            <UseDefault>true</UseDefault>
+            <AlwaysVisible>false</AlwaysVisible>
+            <MasterFactor>1</MasterFactor>
+            <OpaqueFrames>1</OpaqueFrames>
+            <Frames>20</Frames>
+          </InfosFading>
+        </Pencil>
+      </Drawings>
+    </Keyframe>
+    <Keyframe id="2eee0cee-0112-4f85-9603-d6c8992ec0ac">
+      <Timestamp>12930</Timestamp>
+      <Name>ok 왼발</Name>
+      <Color>46;204;113</Color>
+      <Drawings>
+        <Pencil id="208d22bb-028e-4181-b9dc-3153b72b81e1" name="ok 왼발">
+          <PointList Count="2">
+            <Point>358;322</Point>
+            <Point>359;322</Point>
+          </PointList>
+          <DrawingStyle>
+            <Color Key="color">
+              <Value>255;46;204;113</Value>
+            </Color>
+            <PenSize Key="pen size">
+              <Value>10</Value>
+            </PenSize>
+            <PenShape Key="pen shape">
+              <Value>Solid</Value>
+            </PenShape>
+          </DrawingStyle>
+          <InfosFading>
+            <Enabled>true</Enabled>
+            <UseDefault>true</UseDefault>
+            <AlwaysVisible>false</AlwaysVisible>
+            <MasterFactor>1</MasterFactor>
+            <OpaqueFrames>1</OpaqueFrames>
+            <Frames>20</Frames>
+          </InfosFading>
+        </Pencil>
+      </Drawings>
+    </Keyframe>
+    <Keyframe id="7ffac31d-6bdb-4b08-a52b-277205b06e26">
+      <Timestamp>13305</Timestamp>
+      <Name>ok 오른발</Name>
+      <Color>46;204;113</Color>
+      <Drawings>
+        <Pencil id="d8a9f36d-0e1e-4443-9540-c27047511720" name="ok 오른발">
+          <PointList Count="2">
+            <Point>357;323</Point>
+            <Point>358;323</Point>
+          </PointList>
+          <DrawingStyle>
+            <Color Key="color">
+              <Value>255;46;204;113</Value>
+            </Color>
+            <PenSize Key="pen size">
+              <Value>10</Value>
+            </PenSize>
+            <PenShape Key="pen shape">
+              <Value>Solid</Value>
+            </PenShape>
+          </DrawingStyle>
+          <InfosFading>
+            <Enabled>true</Enabled>
+            <UseDefault>true</UseDefault>
+            <AlwaysVisible>false</AlwaysVisible>
+            <MasterFactor>1</MasterFactor>
+            <OpaqueFrames>1</OpaqueFrames>
+            <Frames>20</Frames>
+          </InfosFading>
+        </Pencil>
+      </Drawings>
+    </Keyframe>
+    <Keyframe id="478a2587-a92f-4ac6-9427-823d2687b71d">
+      <Timestamp>13681</Timestamp>
+      <Name>ok 왼발</Name>
+      <Color>46;204;113</Color>
+      <Drawings>
+        <Pencil id="bf93e356-90c1-412a-9c51-eff3c735b0c0" name="ok 왼발">
+          <PointList Count="2">
+            <Point>362;323</Point>
+            <Point>363;323</Point>
+          </PointList>
+          <DrawingStyle>
+            <Color Key="color">
+              <Value>255;46;204;113</Value>
+            </Color>
+            <PenSize Key="pen size">
+              <Value>10</Value>
+            </PenSize>
+            <PenShape Key="pen shape">
+              <Value>Solid</Value>
+            </PenShape>
+          </DrawingStyle>
+          <InfosFading>
+            <Enabled>true</Enabled>
+            <UseDefault>true</UseDefault>
+            <AlwaysVisible>false</AlwaysVisible>
+            <MasterFactor>1</MasterFactor>
+            <OpaqueFrames>1</OpaqueFrames>
+            <Frames>20</Frames>
+          </InfosFading>
+        </Pencil>
+      </Drawings>
+    </Keyframe>
+    <Keyframe id="8c414a63-0e65-409a-9e52-51cfb77db11f">
+      <Timestamp>14056</Timestamp>
+      <Name>ok 오른발</Name>
+      <Color>46;204;113</Color>
+      <Drawings>
+        <Pencil id="fd4047ba-53c4-4caf-9e8b-76d4c48bc300" name="ok 오른발">
+          <PointList Count="2">
+            <Point>357;324</Point>
+            <Point>358;324</Point>
+          </PointList>
+          <DrawingStyle>
+            <Color Key="color">
+              <Value>255;46;204;113</Value>
+            </Color>
+            <PenSize Key="pen size">
+              <Value>10</Value>
+            </PenSize>
+            <PenShape Key="pen shape">
+              <Value>Solid</Value>
+            </PenShape>
+          </DrawingStyle>
+          <InfosFading>
+            <Enabled>true</Enabled>
+            <UseDefault>true</UseDefault>
+            <AlwaysVisible>false</AlwaysVisible>
+            <MasterFactor>1</MasterFactor>
+            <OpaqueFrames>1</OpaqueFrames>
+            <Frames>20</Frames>
+          </InfosFading>
+        </Pencil>
+      </Drawings>
+    </Keyframe>
+    <Keyframe id="146e0a73-7074-4022-9155-357e70a4a0bc">
+      <Timestamp>14432</Timestamp>
+      <Name>ok 왼발</Name>
+      <Color>46;204;113</Color>
+      <Drawings>
+        <Pencil id="f93100d7-6d0c-4170-a95e-0c6f39e70537" name="ok 왼발">
+          <PointList Count="2">
+            <Point>356;325</Point>
+            <Point>357;325</Point>
+          </PointList>
+          <DrawingStyle>
+            <Color Key="color">
+              <Value>255;46;204;113</Value>
+            </Color>
+            <PenSize Key="pen size">
+              <Value>10</Value>
+            </PenSize>
+            <PenShape Key="pen shape">
+              <Value>Solid</Value>
+            </PenShape>
+          </DrawingStyle>
+          <InfosFading>
+            <Enabled>true</Enabled>
+            <UseDefault>true</UseDefault>
+            <AlwaysVisible>false</AlwaysVisible>
+            <MasterFactor>1</MasterFactor>
+            <OpaqueFrames>1</OpaqueFrames>
+            <Frames>20</Frames>
+          </InfosFading>
+        </Pencil>
+      </Drawings>
+    </Keyframe>
+    <Keyframe id="fb3a300d-68cc-429f-a527-a3b9ed683c27">
+      <Timestamp>14765</Timestamp>
+      <Name>ok 오른발</Name>
+      <Color>46;204;113</Color>
+      <Drawings>
+        <Pencil id="f4a6a4aa-bd22-4f4e-b757-8e1bce1a88b4" name="ok 오른발">
+          <PointList Count="2">
+            <Point>347;323</Point>
+            <Point>348;323</Point>
+          </PointList>
+          <DrawingStyle>
+            <Color Key="color">
+              <Value>255;46;204;113</Value>
+            </Color>
+            <PenSize Key="pen size">
+              <Value>10</Value>
+            </PenSize>
+            <PenShape Key="pen shape">
+              <Value>Solid</Value>
+            </PenShape>
+          </DrawingStyle>
+          <InfosFading>
+            <Enabled>true</Enabled>
+            <UseDefault>true</UseDefault>
+            <AlwaysVisible>false</AlwaysVisible>
+            <MasterFactor>1</MasterFactor>
+            <OpaqueFrames>1</OpaqueFrames>
+            <Frames>20</Frames>
+          </InfosFading>
+        </Pencil>
+      </Drawings>
+    </Keyframe>
+    <Keyframe id="fc44a400-e1d1-4d52-bbc8-60732660478b">
+      <Timestamp>15141</Timestamp>
+      <Name>ok 왼발</Name>
+      <Color>46;204;113</Color>
+      <Drawings>
+        <Pencil id="e694e5b2-d2d7-4b9d-bfff-b848b1e5b5d6" name="ok 왼발">
+          <PointList Count="2">
+            <Point>353;324</Point>
+            <Point>354;324</Point>
+          </PointList>
+          <DrawingStyle>
+            <Color Key="color">
+              <Value>255;46;204;113</Value>
+            </Color>
+            <PenSize Key="pen size">
+              <Value>10</Value>
+            </PenSize>
+            <PenShape Key="pen shape">
+              <Value>Solid</Value>
+            </PenShape>
+          </DrawingStyle>
+          <InfosFading>
+            <Enabled>true</Enabled>
+            <UseDefault>true</UseDefault>
+            <AlwaysVisible>false</AlwaysVisible>
+            <MasterFactor>1</MasterFactor>
+            <OpaqueFrames>1</OpaqueFrames>
+            <Frames>20</Frames>
+          </InfosFading>
+        </Pencil>
+      </Drawings>
+    </Keyframe>
+    <Keyframe id="40949d71-7a63-40ec-a19c-2af5fa3be386">
+      <Timestamp>15558</Timestamp>
+      <Name>ok 오른발</Name>
+      <Color>46;204;113</Color>
+      <Drawings>
+        <Pencil id="cebaa615-551d-4e10-91f8-fdc9eff103f3" name="ok 오른발">
+          <PointList Count="2">
+            <Point>352;321</Point>
+            <Point>353;321</Point>
+          </PointList>
+          <DrawingStyle>
+            <Color Key="color">
+              <Value>255;46;204;113</Value>
+            </Color>
+            <PenSize Key="pen size">
+              <Value>10</Value>
+            </PenSize>
+            <PenShape Key="pen shape">
+              <Value>Solid</Value>
+            </PenShape>
+          </DrawingStyle>
+          <InfosFading>
+            <Enabled>true</Enabled>
+            <UseDefault>true</UseDefault>
+            <AlwaysVisible>false</AlwaysVisible>
+            <MasterFactor>1</MasterFactor>
+            <OpaqueFrames>1</OpaqueFrames>
+            <Frames>20</Frames>
+          </InfosFading>
+        </Pencil>
+      </Drawings>
+    </Keyframe>
+    <Keyframe id="3af1a6a7-1029-4779-bbfa-042c81ac5941">
+      <Timestamp>15933</Timestamp>
+      <Name>ok 왼발</Name>
+      <Color>46;204;113</Color>
+      <Drawings>
+        <Pencil id="42c8963f-3387-48cb-9697-59ae5325b41b" name="ok 왼발">
+          <PointList Count="2">
+            <Point>353;323</Point>
+            <Point>354;323</Point>
+          </PointList>
+          <DrawingStyle>
+            <Color Key="color">
+              <Value>255;46;204;113</Value>
+            </Color>
+            <PenSize Key="pen size">
+              <Value>10</Value>
+            </PenSize>
+            <PenShape Key="pen shape">
+              <Value>Solid</Value>
+            </PenShape>
+          </DrawingStyle>
+          <InfosFading>
+            <Enabled>true</Enabled>
+            <UseDefault>true</UseDefault>
+            <AlwaysVisible>false</AlwaysVisible>
+            <MasterFactor>1</MasterFactor>
+            <OpaqueFrames>1</OpaqueFrames>
+            <Frames>20</Frames>
+          </InfosFading>
+        </Pencil>
+      </Drawings>
+    </Keyframe>
+    <Keyframe id="ed1b0b28-a720-4c3d-afc8-626a5035c1de">
+      <Timestamp>16308</Timestamp>
+      <Name>ok 오른발</Name>
+      <Color>46;204;113</Color>
+      <Drawings>
+        <Pencil id="025dbf93-5d91-4e6c-b520-8767e79ab1b2" name="ok 오른발">
+          <PointList Count="2">
+            <Point>348;321</Point>
+            <Point>349;321</Point>
+          </PointList>
+          <DrawingStyle>
+            <Color Key="color">
+              <Value>255;46;204;113</Value>
+            </Color>
+            <PenSize Key="pen size">
+              <Value>10</Value>
+            </PenSize>
+            <PenShape Key="pen shape">
+              <Value>Solid</Value>
+            </PenShape>
+          </DrawingStyle>
+          <InfosFading>
+            <Enabled>true</Enabled>
+            <UseDefault>true</UseDefault>
+            <AlwaysVisible>false</AlwaysVisible>
+            <MasterFactor>1</MasterFactor>
+            <OpaqueFrames>1</OpaqueFrames>
+            <Frames>20</Frames>
+          </InfosFading>
+        </Pencil>
+      </Drawings>
+    </Keyframe>
+    <Keyframe id="dbc4a9fc-68f5-49f2-a4d6-abcfbe733e22">
+      <Timestamp>16642</Timestamp>
+      <Name>ok 왼발</Name>
+      <Color>46;204;113</Color>
+      <Drawings>
+        <Pencil id="1e47b0cd-1e14-4b4a-be0a-aced1a8a5b8d" name="ok 왼발">
+          <PointList Count="2">
+            <Point>354;322</Point>
+            <Point>355;322</Point>
+          </PointList>
+          <DrawingStyle>
+            <Color Key="color">
+              <Value>255;46;204;113</Value>
+            </Color>
+            <PenSize Key="pen size">
+              <Value>10</Value>
+            </PenSize>
+            <PenShape Key="pen shape">
+              <Value>Solid</Value>
+            </PenShape>
+          </DrawingStyle>
+          <InfosFading>
+            <Enabled>true</Enabled>
+            <UseDefault>true</UseDefault>
+            <AlwaysVisible>false</AlwaysVisible>
+            <MasterFactor>1</MasterFactor>
+            <OpaqueFrames>1</OpaqueFrames>
+            <Frames>20</Frames>
+          </InfosFading>
+        </Pencil>
+      </Drawings>
+    </Keyframe>
+    <Keyframe id="a66cd1bb-d482-4263-90ca-13567b02d994">
+      <Timestamp>17017</Timestamp>
+      <Name>ok 오른발</Name>
+      <Color>46;204;113</Color>
+      <Drawings>
+        <Pencil id="4032bbd1-2ef8-44f9-ab1f-3a2c743fa91d" name="ok 오른발">
+          <PointList Count="2">
+            <Point>348;321</Point>
+            <Point>349;321</Point>
+          </PointList>
+          <DrawingStyle>
+            <Color Key="color">
+              <Value>255;46;204;113</Value>
+            </Color>
+            <PenSize Key="pen size">
+              <Value>10</Value>
+            </PenSize>
+            <PenShape Key="pen shape">
+              <Value>Solid</Value>
+            </PenShape>
+          </DrawingStyle>
+          <InfosFading>
+            <Enabled>true</Enabled>
+            <UseDefault>true</UseDefault>
+            <AlwaysVisible>false</AlwaysVisible>
+            <MasterFactor>1</MasterFactor>
+            <OpaqueFrames>1</OpaqueFrames>
+            <Frames>20</Frames>
+          </InfosFading>
+        </Pencil>
+      </Drawings>
+    </Keyframe>
+    <Keyframe id="f55440ab-572f-456c-940a-11746c6ac3a2">
+      <Timestamp>17393</Timestamp>
+      <Name>ok 왼발</Name>
+      <Color>46;204;113</Color>
+      <Drawings>
+        <Pencil id="f6492c3a-c130-4ed7-acba-7b4648aee0ae" name="ok 왼발">
+          <PointList Count="2">
+            <Point>354;323</Point>
+            <Point>355;323</Point>
+          </PointList>
+          <DrawingStyle>
+            <Color Key="color">
+              <Value>255;46;204;113</Value>
+            </Color>
+            <PenSize Key="pen size">
+              <Value>10</Value>
+            </PenSize>
+            <PenShape Key="pen shape">
+              <Value>Solid</Value>
+            </PenShape>
+          </DrawingStyle>
+          <InfosFading>
+            <Enabled>true</Enabled>
+            <UseDefault>true</UseDefault>
+            <AlwaysVisible>false</AlwaysVisible>
+            <MasterFactor>1</MasterFactor>
+            <OpaqueFrames>1</OpaqueFrames>
+            <Frames>20</Frames>
+          </InfosFading>
+        </Pencil>
+      </Drawings>
+    </Keyframe>
+    <Keyframe id="f5f114f0-684b-47ef-9e0b-b235e720a520">
+      <Timestamp>17768</Timestamp>
+      <Name>ok 오른발</Name>
+      <Color>46;204;113</Color>
+      <Drawings>
+        <Pencil id="eefb6443-12a6-4552-9cb0-deef97763b74" name="ok 오른발">
+          <PointList Count="2">
+            <Point>351;322</Point>
+            <Point>352;322</Point>
+          </PointList>
+          <DrawingStyle>
+            <Color Key="color">
+              <Value>255;46;204;113</Value>
+            </Color>
+            <PenSize Key="pen size">
+              <Value>10</Value>
+            </PenSize>
+            <PenShape Key="pen shape">
+              <Value>Solid</Value>
+            </PenShape>
+          </DrawingStyle>
+          <InfosFading>
+            <Enabled>true</Enabled>
+            <UseDefault>true</UseDefault>
+            <AlwaysVisible>false</AlwaysVisible>
+            <MasterFactor>1</MasterFactor>
+            <OpaqueFrames>1</OpaqueFrames>
+            <Frames>20</Frames>
+          </InfosFading>
+        </Pencil>
+      </Drawings>
+    </Keyframe>
+    <Keyframe id="b55ae336-90ec-4744-924f-60b300abf628">
+      <Timestamp>18144</Timestamp>
+      <Name>ok 왼발</Name>
+      <Color>46;204;113</Color>
+      <Drawings>
+        <Pencil id="cef8031b-c49e-4e65-bfdf-178761aa54e4" name="ok 왼발">
+          <PointList Count="2">
+            <Point>353;324</Point>
+            <Point>354;324</Point>
+          </PointList>
+          <DrawingStyle>
+            <Color Key="color">
+              <Value>255;46;204;113</Value>
+            </Color>
+            <PenSize Key="pen size">
+              <Value>10</Value>
+            </PenSize>
+            <PenShape Key="pen shape">
+              <Value>Solid</Value>
+            </PenShape>
+          </DrawingStyle>
+          <InfosFading>
+            <Enabled>true</Enabled>
+            <UseDefault>true</UseDefault>
+            <AlwaysVisible>false</AlwaysVisible>
+            <MasterFactor>1</MasterFactor>
+            <OpaqueFrames>1</OpaqueFrames>
+            <Frames>20</Frames>
+          </InfosFading>
+        </Pencil>
+      </Drawings>
+    </Keyframe>
+    <Keyframe id="396bc525-e3c8-432a-8f78-5f166b11259a">
+      <Timestamp>18519</Timestamp>
+      <Name>ok 오른발</Name>
+      <Color>46;204;113</Color>
+      <Drawings>
+        <Pencil id="6aeb222e-1fbf-4af5-9134-72a129f90e8d" name="ok 오른발">
+          <PointList Count="2">
+            <Point>347;323</Point>
+            <Point>348;323</Point>
+          </PointList>
+          <DrawingStyle>
+            <Color Key="color">
+              <Value>255;46;204;113</Value>
+            </Color>
+            <PenSize Key="pen size">
+              <Value>10</Value>
+            </PenSize>
+            <PenShape Key="pen shape">
+              <Value>Solid</Value>
+            </PenShape>
+          </DrawingStyle>
+          <InfosFading>
+            <Enabled>true</Enabled>
+            <UseDefault>true</UseDefault>
+            <AlwaysVisible>false</AlwaysVisible>
+            <MasterFactor>1</MasterFactor>
+            <OpaqueFrames>1</OpaqueFrames>
+            <Frames>20</Frames>
+          </InfosFading>
+        </Pencil>
+      </Drawings>
+    </Keyframe>
+    <Keyframe id="c3b5b081-6320-4094-be81-95bb974ef0ae">
+      <Timestamp>18894</Timestamp>
+      <Name>ok 왼발</Name>
+      <Color>46;204;113</Color>
+      <Drawings>
+        <Pencil id="c53ce626-2cab-4631-87cb-eadfac265d5f" name="ok 왼발">
+          <PointList Count="2">
+            <Point>351;325</Point>
+            <Point>352;325</Point>
+          </PointList>
+          <DrawingStyle>
+            <Color Key="color">
+              <Value>255;46;204;113</Value>
+            </Color>
+            <PenSize Key="pen size">
+              <Value>10</Value>
+            </PenSize>
+            <PenShape Key="pen shape">
+              <Value>Solid</Value>
+            </PenShape>
+          </DrawingStyle>
+          <InfosFading>
+            <Enabled>true</Enabled>
+            <UseDefault>true</UseDefault>
+            <AlwaysVisible>false</AlwaysVisible>
+            <MasterFactor>1</MasterFactor>
+            <OpaqueFrames>1</OpaqueFrames>
+            <Frames>20</Frames>
+          </InfosFading>
+        </Pencil>
+      </Drawings>
+    </Keyframe>
+    <Keyframe id="026fdded-9f54-454f-855d-1176fb2698cc">
+      <Timestamp>19270</Timestamp>
+      <Name>ok 오른발</Name>
+      <Color>46;204;113</Color>
+      <Drawings>
+        <Pencil id="287e91be-dae8-48ae-81ec-71bd08e6d216" name="ok 오른발">
+          <PointList Count="2">
+            <Point>337;322</Point>
+            <Point>338;322</Point>
+          </PointList>
+          <DrawingStyle>
+            <Color Key="color">
+              <Value>255;46;204;113</Value>
+            </Color>
+            <PenSize Key="pen size">
+              <Value>10</Value>
+            </PenSize>
+            <PenShape Key="pen shape">
+              <Value>Solid</Value>
+            </PenShape>
+          </DrawingStyle>
+          <InfosFading>
+            <Enabled>true</Enabled>
+            <UseDefault>true</UseDefault>
+            <AlwaysVisible>false</AlwaysVisible>
+            <MasterFactor>1</MasterFactor>
+            <OpaqueFrames>1</OpaqueFrames>
+            <Frames>20</Frames>
+          </InfosFading>
+        </Pencil>
+      </Drawings>
+    </Keyframe>
+    <Keyframe id="d59a0a65-24ed-4f49-bb04-4d2594322076">
+      <Timestamp>19645</Timestamp>
+      <Name>ok 왼발</Name>
+      <Color>46;204;113</Color>
+      <Drawings>
+        <Pencil id="d2114f84-1934-486a-a01b-51164c1b80e6" name="ok 왼발">
+          <PointList Count="2">
+            <Point>342;324</Point>
+            <Point>343;324</Point>
+          </PointList>
+          <DrawingStyle>
+            <Color Key="color">
+              <Value>255;46;204;113</Value>
+            </Color>
+            <PenSize Key="pen size">
+              <Value>10</Value>
+            </PenSize>
+            <PenShape Key="pen shape">
+              <Value>Solid</Value>
+            </PenShape>
+          </DrawingStyle>
+          <InfosFading>
+            <Enabled>true</Enabled>
+            <UseDefault>true</UseDefault>
+            <AlwaysVisible>false</AlwaysVisible>
+            <MasterFactor>1</MasterFactor>
+            <OpaqueFrames>1</OpaqueFrames>
+            <Frames>20</Frames>
+          </InfosFading>
+        </Pencil>
+      </Drawings>
+    </Keyframe>
+    <Keyframe id="7919c032-02ae-4eaf-ada4-b0233647ea0e">
+      <Timestamp>19979</Timestamp>
+      <Name>ok 오른발</Name>
+      <Color>46;204;113</Color>
+      <Drawings>
+        <Pencil id="9bbcec39-3c11-4f2b-9f88-2efd987f9a5c" name="ok 오른발">
+          <PointList Count="2">
+            <Point>338;322</Point>
+            <Point>339;322</Point>
+          </PointList>
+          <DrawingStyle>
+            <Color Key="color">
+              <Value>255;46;204;113</Value>
+            </Color>
+            <PenSize Key="pen size">
+              <Value>10</Value>
+            </PenSize>
+            <PenShape Key="pen shape">
+              <Value>Solid</Value>
+            </PenShape>
+          </DrawingStyle>
+          <InfosFading>
+            <Enabled>true</Enabled>
+            <UseDefault>true</UseDefault>
+            <AlwaysVisible>false</AlwaysVisible>
+            <MasterFactor>1</MasterFactor>
+            <OpaqueFrames>1</OpaqueFrames>
+            <Frames>20</Frames>
+          </InfosFading>
+        </Pencil>
+      </Drawings>
+    </Keyframe>
+    <Keyframe id="e6bd3009-37f7-4a3f-987a-7c42aa986400">
+      <Timestamp>20354</Timestamp>
+      <Name>ok 왼발</Name>
+      <Color>46;204;113</Color>
+      <Drawings>
+        <Pencil id="0387adef-502b-4f2a-b171-1fe64412683c" name="ok 왼발">
+          <PointList Count="2">
+            <Point>347;321</Point>
+            <Point>348;321</Point>
+          </PointList>
+          <DrawingStyle>
+            <Color Key="color">
+              <Value>255;46;204;113</Value>
+            </Color>
+            <PenSize Key="pen size">
+              <Value>10</Value>
+            </PenSize>
+            <PenShape Key="pen shape">
+              <Value>Solid</Value>
+            </PenShape>
+          </DrawingStyle>
+          <InfosFading>
+            <Enabled>true</Enabled>
+            <UseDefault>true</UseDefault>
+            <AlwaysVisible>false</AlwaysVisible>
+            <MasterFactor>1</MasterFactor>
+            <OpaqueFrames>1</OpaqueFrames>
+            <Frames>20</Frames>
+          </InfosFading>
+        </Pencil>
+      </Drawings>
+    </Keyframe>
+    <Keyframe id="97de9ab3-37e9-4e7a-b9e9-8d2de0e49932">
+      <Timestamp>20730</Timestamp>
+      <Name>ok 오른발</Name>
+      <Color>46;204;113</Color>
+      <Drawings>
+        <Pencil id="b0806e14-41ab-47dc-889c-daf68b93e05c" name="ok 오른발">
+          <PointList Count="2">
+            <Point>358;320</Point>
+            <Point>359;320</Point>
+          </PointList>
+          <DrawingStyle>
+            <Color Key="color">
+              <Value>255;46;204;113</Value>
+            </Color>
+            <PenSize Key="pen size">
+              <Value>10</Value>
+            </PenSize>
+            <PenShape Key="pen shape">
+              <Value>Solid</Value>
+            </PenShape>
+          </DrawingStyle>
+          <InfosFading>
+            <Enabled>true</Enabled>
+            <UseDefault>true</UseDefault>
+            <AlwaysVisible>false</AlwaysVisible>
+            <MasterFactor>1</MasterFactor>
+            <OpaqueFrames>1</OpaqueFrames>
+            <Frames>20</Frames>
+          </InfosFading>
+        </Pencil>
+      </Drawings>
+    </Keyframe>
+    <Keyframe id="8c6ba46a-3268-4257-9fd6-fb9a0dd14a38">
+      <Timestamp>21105</Timestamp>
+      <Name>ok 왼발</Name>
+      <Color>46;204;113</Color>
+      <Drawings>
+        <Pencil id="9db2fd78-740a-435f-8bdc-f3bd351e5060" name="ok 왼발">
+          <PointList Count="2">
+            <Point>364;320</Point>
+            <Point>365;320</Point>
+          </PointList>
+          <DrawingStyle>
+            <Color Key="color">
+              <Value>255;46;204;113</Value>
+            </Color>
+            <PenSize Key="pen size">
+              <Value>10</Value>
+            </PenSize>
+            <PenShape Key="pen shape">
+              <Value>Solid</Value>
+            </PenShape>
+          </DrawingStyle>
+          <InfosFading>
+            <Enabled>true</Enabled>
+            <UseDefault>true</UseDefault>
+            <AlwaysVisible>false</AlwaysVisible>
+            <MasterFactor>1</MasterFactor>
+            <OpaqueFrames>1</OpaqueFrames>
+            <Frames>20</Frames>
+          </InfosFading>
+        </Pencil>
+      </Drawings>
+    </Keyframe>
+    <Keyframe id="e338ba98-81be-425a-a4f3-1b6d8e7224bc">
+      <Timestamp>21439</Timestamp>
+      <Name>ok 오른발</Name>
+      <Color>46;204;113</Color>
+      <Drawings>
+        <Pencil id="b190a720-d462-4ecf-93a1-f158777a0085" name="ok 오른발">
+          <PointList Count="2">
+            <Point>359;319</Point>
+            <Point>360;319</Point>
+          </PointList>
+          <DrawingStyle>
+            <Color Key="color">
+              <Value>255;46;204;113</Value>
+            </Color>
+            <PenSize Key="pen size">
+              <Value>10</Value>
+            </PenSize>
+            <PenShape Key="pen shape">
+              <Value>Solid</Value>
+            </PenShape>
+          </DrawingStyle>
+          <InfosFading>
+            <Enabled>true</Enabled>
+            <UseDefault>true</UseDefault>
+            <AlwaysVisible>false</AlwaysVisible>
+            <MasterFactor>1</MasterFactor>
+            <OpaqueFrames>1</OpaqueFrames>
+            <Frames>20</Frames>
+          </InfosFading>
+        </Pencil>
+      </Drawings>
+    </Keyframe>
+    <Keyframe id="5dd2deae-a71b-41a0-a49e-a988839f1a60">
+      <Timestamp>21814</Timestamp>
+      <Name>ok 왼발</Name>
+      <Color>46;204;113</Color>
+      <Drawings>
+        <Pencil id="ea7bdb47-4576-4d7c-bcf5-0286959a4bb6" name="ok 왼발">
+          <PointList Count="2">
+            <Point>355;320</Point>
+            <Point>356;320</Point>
+          </PointList>
+          <DrawingStyle>
+            <Color Key="color">
+              <Value>255;46;204;113</Value>
+            </Color>
+            <PenSize Key="pen size">
+              <Value>10</Value>
+            </PenSize>
+            <PenShape Key="pen shape">
+              <Value>Solid</Value>
+            </PenShape>
+          </DrawingStyle>
+          <InfosFading>
+            <Enabled>true</Enabled>
+            <UseDefault>true</UseDefault>
+            <AlwaysVisible>false</AlwaysVisible>
+            <MasterFactor>1</MasterFactor>
+            <OpaqueFrames>1</OpaqueFrames>
+            <Frames>20</Frames>
+          </InfosFading>
+        </Pencil>
+      </Drawings>
+    </Keyframe>
+    <Keyframe id="f301c8f1-7ed1-42f2-8de5-c23655d44ae0">
+      <Timestamp>22189</Timestamp>
+      <Name>ok 오른발</Name>
+      <Color>46;204;113</Color>
+      <Drawings>
+        <Pencil id="76cfa3dc-dceb-45ce-a9e7-3c45e3fc8773" name="ok 오른발">
+          <PointList Count="2">
+            <Point>345;323</Point>
+            <Point>346;323</Point>
+          </PointList>
+          <DrawingStyle>
+            <Color Key="color">
+              <Value>255;46;204;113</Value>
+            </Color>
+            <PenSize Key="pen size">
+              <Value>10</Value>
+            </PenSize>
+            <PenShape Key="pen shape">
+              <Value>Solid</Value>
+            </PenShape>
+          </DrawingStyle>
+          <InfosFading>
+            <Enabled>true</Enabled>
+            <UseDefault>true</UseDefault>
+            <AlwaysVisible>false</AlwaysVisible>
+            <MasterFactor>1</MasterFactor>
+            <OpaqueFrames>1</OpaqueFrames>
+            <Frames>20</Frames>
+          </InfosFading>
+        </Pencil>
+      </Drawings>
+    </Keyframe>
+    <Keyframe id="cbf436c8-0afb-49fb-b276-dd8782fc08e7">
+      <Timestamp>22523</Timestamp>
+      <Name>ok 왼발</Name>
+      <Color>46;204;113</Color>
+      <Drawings>
+        <Pencil id="faf7719d-ba8f-47bc-ae43-1000fe516905" name="ok 왼발">
+          <PointList Count="2">
+            <Point>357;320</Point>
+            <Point>358;320</Point>
+          </PointList>
+          <DrawingStyle>
+            <Color Key="color">
+              <Value>255;46;204;113</Value>
+            </Color>
+            <PenSize Key="pen size">
+              <Value>10</Value>
+            </PenSize>
+            <PenShape Key="pen shape">
+              <Value>Solid</Value>
+            </PenShape>
+          </DrawingStyle>
+          <InfosFading>
+            <Enabled>true</Enabled>
+            <UseDefault>true</UseDefault>
+            <AlwaysVisible>false</AlwaysVisible>
+            <MasterFactor>1</MasterFactor>
+            <OpaqueFrames>1</OpaqueFrames>
+            <Frames>20</Frames>
+          </InfosFading>
+        </Pencil>
+      </Drawings>
+    </Keyframe>
+    <Keyframe id="c863d419-9482-4255-87d7-78b6c535c10b">
+      <Timestamp>22898</Timestamp>
+      <Name>ok 오른발</Name>
+      <Color>46;204;113</Color>
+      <Drawings>
+        <Pencil id="a76e2326-03ff-4dcc-9975-3710f10193b8" name="ok 오른발">
+          <PointList Count="2">
+            <Point>349;322</Point>
+            <Point>350;322</Point>
+          </PointList>
+          <DrawingStyle>
+            <Color Key="color">
+              <Value>255;46;204;113</Value>
+            </Color>
+            <PenSize Key="pen size">
+              <Value>10</Value>
+            </PenSize>
+            <PenShape Key="pen shape">
+              <Value>Solid</Value>
+            </PenShape>
+          </DrawingStyle>
+          <InfosFading>
+            <Enabled>true</Enabled>
+            <UseDefault>true</UseDefault>
+            <AlwaysVisible>false</AlwaysVisible>
+            <MasterFactor>1</MasterFactor>
+            <OpaqueFrames>1</OpaqueFrames>
+            <Frames>20</Frames>
+          </InfosFading>
+        </Pencil>
+      </Drawings>
+    </Keyframe>
+    <Keyframe id="b70396e9-9ef5-40ba-bab9-885d3d1622e9">
+      <Timestamp>23274</Timestamp>
+      <Name>ok 왼발</Name>
+      <Color>46;204;113</Color>
+      <Drawings>
+        <Pencil id="e125ee9d-757d-4619-90e3-02a678cbcf41" name="ok 왼발">
+          <PointList Count="2">
+            <Point>355;324</Point>
+            <Point>356;324</Point>
+          </PointList>
+          <DrawingStyle>
+            <Color Key="color">
+              <Value>255;46;204;113</Value>
+            </Color>
+            <PenSize Key="pen size">
+              <Value>10</Value>
+            </PenSize>
+            <PenShape Key="pen shape">
+              <Value>Solid</Value>
+            </PenShape>
+          </DrawingStyle>
+          <InfosFading>
+            <Enabled>true</Enabled>
+            <UseDefault>true</UseDefault>
+            <AlwaysVisible>false</AlwaysVisible>
+            <MasterFactor>1</MasterFactor>
+            <OpaqueFrames>1</OpaqueFrames>
+            <Frames>20</Frames>
+          </InfosFading>
+        </Pencil>
+      </Drawings>
+    </Keyframe>
+    <Keyframe id="4655d448-1b6d-403b-8fab-b6d002bf72b6">
+      <Timestamp>23649</Timestamp>
+      <Name>ok 오른발</Name>
+      <Color>46;204;113</Color>
+      <Drawings>
+        <Pencil id="a8cf3035-371b-4b17-8329-01d02af91f64" name="ok 오른발">
+          <PointList Count="2">
+            <Point>351;322</Point>
+            <Point>352;322</Point>
+          </PointList>
+          <DrawingStyle>
+            <Color Key="color">
+              <Value>255;46;204;113</Value>
+            </Color>
+            <PenSize Key="pen size">
+              <Value>10</Value>
+            </PenSize>
+            <PenShape Key="pen shape">
+              <Value>Solid</Value>
+            </PenShape>
+          </DrawingStyle>
+          <InfosFading>
+            <Enabled>true</Enabled>
+            <UseDefault>true</UseDefault>
+            <AlwaysVisible>false</AlwaysVisible>
+            <MasterFactor>1</MasterFactor>
+            <OpaqueFrames>1</OpaqueFrames>
+            <Frames>20</Frames>
+          </InfosFading>
+        </Pencil>
+      </Drawings>
+    </Keyframe>
+    <Keyframe id="033c09c5-21a4-4733-96e9-ac3aeb145c9d">
+      <Timestamp>23983</Timestamp>
+      <Name>ok 왼발</Name>
+      <Color>46;204;113</Color>
+      <Drawings>
+        <Pencil id="2484c22e-5949-403b-ba2a-36e63b23b6c4" name="ok 왼발">
+          <PointList Count="2">
+            <Point>357;324</Point>
+            <Point>358;324</Point>
+          </PointList>
+          <DrawingStyle>
+            <Color Key="color">
+              <Value>255;46;204;113</Value>
+            </Color>
+            <PenSize Key="pen size">
+              <Value>10</Value>
+            </PenSize>
+            <PenShape Key="pen shape">
+              <Value>Solid</Value>
+            </PenShape>
+          </DrawingStyle>
+          <InfosFading>
+            <Enabled>true</Enabled>
+            <UseDefault>true</UseDefault>
+            <AlwaysVisible>false</AlwaysVisible>
+            <MasterFactor>1</MasterFactor>
+            <OpaqueFrames>1</OpaqueFrames>
+            <Frames>20</Frames>
+          </InfosFading>
+        </Pencil>
+      </Drawings>
+    </Keyframe>
+    <Keyframe id="73458e53-71be-4b9c-9663-239c7d922a68">
+      <Timestamp>24358</Timestamp>
+      <Name>ok 오른발</Name>
+      <Color>46;204;113</Color>
+      <Drawings>
+        <Pencil id="f1bcf4c9-723d-4cda-b861-b406e28255cf" name="ok 오른발">
+          <PointList Count="2">
+            <Point>354;325</Point>
+            <Point>355;325</Point>
+          </PointList>
+          <DrawingStyle>
+            <Color Key="color">
+              <Value>255;46;204;113</Value>
+            </Color>
+            <PenSize Key="pen size">
+              <Value>10</Value>
+            </PenSize>
+            <PenShape Key="pen shape">
+              <Value>Solid</Value>
+            </PenShape>
+          </DrawingStyle>
+          <InfosFading>
+            <Enabled>true</Enabled>
+            <UseDefault>true</UseDefault>
+            <AlwaysVisible>false</AlwaysVisible>
+            <MasterFactor>1</MasterFactor>
+            <OpaqueFrames>1</OpaqueFrames>
+            <Frames>20</Frames>
+          </InfosFading>
+        </Pencil>
+      </Drawings>
+    </Keyframe>
+    <Keyframe id="f45db27c-daff-43be-944a-f1f11544fa54">
+      <Timestamp>24734</Timestamp>
+      <Name>ok 왼발</Name>
+      <Color>46;204;113</Color>
+      <Drawings>
+        <Pencil id="600c8315-fb4a-4713-b6c5-296f3b4407b2" name="ok 왼발">
+          <PointList Count="2">
+            <Point>365;324</Point>
+            <Point>366;324</Point>
+          </PointList>
+          <DrawingStyle>
+            <Color Key="color">
+              <Value>255;46;204;113</Value>
+            </Color>
+            <PenSize Key="pen size">
+              <Value>10</Value>
+            </PenSize>
+            <PenShape Key="pen shape">
+              <Value>Solid</Value>
+            </PenShape>
+          </DrawingStyle>
+          <InfosFading>
+            <Enabled>true</Enabled>
+            <UseDefault>true</UseDefault>
+            <AlwaysVisible>false</AlwaysVisible>
+            <MasterFactor>1</MasterFactor>
+            <OpaqueFrames>1</OpaqueFrames>
+            <Frames>20</Frames>
+          </InfosFading>
+        </Pencil>
+      </Drawings>
+    </Keyframe>
+    <Keyframe id="f883d0c5-65f5-4dbe-b55f-f6668a2f6e63">
+      <Timestamp>25067</Timestamp>
+      <Name>ok 오른발</Name>
+      <Color>46;204;113</Color>
+      <Drawings>
+        <Pencil id="51f8682f-4d45-45b0-9d86-7e3520ff51e3" name="ok 오른발">
+          <PointList Count="2">
+            <Point>351;323</Point>
+            <Point>352;323</Point>
+          </PointList>
+          <DrawingStyle>
+            <Color Key="color">
+              <Value>255;46;204;113</Value>
+            </Color>
+            <PenSize Key="pen size">
+              <Value>10</Value>
+            </PenSize>
+            <PenShape Key="pen shape">
+              <Value>Solid</Value>
+            </PenShape>
+          </DrawingStyle>
+          <InfosFading>
+            <Enabled>true</Enabled>
+            <UseDefault>true</UseDefault>
+            <AlwaysVisible>false</AlwaysVisible>
+            <MasterFactor>1</MasterFactor>
+            <OpaqueFrames>1</OpaqueFrames>
+            <Frames>20</Frames>
+          </InfosFading>
+        </Pencil>
+      </Drawings>
+    </Keyframe>
+    <Keyframe id="c2e2019f-323f-4ae2-adbf-a70b7aaad99b">
+      <Timestamp>25443</Timestamp>
+      <Name>ok 왼발</Name>
+      <Color>46;204;113</Color>
+      <Drawings>
+        <Pencil id="03ce9354-b509-499d-b22e-4b1355465a7b" name="ok 왼발">
+          <PointList Count="2">
+            <Point>358;323</Point>
+            <Point>359;323</Point>
+          </PointList>
+          <DrawingStyle>
+            <Color Key="color">
+              <Value>255;46;204;113</Value>
+            </Color>
+            <PenSize Key="pen size">
+              <Value>10</Value>
+            </PenSize>
+            <PenShape Key="pen shape">
+              <Value>Solid</Value>
+            </PenShape>
+          </DrawingStyle>
+          <InfosFading>
+            <Enabled>true</Enabled>
+            <UseDefault>true</UseDefault>
+            <AlwaysVisible>false</AlwaysVisible>
+            <MasterFactor>1</MasterFactor>
+            <OpaqueFrames>1</OpaqueFrames>
+            <Frames>20</Frames>
+          </InfosFading>
+        </Pencil>
+      </Drawings>
+    </Keyframe>
+    <Keyframe id="25a22729-e3fe-4f33-88b7-bd44ab52804b">
+      <Timestamp>25818</Timestamp>
+      <Name>ok 오른발</Name>
+      <Color>46;204;113</Color>
+      <Drawings>
+        <Pencil id="95a6fb31-874d-4441-8531-c3ad3e6fb88a" name="ok 오른발">
+          <PointList Count="2">
+            <Point>348;322</Point>
+            <Point>349;322</Point>
+          </PointList>
+          <DrawingStyle>
+            <Color Key="color">
+              <Value>255;46;204;113</Value>
+            </Color>
+            <PenSize Key="pen size">
+              <Value>10</Value>
+            </PenSize>
+            <PenShape Key="pen shape">
+              <Value>Solid</Value>
+            </PenShape>
+          </DrawingStyle>
+          <InfosFading>
+            <Enabled>true</Enabled>
+            <UseDefault>true</UseDefault>
+            <AlwaysVisible>false</AlwaysVisible>
+            <MasterFactor>1</MasterFactor>
+            <OpaqueFrames>1</OpaqueFrames>
+            <Frames>20</Frames>
+          </InfosFading>
+        </Pencil>
+      </Drawings>
+    </Keyframe>
+    <Keyframe id="1ea97de4-c9a3-48f9-990d-3da373dfcd84">
+      <Timestamp>26193</Timestamp>
+      <Name>ok 왼발</Name>
+      <Color>46;204;113</Color>
+      <Drawings>
+        <Pencil id="6fa7f4a0-e410-4f00-b3d9-47ed6cdef161" name="ok 왼발">
+          <PointList Count="2">
+            <Point>347;322</Point>
+            <Point>348;322</Point>
+          </PointList>
+          <DrawingStyle>
+            <Color Key="color">
+              <Value>255;46;204;113</Value>
+            </Color>
+            <PenSize Key="pen size">
+              <Value>10</Value>
+            </PenSize>
+            <PenShape Key="pen shape">
+              <Value>Solid</Value>
+            </PenShape>
+          </DrawingStyle>
+          <InfosFading>
+            <Enabled>true</Enabled>
+            <UseDefault>true</UseDefault>
+            <AlwaysVisible>false</AlwaysVisible>
+            <MasterFactor>1</MasterFactor>
+            <OpaqueFrames>1</OpaqueFrames>
+            <Frames>20</Frames>
+          </InfosFading>
+        </Pencil>
+      </Drawings>
+    </Keyframe>
+    <Keyframe id="67b4c7b9-dd06-4503-a050-1be1009a414c">
+      <Timestamp>26527</Timestamp>
+      <Name>ok 오른발</Name>
+      <Color>46;204;113</Color>
+      <Drawings>
+        <Pencil id="53548255-5cbe-4b07-bda3-ca808ffef9a2" name="ok 오른발">
+          <PointList Count="2">
+            <Point>339;321</Point>
+            <Point>340;321</Point>
+          </PointList>
+          <DrawingStyle>
+            <Color Key="color">
+              <Value>255;46;204;113</Value>
+            </Color>
+            <PenSize Key="pen size">
+              <Value>10</Value>
+            </PenSize>
+            <PenShape Key="pen shape">
+              <Value>Solid</Value>
+            </PenShape>
+          </DrawingStyle>
+          <InfosFading>
+            <Enabled>true</Enabled>
+            <UseDefault>true</UseDefault>
+            <AlwaysVisible>false</AlwaysVisible>
+            <MasterFactor>1</MasterFactor>
+            <OpaqueFrames>1</OpaqueFrames>
+            <Frames>20</Frames>
+          </InfosFading>
+        </Pencil>
+      </Drawings>
+    </Keyframe>
+    <Keyframe id="ef7181db-debb-4abe-a74c-e3b25d9d3cc0">
+      <Timestamp>26861</Timestamp>
+      <Name>ok 왼발</Name>
+      <Color>46;204;113</Color>
+      <Drawings>
+        <Pencil id="1d8cf378-733b-4715-b748-d5dd6aa88679" name="ok 왼발">
+          <PointList Count="2">
+            <Point>345;320</Point>
+            <Point>346;320</Point>
+          </PointList>
+          <DrawingStyle>
+            <Color Key="color">
+              <Value>255;46;204;113</Value>
+            </Color>
+            <PenSize Key="pen size">
+              <Value>10</Value>
+            </PenSize>
+            <PenShape Key="pen shape">
+              <Value>Solid</Value>
+            </PenShape>
+          </DrawingStyle>
+          <InfosFading>
+            <Enabled>true</Enabled>
+            <UseDefault>true</UseDefault>
+            <AlwaysVisible>false</AlwaysVisible>
+            <MasterFactor>1</MasterFactor>
+            <OpaqueFrames>1</OpaqueFrames>
+            <Frames>20</Frames>
+          </InfosFading>
+        </Pencil>
+      </Drawings>
+    </Keyframe>
+    <Keyframe id="814c0a0a-6623-42d1-8cf8-a01cd2371f5d">
+      <Timestamp>27236</Timestamp>
+      <Name>ok 오른발</Name>
+      <Color>46;204;113</Color>
+      <Drawings>
+        <Pencil id="9b37ba82-7062-4f42-a96f-1550d3eba46a" name="ok 오른발">
+          <PointList Count="2">
+            <Point>339;320</Point>
+            <Point>340;320</Point>
+          </PointList>
+          <DrawingStyle>
+            <Color Key="color">
+              <Value>255;46;204;113</Value>
+            </Color>
+            <PenSize Key="pen size">
+              <Value>10</Value>
+            </PenSize>
+            <PenShape Key="pen shape">
+              <Value>Solid</Value>
+            </PenShape>
+          </DrawingStyle>
+          <InfosFading>
+            <Enabled>true</Enabled>
+            <UseDefault>true</UseDefault>
+            <AlwaysVisible>false</AlwaysVisible>
+            <MasterFactor>1</MasterFactor>
+            <OpaqueFrames>1</OpaqueFrames>
+            <Frames>20</Frames>
+          </InfosFading>
+        </Pencil>
+      </Drawings>
+    </Keyframe>
+    <Keyframe id="6dfddade-608a-4b75-b3d5-c0f48b74ca9f">
+      <Timestamp>27611</Timestamp>
+      <Name>ok 왼발</Name>
+      <Color>46;204;113</Color>
+      <Drawings>
+        <Pencil id="81cdca2f-21a4-43f5-bb62-c1acdd2948d4" name="ok 왼발">
+          <PointList Count="2">
+            <Point>351;321</Point>
+            <Point>352;321</Point>
+          </PointList>
+          <DrawingStyle>
+            <Color Key="color">
+              <Value>255;46;204;113</Value>
+            </Color>
+            <PenSize Key="pen size">
+              <Value>10</Value>
+            </PenSize>
+            <PenShape Key="pen shape">
+              <Value>Solid</Value>
+            </PenShape>
+          </DrawingStyle>
+          <InfosFading>
+            <Enabled>true</Enabled>
+            <UseDefault>true</UseDefault>
+            <AlwaysVisible>false</AlwaysVisible>
+            <MasterFactor>1</MasterFactor>
+            <OpaqueFrames>1</OpaqueFrames>
+            <Frames>20</Frames>
+          </InfosFading>
+        </Pencil>
+      </Drawings>
+    </Keyframe>
+    <Keyframe id="2034a76b-48b6-4e5f-9d01-197518133e57">
+      <Timestamp>27945</Timestamp>
+      <Name>ok 오른발</Name>
+      <Color>46;204;113</Color>
+      <Drawings>
+        <Pencil id="9c73d8bb-c4ff-4f76-b080-9b0e529d0d68" name="ok 오른발">
+          <PointList Count="2">
+            <Point>341;321</Point>
+            <Point>342;321</Point>
+          </PointList>
+          <DrawingStyle>
+            <Color Key="color">
+              <Value>255;46;204;113</Value>
+            </Color>
+            <PenSize Key="pen size">
+              <Value>10</Value>
+            </PenSize>
+            <PenShape Key="pen shape">
+              <Value>Solid</Value>
+            </PenShape>
+          </DrawingStyle>
+          <InfosFading>
+            <Enabled>true</Enabled>
+            <UseDefault>true</UseDefault>
+            <AlwaysVisible>false</AlwaysVisible>
+            <MasterFactor>1</MasterFactor>
+            <OpaqueFrames>1</OpaqueFrames>
+            <Frames>20</Frames>
+          </InfosFading>
+        </Pencil>
+      </Drawings>
+    </Keyframe>
+    <Keyframe id="c1069055-ec4a-4ca1-8fbf-75caf72fc7cd">
+      <Timestamp>28320</Timestamp>
+      <Name>ok 왼발</Name>
+      <Color>46;204;113</Color>
+      <Drawings>
+        <Pencil id="cc2694ed-ccd8-4cdc-aab8-684410d3ba55" name="ok 왼발">
+          <PointList Count="2">
+            <Point>349;320</Point>
+            <Point>350;320</Point>
+          </PointList>
+          <DrawingStyle>
+            <Color Key="color">
+              <Value>255;46;204;113</Value>
+            </Color>
+            <PenSize Key="pen size">
+              <Value>10</Value>
+            </PenSize>
+            <PenShape Key="pen shape">
+              <Value>Solid</Value>
+            </PenShape>
+          </DrawingStyle>
+          <InfosFading>
+            <Enabled>true</Enabled>
+            <UseDefault>true</UseDefault>
+            <AlwaysVisible>false</AlwaysVisible>
+            <MasterFactor>1</MasterFactor>
+            <OpaqueFrames>1</OpaqueFrames>
+            <Frames>20</Frames>
+          </InfosFading>
+        </Pencil>
+      </Drawings>
+    </Keyframe>
+    <Keyframe id="bba6c4d5-5c2d-40cd-9361-737deab20876">
+      <Timestamp>28654</Timestamp>
+      <Name>ok 오른발</Name>
+      <Color>46;204;113</Color>
+      <Drawings>
+        <Pencil id="264b7de9-836d-4e20-a592-c1322f828d72" name="ok 오른발">
+          <PointList Count="2">
+            <Point>344;321</Point>
+            <Point>345;321</Point>
+          </PointList>
+          <DrawingStyle>
+            <Color Key="color">
+              <Value>255;46;204;113</Value>
+            </Color>
+            <PenSize Key="pen size">
+              <Value>10</Value>
+            </PenSize>
+            <PenShape Key="pen shape">
+              <Value>Solid</Value>
+            </PenShape>
+          </DrawingStyle>
+          <InfosFading>
+            <Enabled>true</Enabled>
+            <UseDefault>true</UseDefault>
+            <AlwaysVisible>false</AlwaysVisible>
+            <MasterFactor>1</MasterFactor>
+            <OpaqueFrames>1</OpaqueFrames>
+            <Frames>20</Frames>
+          </InfosFading>
+        </Pencil>
+      </Drawings>
+    </Keyframe>
+    <Keyframe id="cf2dad7e-a399-4261-b9b0-1412dde9ffec">
+      <Timestamp>29029</Timestamp>
+      <Name>ok 왼발</Name>
+      <Color>46;204;113</Color>
+      <Drawings>
+        <Pencil id="67f44d19-5ed7-4495-b608-2c7a45bcedd2" name="ok 왼발">
+          <PointList Count="2">
+            <Point>350;321</Point>
+            <Point>351;321</Point>
+          </PointList>
+          <DrawingStyle>
+            <Color Key="color">
+              <Value>255;46;204;113</Value>
+            </Color>
+            <PenSize Key="pen size">
+              <Value>10</Value>
+            </PenSize>
+            <PenShape Key="pen shape">
+              <Value>Solid</Value>
+            </PenShape>
+          </DrawingStyle>
+          <InfosFading>
+            <Enabled>true</Enabled>
+            <UseDefault>true</UseDefault>
+            <AlwaysVisible>false</AlwaysVisible>
+            <MasterFactor>1</MasterFactor>
+            <OpaqueFrames>1</OpaqueFrames>
+            <Frames>20</Frames>
+          </InfosFading>
+        </Pencil>
+      </Drawings>
+    </Keyframe>
+    <Keyframe id="b2bd3373-f6ed-4426-9afa-6c9098fc3e80">
+      <Timestamp>29363</Timestamp>
+      <Name>ok 오른발</Name>
+      <Color>46;204;113</Color>
+      <Drawings>
+        <Pencil id="c9ef2c80-068c-4667-98df-035475940b8c" name="ok 오른발">
+          <PointList Count="2">
+            <Point>341;322</Point>
+            <Point>342;322</Point>
+          </PointList>
+          <DrawingStyle>
+            <Color Key="color">
+              <Value>255;46;204;113</Value>
+            </Color>
+            <PenSize Key="pen size">
+              <Value>10</Value>
+            </PenSize>
+            <PenShape Key="pen shape">
+              <Value>Solid</Value>
+            </PenShape>
+          </DrawingStyle>
+          <InfosFading>
+            <Enabled>true</Enabled>
+            <UseDefault>true</UseDefault>
+            <AlwaysVisible>false</AlwaysVisible>
+            <MasterFactor>1</MasterFactor>
+            <OpaqueFrames>1</OpaqueFrames>
+            <Frames>20</Frames>
+          </InfosFading>
+        </Pencil>
+      </Drawings>
+    </Keyframe>
+    <Keyframe id="535d9d63-58c7-4303-b102-e15f2a38122a">
+      <Timestamp>29739</Timestamp>
+      <Name>ok 왼발</Name>
+      <Color>46;204;113</Color>
+      <Drawings>
+        <Pencil id="d4463a1f-a05c-4908-ba70-f70f097a292e" name="ok 왼발">
+          <PointList Count="2">
+            <Point>351;325</Point>
+            <Point>352;325</Point>
+          </PointList>
+          <DrawingStyle>
+            <Color Key="color">
+              <Value>255;46;204;113</Value>
+            </Color>
+            <PenSize Key="pen size">
+              <Value>10</Value>
+            </PenSize>
+            <PenShape Key="pen shape">
+              <Value>Solid</Value>
+            </PenShape>
+          </DrawingStyle>
+          <InfosFading>
+            <Enabled>true</Enabled>
+            <UseDefault>true</UseDefault>
+            <AlwaysVisible>false</AlwaysVisible>
+            <MasterFactor>1</MasterFactor>
+            <OpaqueFrames>1</OpaqueFrames>
+            <Frames>20</Frames>
+          </InfosFading>
+        </Pencil>
+      </Drawings>
+    </Keyframe>
+  </Keyframes>
+  <CoordinateSystem id="50c67d6f-4f87-48f9-b662-8757622613c4" name="좌표계 1">
+    <Position>640;360</Position>
+    <ReferenceTimestamp>0</ReferenceTimestamp>
+    <Visible>false</Visible>
+    <ShowGrid>true</ShowGrid>
+    <ShowGraduations>true</ShowGraduations>
+    <DrawingStyle>
+      <Color Key="line color">
+        <Value>255;255;0;0</Value>
+      </Color>
+    </DrawingStyle>
+  </CoordinateSystem>
+  <TestGrid id="0be837f4-00fa-466c-8394-e508dec7c6ea" name="카메라 테스트 격자 1">
+    <Visible>false</Visible>
+    <ShowHorizontalAxis>true</ShowHorizontalAxis>
+    <ShowVerticalAxis>true</ShowVerticalAxis>
+    <ShowFraming>true</ShowFraming>
+    <ShowThirds>false</ShowThirds>
+    <DrawingStyle>
+      <Color Key="color">
+        <Value>255;255;0;0</Value>
+      </Color>
+    </DrawingStyle>
+  </TestGrid>
+  <Trackability>
+    <TrackableDrawing id="50c67d6f-4f87-48f9-b662-8757622613c4" name="좌표계 1">
+      <TrackablePoint key="0">
+        <ReferenceTimestamp>0</ReferenceTimestamp>
+        <ReferenceValue>640;360</ReferenceValue>
+      </TrackablePoint>
+    </TrackableDrawing>
+  </Trackability>
+  <VideoFilters />
+</KinoveaVideoAnalysis>

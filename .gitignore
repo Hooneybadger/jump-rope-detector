@@ -218,3 +218,12 @@ __marimo__/
 .bench-venv/
 .benchmark-node/
 benchmark_results/cache/
+
+# External CC BY research data (media and derived landmarks stay local; manifests are tracked)
+.data-venv/
+external_data/media/
+external_data/landmarks/
+external_data/screening/
+.test-venv/
+
+validation_video/

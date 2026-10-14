@@ -1,0 +1,397 @@
+<?xml version="1.0" encoding="utf-8"?>
+<KinoveaVideoAnalysis>
+  <FormatVersion>2.0</FormatVersion>
+  <Producer>jump-rope-detector propose_labels.py</Producer>
+  <OriginalFilename>CfbJKAw83Qw</OriginalFilename>
+  <ImageSize>640;360</ImageSize>
+  <AverageTimeStampsPerFrame>33.3333</AverageTimeStampsPerFrame>
+  <CaptureFramerate>30.000</CaptureFramerate>
+  <UserFramerate>30.000</UserFramerate>
+  <FirstTimeStamp>0</FirstTimeStamp>
+  <Keyframes>
+    <Keyframe id="ca335f30-a8d5-4a6a-a049-7e3520e9774b">
+      <Timestamp>41530</Timestamp>
+      <Name>audio_only</Name>
+      <Color>52;152;219</Color>
+      <Drawings>
+        <Pencil id="eb52c903-9e08-4591-bd44-6ea5d42f7b68" name="audio_only">
+          <PointList Count="1">
+            <Point>320;342</Point>
+          </PointList>
+          <DrawingStyle>
+            <Color Key="color"><Value>255;52;152;219</Value></Color>
+            <PenSize Key="pen size"><Value>10</Value></PenSize>
+          </DrawingStyle>
+        </Pencil>
+      </Drawings>
+    </Keyframe>
+    <Keyframe id="7c824a8b-c0a8-4748-817d-8878509fbd6f">
+      <Timestamp>41967</Timestamp>
+      <Name>pose_only</Name>
+      <Color>255;153;0</Color>
+      <Drawings>
+        <Pencil id="d8a16740-0459-48c8-ac9a-6eb2f5fe8d7a" name="pose_only">
+          <PointList Count="1">
+            <Point>320;342</Point>
+          </PointList>
+          <DrawingStyle>
+            <Color Key="color"><Value>255;255;153;0</Value></Color>
+            <PenSize Key="pen size"><Value>10</Value></PenSize>
+          </DrawingStyle>
+        </Pencil>
+      </Drawings>
+    </Keyframe>
+    <Keyframe id="a3cc4168-26f3-4241-85c3-b606d1c6d24b">
+      <Timestamp>43010</Timestamp>
+      <Name>audio_only</Name>
+      <Color>52;152;219</Color>
+      <Drawings>
+        <Pencil id="c454d036-9441-4dfd-b062-c4892358e170" name="audio_only">
+          <PointList Count="1">
+            <Point>320;342</Point>
+          </PointList>
+          <DrawingStyle>
+            <Color Key="color"><Value>255;52;152;219</Value></Color>
+            <PenSize Key="pen size"><Value>10</Value></PenSize>
+          </DrawingStyle>
+        </Pencil>
+      </Drawings>
+    </Keyframe>
+    <Keyframe id="b3883de2-7a20-4040-87a2-2d01756c7902">
+      <Timestamp>43233</Timestamp>
+      <Name>pose_only</Name>
+      <Color>255;153;0</Color>
+      <Drawings>
+        <Pencil id="a436dcf7-5c72-43e8-8109-f143f3ea17ef" name="pose_only">
+          <PointList Count="1">
+            <Point>320;342</Point>
+          </PointList>
+          <DrawingStyle>
+            <Color Key="color"><Value>255;255;153;0</Value></Color>
+            <PenSize Key="pen size"><Value>10</Value></PenSize>
+          </DrawingStyle>
+        </Pencil>
+      </Drawings>
+    </Keyframe>
+    <Keyframe id="9d652826-2bc6-483e-8b89-17327beb434e">
+      <Timestamp>43773</Timestamp>
+      <Name>agreed</Name>
+      <Color>46;204;113</Color>
+      <Drawings>
+        <Pencil id="59a8bb51-a72e-44cc-80ee-b09f7b09fdac" name="agreed">
+          <PointList Count="1">
+            <Point>320;342</Point>
+          </PointList>
+          <DrawingStyle>
+            <Color Key="color"><Value>255;46;204;113</Value></Color>
+            <PenSize Key="pen size"><Value>10</Value></PenSize>
+          </DrawingStyle>
+        </Pencil>
+      </Drawings>
+    </Keyframe>
+    <Keyframe id="14982157-7534-45e6-9815-7130d1258bb3">
+      <Timestamp>44733</Timestamp>
+      <Name>pose_only</Name>
+      <Color>255;153;0</Color>
+      <Drawings>
+        <Pencil id="76af4215-3a65-4a94-8bc4-c0dffc59256a" name="pose_only">
+          <PointList Count="1">
+            <Point>320;342</Point>
+          </PointList>
+          <DrawingStyle>
+            <Color Key="color"><Value>255;255;153;0</Value></Color>
+            <PenSize Key="pen size"><Value>10</Value></PenSize>
+          </DrawingStyle>
+        </Pencil>
+      </Drawings>
+    </Keyframe>
+    <Keyframe id="6e369160-28bd-416f-a9b9-25bad6b811ca">
+      <Timestamp>45495</Timestamp>
+      <Name>agreed</Name>
+      <Color>46;204;113</Color>
+      <Drawings>
+        <Pencil id="5f8a1870-fd2e-48da-a7b5-fb0b718b0fad" name="agreed">
+          <PointList Count="1">
+            <Point>320;342</Point>
+          </PointList>
+          <DrawingStyle>
+            <Color Key="color"><Value>255;46;204;113</Value></Color>
+            <PenSize Key="pen size"><Value>10</Value></PenSize>
+          </DrawingStyle>
+        </Pencil>
+      </Drawings>
+    </Keyframe>
+    <Keyframe id="8544eec5-c8ac-4342-aa48-819087fc3393">
+      <Timestamp>46233</Timestamp>
+      <Name>pose_only</Name>
+      <Color>255;153;0</Color>
+      <Drawings>
+        <Pencil id="2cae4307-946e-4da4-a867-6e8e3bb39036" name="pose_only">
+          <PointList Count="1">
+            <Point>320;342</Point>
+          </PointList>
+          <DrawingStyle>
+            <Color Key="color"><Value>255;255;153;0</Value></Color>
+            <PenSize Key="pen size"><Value>10</Value></PenSize>
+          </DrawingStyle>
+        </Pencil>
+      </Drawings>
+    </Keyframe>
+    <Keyframe id="19c4eb83-68a5-4faf-87b9-1e393f1af7d2">
+      <Timestamp>46780</Timestamp>
+      <Name>audio_only</Name>
+      <Color>52;152;219</Color>
+      <Drawings>
+        <Pencil id="f5686c0a-39f4-4648-bb86-af8581dfe154" name="audio_only">
+          <PointList Count="1">
+            <Point>320;342</Point>
+          </PointList>
+          <DrawingStyle>
+            <Color Key="color"><Value>255;52;152;219</Value></Color>
+            <PenSize Key="pen size"><Value>10</Value></PenSize>
+          </DrawingStyle>
+        </Pencil>
+      </Drawings>
+    </Keyframe>
+    <Keyframe id="c568299d-adca-4dd8-9fef-d25f586a1e90">
+      <Timestamp>46867</Timestamp>
+      <Name>pose_only</Name>
+      <Color>255;153;0</Color>
+      <Drawings>
+        <Pencil id="034aa26c-3faf-49e4-b592-aafe51cc51a3" name="pose_only">
+          <PointList Count="1">
+            <Point>320;342</Point>
+          </PointList>
+          <DrawingStyle>
+            <Color Key="color"><Value>255;255;153;0</Value></Color>
+            <PenSize Key="pen size"><Value>10</Value></PenSize>
+          </DrawingStyle>
+        </Pencil>
+      </Drawings>
+    </Keyframe>
+    <Keyframe id="ec23defe-57b7-4f7d-8fb7-ffd1c20904bd">
+      <Timestamp>47630</Timestamp>
+      <Name>audio_only</Name>
+      <Color>52;152;219</Color>
+      <Drawings>
+        <Pencil id="427f0a49-f375-4701-99b2-55a95155bade" name="audio_only">
+          <PointList Count="1">
+            <Point>320;342</Point>
+          </PointList>
+          <DrawingStyle>
+            <Color Key="color"><Value>255;52;152;219</Value></Color>
+            <PenSize Key="pen size"><Value>10</Value></PenSize>
+          </DrawingStyle>
+        </Pencil>
+      </Drawings>
+    </Keyframe>
+    <Keyframe id="3a8b221f-b387-4afb-9ce5-dafa035af2ee">
+      <Timestamp>48267</Timestamp>
+      <Name>pose_only</Name>
+      <Color>255;153;0</Color>
+      <Drawings>
+        <Pencil id="38fa3244-2245-448b-a9fd-90e8b04f5113" name="pose_only">
+          <PointList Count="1">
+            <Point>320;342</Point>
+          </PointList>
+          <DrawingStyle>
+            <Color Key="color"><Value>255;255;153;0</Value></Color>
+            <PenSize Key="pen size"><Value>10</Value></PenSize>
+          </DrawingStyle>
+        </Pencil>
+      </Drawings>
+    </Keyframe>
+    <Keyframe id="fc0807ac-bc31-4786-b70c-a37a1f6e4ff8">
+      <Timestamp>48710</Timestamp>
+      <Name>audio_only</Name>
+      <Color>52;152;219</Color>
+      <Drawings>
+        <Pencil id="b1475d06-d55a-4049-b812-7782a14756b5" name="audio_only">
+          <PointList Count="1">
+            <Point>320;342</Point>
+          </PointList>
+          <DrawingStyle>
+            <Color Key="color"><Value>255;52;152;219</Value></Color>
+            <PenSize Key="pen size"><Value>10</Value></PenSize>
+          </DrawingStyle>
+        </Pencil>
+      </Drawings>
+    </Keyframe>
+    <Keyframe id="f043657d-47c5-4270-a0cf-782e819b3520">
+      <Timestamp>49600</Timestamp>
+      <Name>pose_only</Name>
+      <Color>255;153;0</Color>
+      <Drawings>
+        <Pencil id="141d799a-980a-4d36-9bcd-01568fa83a65" name="pose_only">
+          <PointList Count="1">
+            <Point>320;342</Point>
+          </PointList>
+          <DrawingStyle>
+            <Color Key="color"><Value>255;255;153;0</Value></Color>
+            <PenSize Key="pen size"><Value>10</Value></PenSize>
+          </DrawingStyle>
+        </Pencil>
+      </Drawings>
+    </Keyframe>
+    <Keyframe id="08cc3f91-ecf2-48f9-9656-ea2825405a34">
+      <Timestamp>49940</Timestamp>
+      <Name>audio_only</Name>
+      <Color>52;152;219</Color>
+      <Drawings>
+        <Pencil id="9e84c92a-65db-4e5f-8996-5271915e7b3a" name="audio_only">
+          <PointList Count="1">
+            <Point>320;342</Point>
+          </PointList>
+          <DrawingStyle>
+            <Color Key="color"><Value>255;52;152;219</Value></Color>
+            <PenSize Key="pen size"><Value>10</Value></PenSize>
+          </DrawingStyle>
+        </Pencil>
+      </Drawings>
+    </Keyframe>
+    <Keyframe id="a899917f-926f-4fc9-adc0-746bee4d1e77">
+      <Timestamp>50167</Timestamp>
+      <Name>pose_only</Name>
+      <Color>255;153;0</Color>
+      <Drawings>
+        <Pencil id="93502f27-aeaf-4fc8-a385-ef1c496509ef" name="pose_only">
+          <PointList Count="1">
+            <Point>320;342</Point>
+          </PointList>
+          <DrawingStyle>
+            <Color Key="color"><Value>255;255;153;0</Value></Color>
+            <PenSize Key="pen size"><Value>10</Value></PenSize>
+          </DrawingStyle>
+        </Pencil>
+      </Drawings>
+    </Keyframe>
+    <Keyframe id="41e84159-5226-420c-aa0b-656c3f32858f">
+      <Timestamp>50850</Timestamp>
+      <Name>audio_only</Name>
+      <Color>52;152;219</Color>
+      <Drawings>
+        <Pencil id="ead9e0aa-21f6-47e3-8296-686b54f28ba6" name="audio_only">
+          <PointList Count="1">
+            <Point>320;342</Point>
+          </PointList>
+          <DrawingStyle>
+            <Color Key="color"><Value>255;52;152;219</Value></Color>
+            <PenSize Key="pen size"><Value>10</Value></PenSize>
+          </DrawingStyle>
+        </Pencil>
+      </Drawings>
+    </Keyframe>
+    <Keyframe id="d6469122-3c1c-428c-ae51-26b9bb322f18">
+      <Timestamp>51490</Timestamp>
+      <Name>audio_only</Name>
+      <Color>52;152;219</Color>
+      <Drawings>
+        <Pencil id="bf73807c-4b4b-4bad-a4c3-810746652fa4" name="audio_only">
+          <PointList Count="1">
+            <Point>320;342</Point>
+          </PointList>
+          <DrawingStyle>
+            <Color Key="color"><Value>255;52;152;219</Value></Color>
+            <PenSize Key="pen size"><Value>10</Value></PenSize>
+          </DrawingStyle>
+        </Pencil>
+      </Drawings>
+    </Keyframe>
+    <Keyframe id="141af9fd-cf78-4352-b576-1842364da304">
+      <Timestamp>51600</Timestamp>
+      <Name>pose_only</Name>
+      <Color>255;153;0</Color>
+      <Drawings>
+        <Pencil id="6c0be00a-f751-416f-8911-8484c9201127" name="pose_only">
+          <PointList Count="1">
+            <Point>320;342</Point>
+          </PointList>
+          <DrawingStyle>
+            <Color Key="color"><Value>255;255;153;0</Value></Color>
+            <PenSize Key="pen size"><Value>10</Value></PenSize>
+          </DrawingStyle>
+        </Pencil>
+      </Drawings>
+    </Keyframe>
+    <Keyframe id="1f7a9eac-3e77-4c65-ace9-6a7ea18be37e">
+      <Timestamp>52405</Timestamp>
+      <Name>agreed</Name>
+      <Color>46;204;113</Color>
+      <Drawings>
+        <Pencil id="d6eda110-bd82-48d4-98ea-587fa13bc51f" name="agreed">
+          <PointList Count="1">
+            <Point>320;342</Point>
+          </PointList>
+          <DrawingStyle>
+            <Color Key="color"><Value>255;46;204;113</Value></Color>
+            <PenSize Key="pen size"><Value>10</Value></PenSize>
+          </DrawingStyle>
+        </Pencil>
+      </Drawings>
+    </Keyframe>
+    <Keyframe id="6379e152-a187-4761-888f-e29a04c9b3f0">
+      <Timestamp>53188</Timestamp>
+      <Name>agreed</Name>
+      <Color>46;204;113</Color>
+      <Drawings>
+        <Pencil id="feb31d29-c910-4901-a186-8eb9efb9db17" name="agreed">
+          <PointList Count="1">
+            <Point>320;342</Point>
+          </PointList>
+          <DrawingStyle>
+            <Color Key="color"><Value>255;46;204;113</Value></Color>
+            <PenSize Key="pen size"><Value>10</Value></PenSize>
+          </DrawingStyle>
+        </Pencil>
+      </Drawings>
+    </Keyframe>
+    <Keyframe id="47d6f34e-3224-42f8-8f82-66c40f388d46">
+      <Timestamp>53767</Timestamp>
+      <Name>pose_only</Name>
+      <Color>255;153;0</Color>
+      <Drawings>
+        <Pencil id="30abaca0-90fd-4b63-bcbe-45be217b40e0" name="pose_only">
+          <PointList Count="1">
+            <Point>320;342</Point>
+          </PointList>
+          <DrawingStyle>
+            <Color Key="color"><Value>255;255;153;0</Value></Color>
+            <PenSize Key="pen size"><Value>10</Value></PenSize>
+          </DrawingStyle>
+        </Pencil>
+      </Drawings>
+    </Keyframe>
+    <Keyframe id="fd4fa57f-7ef5-49de-9fac-b57fe0084db3">
+      <Timestamp>54630</Timestamp>
+      <Name>audio_only</Name>
+      <Color>52;152;219</Color>
+      <Drawings>
+        <Pencil id="85c5ed50-853c-469b-a1a5-168d58b785b8" name="audio_only">
+          <PointList Count="1">
+            <Point>320;342</Point>
+          </PointList>
+          <DrawingStyle>
+            <Color Key="color"><Value>255;52;152;219</Value></Color>
+            <PenSize Key="pen size"><Value>10</Value></PenSize>
+          </DrawingStyle>
+        </Pencil>
+      </Drawings>
+    </Keyframe>
+    <Keyframe id="960109ff-8972-4dbd-8629-83ed8160dbdd">
+      <Timestamp>55100</Timestamp>
+      <Name>pose_only</Name>
+      <Color>255;153;0</Color>
+      <Drawings>
+        <Pencil id="37ba44e6-5a19-4962-a75e-8e54bb6c5d3e" name="pose_only">
+          <PointList Count="1">
+            <Point>320;342</Point>
+          </PointList>
+          <DrawingStyle>
+            <Color Key="color"><Value>255;255;153;0</Value></Color>
+            <PenSize Key="pen size"><Value>10</Value></PenSize>
+          </DrawingStyle>
+        </Pencil>
+      </Drawings>
+    </Keyframe>
+  </Keyframes>
+</KinoveaVideoAnalysis>

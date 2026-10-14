@@ -10,6 +10,7 @@ from statistics import median
 
 import cv2
 import mediapipe as mp
+import numpy as np
 
 
 mp_pose = mp.solutions.pose
@@ -49,14 +50,14 @@ CORE_READY_LANDMARKS = (
 
 @dataclass(frozen=True)
 class EngineConfig:
-    ema_alpha_hip: float = 0.45
-    ema_alpha_foot: float = 0.55
-    fast_ema_alpha_hip: float = 0.25
-    fast_ema_alpha_foot: float = 0.35
+    ema_alpha_hip: float = 0.70
+    ema_alpha_foot: float = 0.70
+    fast_ema_alpha_hip: float = 0.70
+    fast_ema_alpha_foot: float = 0.70
     foot_visibility_threshold: float = 0.35
     hip_visibility_threshold: float = 0.50
     contact_margin_ratio: float = 0.08
-    symmetry_y_ratio: float = 0.12
+    symmetry_y_ratio: float = 0.20
     descend_velocity_ratio: float = 0.006
     ascend_velocity_ratio: float = 0.004
     fast_descend_velocity_ratio: float = 0.002
@@ -108,6 +109,21 @@ class EngineConfig:
     rope_stuck_contact_ratio: float = 0.67
     rope_stuck_release_recovery_ratio: float = 0.018
     rope_stuck_attempt_velocity_ratio: float = 0.003
+    floor_reacquire_ratio: float = 0.5
+    floor_reacquire_frames: int = 30
+    # Rhythm-adaptive gating: while the last rhythm_window_sec of hip motion is clearly periodic, the
+    # minimum gap follows the measured period and the amplitude floors follow the jumper's own amplitude.
+    # Both only ever relax the fixed limits above, never tighten them.
+    rhythm_adaptive_enabled: bool = True
+    rhythm_window_sec: float = 2.0
+    rhythm_min_period_sec: float = 0.18
+    rhythm_max_period_sec: float = 0.90
+    rhythm_min_periodicity: float = 0.5
+    rhythm_gap_factor: float = 0.6
+    rhythm_range_factor: float = 0.5
+    rhythm_foot_factor: float = 0.5
+    rhythm_recent_factor: float = 0.3
+    rhythm_noise_floor_ratio: float = 0.015
 
     def to_dict(self) -> dict[str, float | int]:
         return asdict(self)
@@ -474,6 +490,7 @@ class _StateMachineCounter:
         self.current_contact_gate = False
         self.current_release_height_ratio = 0.0
         self.current_abs_hip_velocity_ratio = 0.0
+        self.stale_floor_frames = 0
 
     @staticmethod
     def _ema(alpha: float, value: float, previous: float | None) -> float:
@@ -530,6 +547,15 @@ class _StateMachineCounter:
             self.config.symmetry_y_ratio * leg_length
         )
         release_height_ratio = max(0.0, (self.floor_y - foot_motion) / leg_length)
+        # Feet cannot hover half a leg above the floor for a second while skipping; the floor
+        # estimate is stale (pose glitch, camera or player moved), so re-acquire it.
+        self.stale_floor_frames = self.stale_floor_frames + 1 if release_height_ratio > self.config.floor_reacquire_ratio else 0
+        if self.stale_floor_frames > self.config.floor_reacquire_frames:
+            self.floor_y = foot_motion
+            self.stale_floor_frames = 0
+            contact_threshold = self.floor_y - (self.config.contact_margin_ratio * leg_length)
+            contact_gate = foot_motion >= contact_threshold and symmetry_y <= (self.config.symmetry_y_ratio * leg_length)
+            release_height_ratio = 0.0
         descend_ratio = self.config.fast_descend_velocity_ratio if fast_mode else self.config.descend_velocity_ratio
         ascend_ratio = self.config.fast_ascend_velocity_ratio if fast_mode else self.config.ascend_velocity_ratio
         min_refractory = self.config.fast_min_refractory_frames if fast_mode else self.config.min_refractory_frames
@@ -608,6 +634,8 @@ class RealtimeCounterEngine:
         self.accepted_running_count = 0
         self.last_decision: CounterDecision | None = None
         self.pending_compensation: _PendingCountCompensation | None = None
+        self.rhythm_samples: deque[tuple[float, float, float, float]] = deque()
+        self.last_rhythm: tuple[float, float, float, float] | None = None
 
     def _clear_pending_compensation(self) -> None:
         self.pending_compensation = None
@@ -681,6 +709,56 @@ class RealtimeCounterEngine:
         self.foot_history.append(mean_foot)
         self.leg_history.append(leg_length)
         self.recent_hip_history.append(mean_hip)
+        if self.config.rhythm_adaptive_enabled:
+            self.rhythm_samples.append((signal.time_sec, mean_hip, mean_foot, leg_length))
+            while self.rhythm_samples and signal.time_sec - self.rhythm_samples[0][0] > self.config.rhythm_window_sec:
+                self.rhythm_samples.popleft()
+
+    def rhythm(self) -> tuple[float, float, float, float] | None:
+        """(period_sec, periodicity, hip_amplitude, foot_amplitude) of the last rhythm_window_sec, or None.
+
+        Period = first autocorrelation peak of the detrended hip height within the allowed period range that
+        reaches 85% of the strongest one (so a 2x period is not chosen over the true one). Amplitudes are the
+        10-90% spread of hip and foot height in leg lengths, the same units as motion_metrics().
+        """
+        samples = self.rhythm_samples
+        if len(samples) < 12 or samples[-1][0] - samples[0][0] < 0.5 * self.config.rhythm_window_sec:
+            return None
+        times = np.fromiter((s[0] for s in samples), float, len(samples))
+        leg = float(np.median([s[3] for s in samples]))
+        hip = np.fromiter((s[1] for s in samples), float, len(samples)) / leg
+        foot = np.fromiter((s[2] for s in samples), float, len(samples)) / leg
+        dt = float(np.median(np.diff(times)))
+        if dt <= 0:
+            return None
+        index = np.arange(len(hip))
+        x = hip - np.polyval(np.polyfit(index, hip, 1), index)
+        denom = float(np.dot(x, x))
+        lo = max(1, int(np.ceil(self.config.rhythm_min_period_sec / dt)))
+        hi = min(len(x) - 3, int(self.config.rhythm_max_period_sec / dt))
+        if denom <= 1e-12 or hi <= lo:
+            return None
+        lags = np.arange(lo - 1, hi + 2)
+        corr = np.array([float(np.dot(x[:-k], x[k:])) / denom * len(x) / (len(x) - k) if k > 0 else 1.0 for k in lags])
+        peaks = [i for i in range(1, len(lags) - 1) if corr[i] >= corr[i - 1] and corr[i] >= corr[i + 1]]
+        if not peaks:
+            return None
+        best = max(corr[i] for i in peaks)
+        if best <= 0:
+            return None
+        first = next(i for i in peaks if corr[i] >= 0.85 * best)
+        hip_amp = float(np.percentile(x, 90) - np.percentile(x, 10))
+        foot_amp = float(np.percentile(foot, 90) - np.percentile(foot, 10))
+        return float(lags[first] * dt), float(corr[first]), hip_amp, foot_amp
+
+    def _rhythm_locked(self) -> tuple[float, float, float, float] | None:
+        if not self.config.rhythm_adaptive_enabled:
+            return None
+        rhythm = self.rhythm()
+        self.last_rhythm = rhythm
+        if rhythm is None or rhythm[1] < self.config.rhythm_min_periodicity:
+            return None
+        return rhythm
 
     def motion_metrics(self) -> dict[str, float]:
         if not self.hip_history or not self.foot_history or not self.leg_history:
@@ -751,6 +829,22 @@ class RealtimeCounterEngine:
                     self.config.min_recent_hip_range_ratio * 0.8,
                 )
         return min_gap_frames, min_recent_hip_ratio, cadence_locked
+
+    def _range_limits(self, min_gap_frames: int, min_recent_hip_ratio: float) -> tuple[int, float, float, float, bool]:
+        """Limits after the rhythm relaxation: (min_gap, min_recent_hip, min_hip_range, min_foot_range, rhythm_locked)."""
+        min_hip, min_foot = self.config.min_hip_range_ratio, self.config.min_foot_range_ratio
+        rhythm = self._rhythm_locked()
+        if rhythm is None:
+            return min_gap_frames, min_recent_hip_ratio, min_hip, min_foot, False
+        period, _, hip_amp, foot_amp = rhythm
+        dt = (self.rhythm_samples[-1][0] - self.rhythm_samples[0][0]) / max(1, len(self.rhythm_samples) - 1)
+        floor = self.config.rhythm_noise_floor_ratio
+        min_gap_frames = max(self.config.adaptive_gap_floor_frames,
+                             min(min_gap_frames, int(round(self.config.rhythm_gap_factor * period / dt))))
+        min_recent_hip_ratio = max(floor, min(min_recent_hip_ratio, self.config.rhythm_recent_factor * hip_amp))
+        min_hip = max(floor, min(min_hip, self.config.rhythm_range_factor * hip_amp))
+        min_foot = max(floor, min(min_foot, self.config.rhythm_foot_factor * foot_amp))
+        return min_gap_frames, min_recent_hip_ratio, min_hip, min_foot, True
 
     def _reject(
         self,
@@ -843,6 +937,8 @@ class RealtimeCounterEngine:
         metrics = self.motion_metrics()
         self._observe_candidate(candidate.frame_idx, metrics)
         min_gap_frames, min_recent_hip_ratio, cadence_locked = self._effective_limits()
+        min_gap_frames, min_recent_hip_ratio, min_hip_range, min_foot_range, rhythm_locked = self._range_limits(
+            min_gap_frames, min_recent_hip_ratio)
 
         required_history = max(3, self.config.motion_window_frames // 2)
         if len(self.hip_history) < required_history:
@@ -854,11 +950,11 @@ class RealtimeCounterEngine:
         ):
             self._reject(candidate, "min_gap", metrics, min_gap_frames, min_recent_hip_ratio, cadence_locked)
             return None
-        if metrics["hip_range_ratio"] < self.config.min_hip_range_ratio:
+        if metrics["hip_range_ratio"] < min_hip_range:
             self._reject(candidate, "hip_range", metrics, min_gap_frames, min_recent_hip_ratio, cadence_locked)
             return None
         if (
-            metrics["foot_range_ratio"] < self.config.min_foot_range_ratio
+            metrics["foot_range_ratio"] < min_foot_range
             and not self._foot_floor_override(metrics)
         ):
             self._reject(candidate, "foot_range", metrics, min_gap_frames, min_recent_hip_ratio, cadence_locked)

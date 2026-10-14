@@ -145,6 +145,19 @@ class EngineConfig:
     rope_stuck_min_hold_frames: int = 3
     rope_stuck_contact_ratio: float = 0.70
     rope_stuck_attempt_flow_ratio: float = 0.010
+    # Double-under vs single jump from hand motion (no rope vision): in the last hand_ratio_window_sec,
+    # the dominant hand-point oscillation runs at ~1x the jump rate for single jumps and ~2x for
+    # double-unders. Hand points need enough pixels: the rule is used when the body (nose to lowest foot)
+    # spans at least hand_ratio_min_body_px in the image fed to the pose model; below that the cycle
+    # classifier decides. Without a known image height, spectral concentration stands in for the size check.
+    hand_ratio_enabled: bool = True
+    # "decide": a usable hand ratio alone decides (also vetoes the classifier);
+    # "assist": a usable hand ratio >= hand_ratio_double_min accepts, otherwise the classifier decides.
+    hand_ratio_mode: str = "decide"
+    hand_ratio_window_sec: float = 2.0
+    hand_ratio_double_min: float = 1.5
+    hand_ratio_min_body_px: float = 150.0
+    hand_ratio_min_concentration: float = 0.45
 
     def to_dict(self) -> dict[str, float | int | bool]:
         return asdict(self)
@@ -186,6 +199,15 @@ class SignalFrame:
     left_wrist_y: float | None = None
     right_wrist_x: float | None = None
     right_wrist_y: float | None = None
+    nose_y: float | None = None
+    left_pinky_x: float | None = None
+    left_pinky_y: float | None = None
+    left_index_x: float | None = None
+    left_index_y: float | None = None
+    right_pinky_x: float | None = None
+    right_pinky_y: float | None = None
+    right_index_x: float | None = None
+    right_index_y: float | None = None
     left_hip_x: float | None = None
     left_ankle_x: float | None = None
     left_ankle_y: float | None = None
@@ -541,6 +563,15 @@ def pose_result_to_signal(
         left_wrist_y=None if left_wrist is None else left_wrist[1],
         right_wrist_x=None if right_wrist is None else right_wrist[0],
         right_wrist_y=None if right_wrist is None else right_wrist[1],
+        nose_y=float(lms[mp_pose.PoseLandmark.NOSE.value].y),
+        left_pinky_x=float(lms[mp_pose.PoseLandmark.LEFT_PINKY.value].x),
+        left_pinky_y=float(lms[mp_pose.PoseLandmark.LEFT_PINKY.value].y),
+        left_index_x=float(lms[mp_pose.PoseLandmark.LEFT_INDEX.value].x),
+        left_index_y=float(lms[mp_pose.PoseLandmark.LEFT_INDEX.value].y),
+        right_pinky_x=float(lms[mp_pose.PoseLandmark.RIGHT_PINKY.value].x),
+        right_pinky_y=float(lms[mp_pose.PoseLandmark.RIGHT_PINKY.value].y),
+        right_index_x=float(lms[mp_pose.PoseLandmark.RIGHT_INDEX.value].x),
+        right_index_y=float(lms[mp_pose.PoseLandmark.RIGHT_INDEX.value].y),
         left_hip_x=float(left_hip.x),
         left_ankle_x=float(left_ankle.x),
         left_ankle_y=float(left_ankle.y),
@@ -1009,7 +1040,14 @@ class _AirborneStateMachine:
         self.current_jump_height_ratio = max(0.0, (self.floor_y - self.airborne_min_foot_motion) / leg_length)
         self.current_hip_lift_ratio = max(0.0, -self.airborne_min_hip_motion / leg_length)
 
-        if self.contact_gate and self.contact_streak >= self.config.landing_contact_frames:
+        # A real airtime never lasts past max_airborne_frames; staying "in air" longer means the
+        # floor estimate is stale (e.g. after a pose glitch). Force a landing so the cycle is rejected
+        # as airtime_long, and re-acquire the floor from the current foot height instead of waiting
+        # for floor_decay to catch up over many seconds.
+        stale_airtime = self.airborne_frames > self.config.max_airborne_frames
+        if stale_airtime:
+            self.floor_y = foot_motion
+        if stale_airtime or (self.contact_gate and self.contact_streak >= self.config.landing_contact_frames):
             self.in_air = False
             if self.last_takeoff_frame is not None and signal.frame_idx > self.last_takeoff_frame:
                 self.interval_history.append(signal.frame_idx - self.last_takeoff_frame)
@@ -1070,6 +1108,74 @@ class RealtimeCounterEngine:
         self.monitor = MonitorState()
         self.pending_compensation: _PendingCountCompensation | None = None
         self.current_attempt_flow_ratio = 0.0
+        self.hand_samples: deque[tuple[float, tuple[float, ...]]] = deque()
+        self.landing_times: deque[float] = deque(maxlen=5)
+        self.last_hand_ratio: tuple[float, float] | None = None
+        self.last_hand_ratio_usable = False
+        # Height in pixels of the image the pose model saw (set by the adapter); None = unknown.
+        self.frame_height_px: float | None = None
+        self.body_fractions: deque[float] = deque(maxlen=90)
+
+    def _update_hand_samples(self, signal: SignalFrame) -> None:
+        """Wrist-relative pinky/index positions (per leg length) for the hand-turn ratio."""
+        values = []
+        for wrist, points in (("left_wrist", ("left_pinky", "left_index")), ("right_wrist", ("right_pinky", "right_index"))):
+            wx, wy = getattr(signal, f"{wrist}_x"), getattr(signal, f"{wrist}_y")
+            for point in points:
+                px, py = getattr(signal, f"{point}_x"), getattr(signal, f"{point}_y")
+                if None in (wx, wy, px, py) or not signal.leg_length:
+                    return
+                values += [(px - wx) / signal.leg_length, (py - wy) / signal.leg_length]
+        # Hip height carries one bounce per jump; foot height can add a 2x component from the knee tuck
+        # of double-unders, which would halve the measured ratio.
+        hip = (signal.left_hip_y + signal.right_hip_y) / 2 / signal.leg_length
+        self.hand_samples.append((signal.time_sec, (hip, *values)))
+        if signal.nose_y is not None:
+            self.body_fractions.append(max(signal.left_foot_y, signal.right_foot_y) - signal.nose_y)
+        horizon = signal.time_sec - self.config.hand_ratio_window_sec - 0.5
+        while self.hand_samples and self.hand_samples[0][0] < horizon:
+            self.hand_samples.popleft()
+
+    def _hand_turn_ratio(self, now: float) -> tuple[float, float] | None:
+        """(dominant hand frequency / jump frequency, spectral concentration) over the recent window.
+
+        The jump rate comes from the hip-height spectrum of the same window, not from this engine's
+        own landings, so a missed or split landing cannot fake a 2x ratio.
+        """
+        samples = [v for t, v in self.hand_samples if t > now - self.config.hand_ratio_window_sec]
+        times = [t for t, _ in self.hand_samples if t > now - self.config.hand_ratio_window_sec]
+        if len(samples) < 10:
+            return None
+        rate = (len(times) - 1) / max(1e-6, times[-1] - times[0])
+        block = np.asarray(samples, dtype=np.float64)
+        block -= block.mean(axis=0)
+        size = 1 << int(np.ceil(np.log2(len(block) * 8)))
+        spectra = np.abs(np.fft.rfft(block * np.hanning(len(block))[:, None], size, axis=0)) ** 2
+        freqs = np.fft.rfftfreq(size, 1.0 / rate)
+        jump_band = (freqs >= 1.2) & (freqs <= 5.0)
+        if not jump_band.any():
+            return None
+        jump_hz = float(freqs[jump_band][int(np.argmax(spectra[jump_band, 0]))])
+        power = spectra[:, 1:].sum(axis=1)
+        band = (freqs >= 0.6 * jump_hz) & (freqs <= min(2.6 * jump_hz, rate / 2 - 0.5))
+        if not band.any() or power[band].sum() <= 0:
+            return None
+        peak = float(freqs[band][int(np.argmax(power[band]))])
+        near = band & (np.abs(freqs - peak) <= 0.15 * peak)
+        return peak / jump_hz, float(power[near].sum() / power[band].sum())
+
+    def body_height_px(self) -> float | None:
+        if self.frame_height_px is None or not self.body_fractions:
+            return None
+        return float(np.median(self.body_fractions)) * self.frame_height_px
+
+    def _hand_ratio_usable(self) -> bool:
+        if self.last_hand_ratio is None:
+            return False
+        body_px = self.body_height_px()
+        if body_px is not None:
+            return body_px >= self.config.hand_ratio_min_body_px
+        return self.last_hand_ratio[1] >= self.config.hand_ratio_min_concentration
 
     def _update_motion_history(self, signal: SignalFrame) -> None:
         if not signal.detected:
@@ -1465,6 +1571,9 @@ class RealtimeCounterEngine:
 
     def arm_for_counting(self) -> None:
         self.state_engine.arm_for_counting()
+        self.landing_times.clear()
+        self.last_hand_ratio = None
+        self.last_hand_ratio_usable = False
         self.last_accepted_frame = None
         self.accepted_frame_history.clear()
         self.accepted_running_count = 0
@@ -1483,6 +1592,7 @@ class RealtimeCounterEngine:
             return None
 
         self._update_motion_history(signal)
+        self._update_hand_samples(signal)
         metrics = self.motion_metrics()
         min_gap_frames, min_recent_hip_ratio, cadence_locked = self._effective_limits()
 
@@ -1508,6 +1618,9 @@ class RealtimeCounterEngine:
             self._update_jump_cycle(signal, flow_excess_ratio, ankle_flow_excess_ratio)
         elif was_in_air and not is_in_air:
             completed_cycle = self._finish_jump_cycle(signal)
+            self.landing_times.append(signal.time_sec)
+            self.last_hand_ratio = self._hand_turn_ratio(signal.time_sec) if self.config.hand_ratio_enabled else None
+            self.last_hand_ratio_usable = self._hand_ratio_usable()
 
         self._update_monitor(signal, cadence_locked)
         if not allow_count:
@@ -1567,6 +1680,11 @@ class RealtimeCounterEngine:
             reject_reason = "foot_dominant_low_hip"
         elif self._stale_tail_reject(metrics, cadence_locked):
             reject_reason = "stale_tail"
+        elif self.last_hand_ratio_usable and (
+            self.config.hand_ratio_mode == "decide" or self.last_hand_ratio[0] >= self.config.hand_ratio_double_min
+        ):
+            if self.last_hand_ratio[0] < self.config.hand_ratio_double_min:
+                reject_reason = "hand_ratio_single"
         elif classifier_label != "double_under":
             reject_reason = f"classifier_{classifier_label}"
         elif classifier_confidence < self.config.classifier_confidence_threshold:
