@@ -34,9 +34,18 @@ from app.pose_protocol import PoseSamplingClock, plausible_pose  # noqa: E402
 from app.rope_trip import RopeTripPolicy  # noqa: E402
 from tools.eval.engine_rate import scale_config  # noqa: E402
 from app.signal_resampler import SignalResampler  # noqa: E402
+from alternating_jump.pair_counter import paired_label_times  # noqa: E402
 
 WARMUP_SEC = 3.0
 HOOKS = {"basic": None, "alternating": "begin_count_phase", "double": "arm_for_counting"}
+APP_RATE = {"basic": "30", "alternating": "native", "double": "30"}
+
+
+def count_labels(record: dict) -> list[float]:
+    """Convert original step annotations to pair completions without detector predictions."""
+    if record["mode"] != "alternating":
+        return list(record["labels_sec"])
+    return paired_label_times(record["labels_sec"], record.get("label_feet"))
 
 
 def bench_records(landmark_dir: Path) -> list[dict]:
@@ -66,7 +75,20 @@ def json_records(path: Path, landmark_dir: Path) -> list[dict]:
     for item in json.loads(path.read_text(encoding="utf-8")):
         npz = landmark_dir / f"{item.get('video_id', item['id'])}.npz"
         if npz.exists():
-            records.append(dict(item, npz=str(npz), group=item.get("group", item["id"])))
+            record = dict(item, npz=str(npz), group=item.get("group", item["id"]))
+            annotation = ROOT / "external_data" / "annotation" / "clips" / f"{item['id']}.kva"
+            if item["mode"] == "alternating" and "label_feet" not in record and annotation.exists():
+                offset = item.get("segment", [0.0])[0]
+                feet_by_time = {}
+                for k in ET.parse(annotation).findall("./Keyframes/Keyframe"):
+                    name = k.findtext("Name") or ""
+                    side = "left" if "왼발" in name else ("right" if "오른발" in name else None)
+                    if side:
+                        feet_by_time[round(offset + int(k.findtext("Timestamp")) / 1000, 3)] = side
+                feet = [feet_by_time.get(round(t, 3)) for t in item["labels_sec"]]
+                if all(feet):
+                    record["label_feet"] = feet
+            records.append(record)
     return records
 
 
@@ -80,6 +102,8 @@ def pose_result(row: np.ndarray):
 
 def run_record(record: dict, rate: str, overrides: dict, resample_double: bool, scale_ref: dict | None = None,
                raw_pose: bool = False, trip_policy: str = "resume", end_pad: float = 0.5) -> dict:
+    if rate == "app":
+        rate = APP_RATE[record["mode"]]
     module = importlib.import_module(f"{record['mode']}_jump.counter_engine")
     config = replace(module.EngineConfig(), **overrides.get(record["mode"], {}))
     if scale_ref and record["mode"] in scale_ref:
@@ -164,7 +188,8 @@ def main() -> None:
     parser = argparse.ArgumentParser()
     parser.add_argument("--landmarks", default=str(ROOT / "external_data" / "landmarks" / "bench"))
     parser.add_argument("--labels-json", help="external label file; default is the KVA benchmark set")
-    parser.add_argument("--rate", action="append", help="counter input rate: 20, 30, 60 or native (repeatable)")
+    parser.add_argument("--mode", choices=tuple(HOOKS), help="evaluate only this jump mode")
+    parser.add_argument("--rate", action="append", help="counter input rate: app, 20, 30, 60 or native (repeatable)")
     parser.add_argument("--tol", type=float, default=0.25)
     parser.add_argument("--no-double-resample", action="store_true")
     parser.add_argument("--raw-pose", action="store_true", help="skip the app's plausible_pose filter")
@@ -178,11 +203,17 @@ def main() -> None:
 
     landmark_dir = Path(args.landmarks)
     records = json_records(Path(args.labels_json), landmark_dir) if args.labels_json else bench_records(landmark_dir)
+    if args.mode:
+        records = [record for record in records if record["mode"] == args.mode]
+    if not records:
+        parser.error("no labelled videos with cached landmarks matched the selection")
     overrides = json.loads(args.override)
     out_dir = Path(args.out)
     out_dir.mkdir(parents=True, exist_ok=True)
     report = dict(created_at=datetime.now(timezone.utc).isoformat(timespec="seconds"), tolerance_sec=args.tol,
-                  overrides=overrides, scale_ref=json.loads(args.scale_ref), double_resample=not args.no_double_resample, runs={})
+                  overrides=overrides, scale_ref=json.loads(args.scale_ref), double_resample=not args.no_double_resample,
+                  counting_units={"basic": "jump", "alternating": "observed_left_right_pair", "double": "double_under_jump"},
+                  pair_max_gap_sec=1.0, end_pad=args.end_pad, trip_policy=args.trip_policy, runs={})
 
     for rate in args.rate or ["20"]:
         rows = []
@@ -191,14 +222,18 @@ def main() -> None:
                                 args.trip_policy, record.get("end_pad", args.end_pad))
             positives = [e["time_sec"] for e in result["events"] if e["count_delta"] > 0]
             negatives = [e["time_sec"] for e in result["events"] if e["count_delta"] < 0]
-            tp, fp, fn = match_events(record["labels_sec"], positives, args.tol)
-            gt = len(record["labels_sec"])
+            labels = count_labels(record)
+            tp, fp, fn = match_events(labels, positives, args.tol)
+            gt = len(labels)
             rows.append(dict(id=record["id"], mode=record["mode"], group=record["group"], tier=record.get("tier", "kva"),
                              gt=gt, count=result["count"], error=result["count"] - gt, tp=tp, fp=fp, fn=fn,
                              decrements=len(negatives),
                              decrements_after_last_label=sum(t > record["labels_sec"][-1] for t in negatives),
                              decrement_times=negatives, counter_frames=result["counter_frames"],
-                             committed=result["committed"], dropped=result["dropped"]))
+                             committed=result["committed"], dropped=result["dropped"],
+                             source_step_labels=len(record["labels_sec"]),
+                             label_pairing=("explicit_feet" if record.get("label_feet") else "assumed_alternation")
+                             if record["mode"] == "alternating" else "unchanged"))
         by_mode = {mode: summarize([r for r in rows if r["mode"] == mode]) for mode in ("basic", "alternating", "double")}
         report["runs"][rate] = dict(by_mode={m: s for m, s in by_mode.items() if s["videos"]}, overall=summarize(rows), videos=rows)
         with (out_dir / f"{args.tag}_rate{rate}.csv").open("w", newline="", encoding="utf-8-sig") as handle:

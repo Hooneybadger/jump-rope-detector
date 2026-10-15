@@ -12,6 +12,9 @@ from statistics import median
 import cv2
 import mediapipe as mp
 
+from app.rope_trip import RopeTripPolicy
+from alternating_jump.pair_counter import AlternatingPairCounter, paired_label_times
+
 
 mp_pose = mp.solutions.pose
 
@@ -50,6 +53,7 @@ CORE_READY_LANDMARKS = (
 
 @dataclass(frozen=True)
 class EngineConfig:
+    pair_max_gap_sec: float = 1.0
     ema_alpha_hip: float = 0.45
     ema_alpha_foot: float = 0.55
     foot_visibility_threshold: float = 0.30
@@ -179,6 +183,7 @@ class CounterEvent:
     time_sec: float
     running_count: int
     count_delta: int = 1
+    trip_policy_applied: bool = False
 
 
 @dataclass
@@ -539,6 +544,10 @@ class RealtimeCounterEngine:
         self.stale_floor_frames = 0
         self.enable_realtime_compensation = enable_realtime_compensation
         self.pending_compensation: _PendingCountCompensation | None = None
+        self.pairs = AlternatingPairCounter(max_gap_sec=config.pair_max_gap_sec)
+        # Catch decisions and cadence remain in single-step units, before pairing.
+        self.step_trip_policy = RopeTripPolicy()
+        self.last_step_pair_snapshot = None
 
     @staticmethod
     def _ema(alpha: float, value: float, previous: float | None) -> float:
@@ -934,6 +943,9 @@ class RealtimeCounterEngine:
         self._step_internal(signal, allow_count=False, track_precount=True)
 
     def begin_count_phase(self) -> None:
+        self.pairs = AlternatingPairCounter(max_gap_sec=self.config.pair_max_gap_sec)
+        self.step_trip_policy.reset()
+        self.last_step_pair_snapshot = None
         self.candidate_side = None
         self.candidate_streak = 0
         self.active_side = None
@@ -984,6 +996,31 @@ class RealtimeCounterEngine:
             self.weak_support_pending_bonus = 1
 
     def step(self, signal: SignalFrame) -> CounterEvent | None:
+        """Emit completed left/right pairs, never estimated or unfinished half-pairs."""
+        before = self.pairs.count
+        self.step_trip_policy.expire(signal.time_sec)
+        event = self._step_event(signal)
+        if event is None:
+            return None
+        committed_before = self.step_trip_policy.committed
+        self.step_trip_policy.observe(event, signal.time_sec)
+        if self.step_trip_policy.committed > committed_before and self.last_step_pair_snapshot is not None:
+            # Revoke only the single step preceding a confirmed catch, then restart.
+            self.pairs.restore(self.last_step_pair_snapshot)
+            self.pairs.clear_pending()
+        if event.count_delta > 0 and self.last_decision is not None:
+            side = self.last_decision.side
+            if side is not None:
+                self.last_step_pair_snapshot = self.pairs.snapshot()
+                # Recovery may estimate multiple steps; only the observed foot is evidence.
+                self.pairs.add(side, event.time_sec)
+        delta = self.pairs.count - before
+        if delta == 0:
+            return None
+        return CounterEvent(signal.frame_idx, signal.time_sec, self.pairs.count, delta,
+                            trip_policy_applied=True)
+
+    def _step_event(self, signal: SignalFrame) -> CounterEvent | None:
         self.last_decision = None
         event = self._step_internal(signal, allow_count=True)
         if event is not None:
@@ -1570,7 +1607,8 @@ def run_dataset(
             end_frame=eval_end_frame,
             warmup_frames=warmup_frames,
         )
-        gt_count = len(ground_truth[stem])
+        gt_count = len(paired_label_times([e.time_sec for e in ground_truth[stem]],
+                                         max_gap_sec=config.pair_max_gap_sec))
         predicted_count = sum(event.count_delta for event in events)
         results.append(
             VideoResult(

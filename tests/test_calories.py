@@ -9,7 +9,11 @@ from app import calories
         ("basic", 90, 60, 8.3, "15552"),
         ("basic", 110, 60, 11.8, "15551"),
         ("basic", 130, 60, 12.3, "15550"),
-        ("alternating", 110, 60, 11.8, "15551"),
+        ("alternating", 45, 60, 8.3, "15552"),
+        ("alternating", 50, 60, 11.8, "15551"),
+        ("alternating", 55, 60, 11.8, "15551"),
+        ("alternating", 60, 60, 12.3, "15550"),
+        ("alternating", 110, 60, 12.3, "15550"),
         ("alternating", 300, 120, 12.3, "15550"),
         ("double", 40, 60, 10.0, "15554"),
         ("double", 150, 60, 10.0, "15554"),
@@ -27,6 +31,14 @@ def test_acsm_equation_with_reference_weight():
     assert estimate.kcal == pytest.approx(12.39)
     assert estimate.kcal_for(10) == pytest.approx(123.9)
     assert estimate.kcal_for(1, weight_kg=80) == pytest.approx(16.52)
+
+
+def test_alternating_pair_pace_stays_in_repetitions_but_calories_use_rope_passes():
+    pairs = calories.estimate("alternating", 55, 60)
+    jumps = calories.estimate("basic", 110, 60)
+    assert pairs.pace_per_min == 55
+    assert pairs.basis == jumps.basis
+    assert pairs.kcal == jumps.kcal
 
 
 def test_no_jumps_means_no_calorie_estimate():
