@@ -47,6 +47,9 @@ class RopeTripPolicy:
 
     def observe(self, event, time_sec: float) -> int:
         """Feed one engine event (count_delta +1 or -1); returns the count to display."""
+        if getattr(event, "trip_policy_applied", False):
+            # Alternate-foot pairs already resolved catches in single-step units.
+            return max(0, int(event.running_count))
         if event.count_delta < 0:
             if self.pending_since is None and self.last_count_time is not None:
                 self.withheld += 1

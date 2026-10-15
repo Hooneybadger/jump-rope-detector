@@ -218,6 +218,9 @@ def youth_basis(age: int) -> MetBasis:
 def met_basis(mode: str, pace_per_min: float) -> MetBasis:
     if mode == "double":
         return DOUBLE_UNDER
+    # Alternate-foot counts are left/right pairs: each pair has two rope passes.
+    if mode == "alternating":
+        pace_per_min *= 2
     if pace_per_min >= 120:
         return FAST
     if pace_per_min >= 100:

@@ -11,15 +11,21 @@ their CC BY attribution. Output: validation_video/{benchmark,external}/<id>.mp4 
 These files are for verification only; nothing here is shown by the app.
 
     python tools/eval/render_validation.py [--only basic_05 ...] [--ids-file ids.txt] [--workers 4]
+    python tools/eval/render_validation.py --mode alternating --out validation_video/alternating_pairs_20261015
+
+An alternate-foot label marks the completion of one observed left/right pair. Earlier videos can be
+preserved with --out; render_report.json records each video's labels, display changes and final metrics.
 """
 from __future__ import annotations
 
 import argparse
 import csv
 import importlib
+import json
 import subprocess
 import sys
 from concurrent.futures import ProcessPoolExecutor
+from functools import lru_cache
 from pathlib import Path
 
 import cv2
@@ -32,7 +38,7 @@ sys.path.insert(0, str(ROOT / "tools" / "external_data"))
 from app.pose_protocol import PoseSamplingClock, plausible_pose  # noqa: E402
 from app.rope_trip import RopeTripPolicy  # noqa: E402
 from app.signal_resampler import SignalResampler  # noqa: E402
-from tools.eval.evaluate_engines import HOOKS, WARMUP_SEC, bench_records, json_records, pose_result  # noqa: E402
+from tools.eval.evaluate_engines import HOOKS, WARMUP_SEC, bench_records, count_labels, json_records, pose_result  # noqa: E402
 
 OUT = ROOT / "validation_video"
 FPS_OUT = 60.0
@@ -107,8 +113,13 @@ def foot_point(data, time_sec: float, width: int, height: int) -> tuple[int, int
     return int(x * width), int(y * height)
 
 
+@lru_cache(maxsize=32)
+def font(size: int) -> ImageFont.FreeTypeFont:
+    return ImageFont.truetype(FONT, size)
+
+
 def text(draw: ImageDraw.ImageDraw, xy, value: str, size: int, fill=(255, 255, 255)) -> None:
-    draw.text(xy, value, font=ImageFont.truetype(FONT, size), fill=fill, stroke_width=max(1, size // 12), stroke_fill=(0, 0, 0))
+    draw.text(xy, value, font=font(size), fill=fill, stroke_width=max(1, size // 12), stroke_fill=(0, 0, 0))
 
 
 def ffmpeg_exe() -> str:
@@ -117,10 +128,10 @@ def ffmpeg_exe() -> str:
     return _ffmpeg()
 
 
-def render(job: dict) -> str:
+def render(job: dict) -> dict:
     record, video, out, credit = job["record"], Path(job["video"]), Path(job["out"]), job.get("credit")
     changes, start, end = run_app(record)
-    labels = list(record["labels_sec"])
+    labels = count_labels(record)
     counts = [t for t, _, d in changes if d > 0]
     by_count, by_label = match(labels, counts)
     data = np.load(record["npz"])
@@ -209,32 +220,43 @@ def render(job: dict) -> str:
         state = "측정 전" if now < start else ("측정 종료" if now > end - 1e-6 else "측정 중")
         text(draw, (8, 6 + font_px), f"정답 {gt_now} · 앱 표시 {shown} · {state}", font_px)
         text(draw, (8, 8 + 2 * font_px), f"맞음 {ok_now} · 오탐 {false_now} · 누락 {miss_now}", font_px)
-        text(draw, (8, y0 + 30), "흰선/흰 고리 정답 · 초록 맞음 · 빨강 오탐 · 주황 누락 · 보라 -1", small, (220, 220, 220))
+        legend = "흰선/흰 고리 정답 · 초록 맞음 · 빨강 오탐 · 주황 누락 · 보라 -1"
+        if record["mode"] == "alternating":
+            legend = "좌우 1쌍=1회 · 흰색 정답 · 초록 맞음 · 빨강 오탐 · 주황 누락"
+        text(draw, (8, y0 + 30), legend, small, (220, 220, 220))
         for n, line in enumerate(credit or []):
             text(draw, (8, y0 + 36 + small + n * (small + 4)), line, small, (220, 220, 220))
         canvas = cv2.cvtColor(np.asarray(image), cv2.COLOR_RGB2BGR)
         proc.stdin.write(canvas.tobytes())
     capture.release()
     proc.stdin.close()
-    proc.wait()
+    if proc.wait() != 0:
+        raise RuntimeError(f"ffmpeg failed: {out}")
     final = changes[-1][1] if changes else 0
-    return f"{record['id']}: labels {len(labels)} shown {final} ok {len(by_count)} false {len(counts) - len(by_count)} missed {len(labels) - len(by_label)}"
+    return dict(id=record["id"], mode=record["mode"], video=str(video), output=str(out),
+                labels=len(labels), shown=final, tp=len(by_count), fp=len(counts) - len(by_count),
+                fn=len(labels) - len(by_label), source_step_labels=len(record["labels_sec"]),
+                label_pairing=("explicit_feet" if record.get("label_feet") else "assumed_alternation")
+                if record["mode"] == "alternating" else "unchanged",
+                count_start=start, count_end=end, video_start=t0, video_end=t1,
+                fps=FPS_OUT, width=out_w, height=canvas_h, label_times=labels, changes=changes)
 
 
-def jobs(only: set[str]) -> list[dict]:
+def jobs(only: set[str], mode: str | None = None, out_dir: Path = OUT) -> list[dict]:
     items = []
     for record in bench_records(ROOT / "external_data" / "landmarks" / "bench"):
-        mode, number = record["id"].split("_")
-        items.append(dict(record=record, video=str(ROOT / "benchmark_results" / "cache" / mode / f"{number}.mp4"),
-                          out=str(OUT / "benchmark" / f"{record['id']}.mp4")))
+        record_mode, number = record["id"].split("_")
+        items.append(dict(record=record, video=str(ROOT / "benchmark_results" / "cache" / record_mode / f"{number}.mp4"),
+                          out=str(out_dir / "benchmark" / f"{record['id']}.mp4")))
     with (ROOT / "external_data" / "manifest" / "sources.csv").open(encoding="utf-8-sig") as handle:
         sources = {row["id"]: row for row in csv.DictReader(handle)}
     for record in json_records(ROOT / "external_data" / "labels" / "verified.json", ROOT / "external_data" / "landmarks" / "cc"):
         source = sources.get(record["video_id"], {})
         credit = [f"출처: {source.get('title', '')[:50]} · {source.get('channel', '')}", f"라이선스: CC BY · {source.get('url', '')}"]
         items.append(dict(record=record, video=str(ROOT / "external_data" / "media" / f"{record['video_id']}.mp4"),
-                          out=str(OUT / "external" / f"{record['id']}.mp4"), credit=credit))
-    return [j for j in items if not only or j["record"]["id"] in only]
+                          out=str(out_dir / "external" / f"{record['id']}.mp4"), credit=credit))
+    return [j for j in items if (not only or j["record"]["id"] in only)
+            and (mode is None or j["record"]["mode"] == mode)]
 
 
 def main() -> None:
@@ -242,12 +264,23 @@ def main() -> None:
     parser.add_argument("--only", nargs="*", default=[])
     parser.add_argument("--ids-file", help="one id per line (ids may start with '-', which --only cannot take)")
     parser.add_argument("--workers", type=int, default=4)
+    parser.add_argument("--mode", choices=tuple(MODE_NAMES), help="render only this jump mode")
+    parser.add_argument("--out", type=Path, default=OUT, help="output root; use a new folder to preserve earlier videos")
     args = parser.parse_args()
     only = set(args.only) | (set(Path(args.ids_file).read_text(encoding="utf-8").split()) if args.ids_file else set())
-    work = jobs(only)
+    work = jobs(only, args.mode, args.out)
+    if not work:
+        parser.error("no labelled videos matched the selection")
+    results = []
     with ProcessPoolExecutor(args.workers) as pool:
-        for line in pool.map(render, work):
-            print(line, flush=True)
+        for result in pool.map(render, work):
+            results.append(result)
+            print(f"{result['id']}: labels {result['labels']} shown {result['shown']} "
+                  f"ok {result['tp']} false {result['fp']} missed {result['fn']}", flush=True)
+    args.out.mkdir(parents=True, exist_ok=True)
+    (args.out / "render_report.json").write_text(json.dumps(dict(
+        tolerance_sec=TOL, end_pad_sec=END_PAD, fps=FPS_OUT, videos=results,
+    ), ensure_ascii=False, indent=2), encoding="utf-8")
 
 
 if __name__ == "__main__":

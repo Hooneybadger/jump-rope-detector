@@ -23,7 +23,7 @@ const cheerAssets = {
   },
   alternating: {
     animation: "/cheer-alternating.gif", poster: "/cheer-alternating-poster.png",
-    alt: "번갈아뛰기를 하는 남성 전신 애니메이션", caption: "좌우 발을 고르게 바꾸며 리듬을 이어가요.",
+    alt: "번갈아뛰기를 하는 남성 전신 애니메이션", caption: "오른발·왼발 한 쌍이 1회예요. 반대쪽 무릎을 살짝 들어요.",
   },
   double: {
     animation: "/cheer-double.gif", poster: "/cheer-double-poster.png",
@@ -456,6 +456,7 @@ function resolveConfirmation(value) {
 function openWorkoutSetup(mode) {
   if (!state.user.permissions[mode]) return;
   state.mode = mode; $("#setup-mode-name").textContent = modeNames[mode]; $("#setup-error").textContent = "";
+  $("#alternating-count-hint").hidden = mode !== "alternating";
   const advice = state.user.profile && state.user.profile.recommendation;
   const recommended = $("#recommended-duration"); const hint = $("#recommend-hint");
   recommended.hidden = !advice; hint.hidden = !advice; recommended.dataset.duration = advice ? String(advice.seconds) : "";
